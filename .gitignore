@@ -23,6 +23,9 @@
 # production
 /build
 
+# video uploads
+/storage/
+
 # misc
 .DS_Store
 *.pem
