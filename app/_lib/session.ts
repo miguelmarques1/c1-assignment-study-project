@@ -1,12 +1,41 @@
-// F01 stub: this module will be replaced by F02 (Authentication System).
-// Until then, `getSession()` always resolves to `null` so F01's landing page
-// can call it server-side without coupling to a specific session store.
+import { prisma } from "@/app/_lib/db";
+import { readSessionCookie } from "@/app/_lib/cookies";
+import { readSession, refreshSession, deleteSession } from "@/app/_lib/auth/session-store";
+
+export type SessionUser = {
+  id: string;
+  email: string;
+  name: string;
+  isAdmin: boolean;
+};
 
 export type Session = {
-  userId: string;
-  email: string;
+  user: SessionUser;
 };
 
 export async function getSession(): Promise<Session | null> {
-  return null;
+  const sessionId = await readSessionCookie();
+  if (!sessionId) return null;
+
+  const row = await readSession(sessionId);
+  if (!row) {
+    return null;
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: row.userId } });
+  if (!user || user.isSuspended) {
+    await deleteSession(sessionId);
+    return null;
+  }
+
+  await refreshSession(row);
+
+  return {
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      isAdmin: user.isAdmin,
+    },
+  };
 }

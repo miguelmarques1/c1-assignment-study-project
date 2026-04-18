@@ -39,7 +39,14 @@ describe("LandingPage (/)", () => {
   });
 
   it("authenticated_visitor_is_redirected_to_app", async () => {
-    mockedGetSession.mockResolvedValue({ userId: "u1", email: "a@b.co" });
+    mockedGetSession.mockResolvedValue({
+      user: {
+        id: "u1",
+        email: "a@b.co",
+        name: "Ada",
+        isAdmin: false,
+      },
+    });
     await expect(LandingPage()).rejects.toThrow("NEXT_REDIRECT");
     expect(mockedRedirect).toHaveBeenCalledWith("/app");
   });
