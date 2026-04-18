@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String    @db.VarChar(120)
+  email        String    @unique(map: "ux_user_email") @db.VarChar(255)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  isAdmin      Boolean   @default(false) @map("is_admin")
+  isSuspended  Boolean   @default(false) @map("is_suspended")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  sessions     Session[]
+
+  @@map("user")
+}
+
+model Session {
+  id                String   @id @db.VarChar(64)
+  userId            String   @map("user_id")
+  expiresAt         DateTime @map("expires_at") @db.Timestamptz(6)
+  absoluteExpiresAt DateTime @map("absolute_expires_at") @db.Timestamptz(6)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "ix_session_user_id")
+  @@index([expiresAt], map: "ix_session_expires_at")
+  @@map("session")
+}
