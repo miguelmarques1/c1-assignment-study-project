@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { Readable } from "node:stream";
 import { getSession } from "@/app/_lib/session";
-import { MAX_VIDEO_BYTES, ALLOWED_MIME_TYPES, extensionOf } from "@/app/_lib/videos/constants";
+import { ALLOWED_MIME_TYPES, extensionOf, resolveMaxVideoBytes } from "@/app/_lib/videos/constants";
 import {
   VideoUploadError,
   uploadErrorMessage,
@@ -35,13 +35,14 @@ export async function POST(request: NextRequest) {
   if (!sizeRaw) return errorResponse("UPL_MISSING_SIZE");
   const size = Number.parseInt(sizeRaw, 10);
   if (!Number.isFinite(size) || size <= 0) return errorResponse("UPL_MISSING_SIZE");
-  if (size > MAX_VIDEO_BYTES) return errorResponse("UPL_TOO_LARGE");
+  const maxBytes = resolveMaxVideoBytes();
+  if (size > maxBytes) return errorResponse("UPL_TOO_LARGE");
 
   const contentLengthHeader = request.headers.get("content-length");
   if (contentLengthHeader) {
     const contentLength = Number.parseInt(contentLengthHeader, 10);
     if (Number.isFinite(contentLength)) {
-      if (contentLength > MAX_VIDEO_BYTES) return errorResponse("UPL_TOO_LARGE");
+      if (contentLength > maxBytes) return errorResponse("UPL_TOO_LARGE");
       if (contentLength !== size) return errorResponse("UPL_SIZE_MISMATCH");
     }
   }

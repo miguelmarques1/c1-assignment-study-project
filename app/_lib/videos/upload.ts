@@ -3,9 +3,9 @@ import type { Readable } from "node:stream";
 import { prisma } from "@/app/_lib/db";
 import {
   ALLOWED_MIME_TYPES,
-  MAX_VIDEO_BYTES,
   containerFormatOf,
   extensionOf,
+  resolveMaxVideoBytes,
 } from "./constants";
 import { VideoUploadError } from "./errors";
 import { extractThumbnail, pickThumbnailTimestamp, probeDuration } from "./probe";
@@ -57,13 +57,18 @@ export async function uploadVideo(input: UploadVideoInput): Promise<VideoDTO> {
   if (!ext) {
     throw new VideoUploadError("UPL_BAD_EXTENSION");
   }
-  if (declaredMime && !(ALLOWED_MIME_TYPES as readonly string[]).includes(declaredMime)) {
+  if (
+    declaredMime &&
+    declaredMime !== "application/octet-stream" &&
+    !(ALLOWED_MIME_TYPES as readonly string[]).includes(declaredMime)
+  ) {
     throw new VideoUploadError("UPL_BAD_MIME");
   }
   if (!Number.isFinite(declaredSize) || declaredSize <= 0) {
     throw new VideoUploadError("UPL_MISSING_SIZE");
   }
-  if (declaredSize > MAX_VIDEO_BYTES) {
+  const maxBytes = resolveMaxVideoBytes();
+  if (declaredSize > maxBytes) {
     throw new VideoUploadError("UPL_TOO_LARGE");
   }
 
@@ -96,7 +101,7 @@ export async function uploadVideo(input: UploadVideoInput): Promise<VideoDTO> {
   let bytesWritten = 0;
   try {
     await ensureVideoDir(paths.videoDir);
-    bytesWritten = await writeTempStream(paths.temp, requestStream, MAX_VIDEO_BYTES);
+    bytesWritten = await writeTempStream(paths.temp, requestStream, maxBytes);
     if (bytesWritten === 0) {
       throw new VideoUploadError("UPL_EMPTY");
     }

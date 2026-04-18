@@ -26,6 +26,9 @@ export function resolveMaxVideoBytes(): number {
 
 export const MAX_VIDEO_BYTES = resolveMaxVideoBytes();
 
+// Use resolveMaxVideoBytes() where a live re-read is required (tests).
+
+
 export function resolveStorageRoot(): string {
   const raw = process.env.VIDEO_STORAGE_ROOT;
   const rel = raw && raw.trim().length > 0 ? raw : "storage/videos";
