@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { Readable } from "node:stream";
 import { getSession } from "@/app/_lib/session";
-import { ALLOWED_MIME_TYPES, extensionOf, resolveMaxVideoBytes } from "@/app/_lib/videos/constants";
+import { extensionOf, resolveMaxVideoBytes } from "@/app/_lib/videos/constants";
 import {
   VideoUploadError,
   uploadErrorMessage,
@@ -47,17 +47,6 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const contentType = request.headers.get("content-type");
-  if (contentType) {
-    const mainType = contentType.split(";")[0].trim().toLowerCase();
-    if (
-      mainType !== "application/octet-stream" &&
-      !(ALLOWED_MIME_TYPES as readonly string[]).includes(mainType)
-    ) {
-      return errorResponse("UPL_BAD_MIME");
-    }
-  }
-
   const body = request.body;
   if (!body) return errorResponse("UPL_MISSING_SIZE", "Missing request body");
 
@@ -69,7 +58,6 @@ export async function POST(request: NextRequest) {
       requestStream: nodeStream,
       declaredName: name,
       declaredSize: size,
-      declaredMime: contentType ? contentType.split(";")[0].trim().toLowerCase() : null,
     });
     return NextResponse.json(dto, { status: 201 });
   } catch (err) {

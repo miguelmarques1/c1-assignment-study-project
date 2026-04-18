@@ -2,7 +2,6 @@ import path from "node:path";
 import type { Readable } from "node:stream";
 import { prisma } from "@/app/_lib/db";
 import {
-  ALLOWED_MIME_TYPES,
   containerFormatOf,
   extensionOf,
   resolveMaxVideoBytes,
@@ -37,7 +36,6 @@ export type UploadVideoInput = {
   requestStream: Readable;
   declaredName: string;
   declaredSize: number;
-  declaredMime?: string | null;
 };
 
 function titleFromFilename(filename: string): string {
@@ -48,7 +46,7 @@ function titleFromFilename(filename: string): string {
 }
 
 export async function uploadVideo(input: UploadVideoInput): Promise<VideoDTO> {
-  const { userId, requestStream, declaredName, declaredSize, declaredMime } = input;
+  const { userId, requestStream, declaredName, declaredSize } = input;
 
   if (!declaredName || declaredName.length === 0 || declaredName.length > 255) {
     throw new VideoUploadError("UPL_MISSING_NAME");
@@ -56,13 +54,6 @@ export async function uploadVideo(input: UploadVideoInput): Promise<VideoDTO> {
   const ext = extensionOf(declaredName);
   if (!ext) {
     throw new VideoUploadError("UPL_BAD_EXTENSION");
-  }
-  if (
-    declaredMime &&
-    declaredMime !== "application/octet-stream" &&
-    !(ALLOWED_MIME_TYPES as readonly string[]).includes(declaredMime)
-  ) {
-    throw new VideoUploadError("UPL_BAD_MIME");
   }
   if (!Number.isFinite(declaredSize) || declaredSize <= 0) {
     throw new VideoUploadError("UPL_MISSING_SIZE");

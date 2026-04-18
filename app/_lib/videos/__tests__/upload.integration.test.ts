@@ -69,7 +69,6 @@ describe("uploadVideo", () => {
       requestStream: streamOf(bytes),
       declaredName: "clip.mp4",
       declaredSize: bytes.length,
-      declaredMime: "video/mp4",
     });
 
     expect(dto.status).toBe("validating");
