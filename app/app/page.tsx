@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/app/_components/LogoutButton";
+import { UploadDropZone } from "@/app/_components/upload/UploadDropZone";
+import { UploadProgressList } from "@/app/_components/upload/UploadProgressList";
 import { getSession } from "@/app/_lib/session";
 
 export default async function AppHomePage() {
@@ -16,7 +18,9 @@ export default async function AppHomePage() {
           <LogoutButton />
         </div>
       </header>
-      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-10">
+      <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
+        <UploadDropZone />
+        <UploadProgressList />
         <p className="text-muted">Your videos will appear here.</p>
       </main>
     </div>

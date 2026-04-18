@@ -16,6 +16,8 @@
     "db:studio": "prisma studio"
   },
   "dependencies": {
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@ffprobe-installer/ffprobe": "^2.1.2",
     "@prisma/client": "^6.1.0",
     "bcryptjs": "^2.4.3",
     "next": "16.2.4",
