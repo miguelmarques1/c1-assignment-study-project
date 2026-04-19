@@ -8,39 +8,123 @@ datasource db {
 }
 
 model User {
-  id           String    @id @default(cuid())
-  name         String    @db.VarChar(120)
-  email        String    @unique(map: "ux_user_email") @db.VarChar(255)
-  passwordHash String    @map("password_hash") @db.VarChar(255)
-  isAdmin      Boolean   @default(false) @map("is_admin")
-  isSuspended  Boolean   @default(false) @map("is_suspended")
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  id           String       @id @default(cuid())
+  name         String       @db.VarChar(120)
+  email        String       @unique(map: "ux_user_email") @db.VarChar(255)
+  passwordHash String       @map("password_hash") @db.VarChar(255)
+  isAdmin      Boolean      @default(false) @map("is_admin")
+  isSuspended  Boolean      @default(false) @map("is_suspended")
+  createdAt    DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
   sessions     Session[]
   videos       Video[]
+  videoEvents  VideoEvent[]
 
   @@map("user")
 }
 
 model Video {
-  id               String   @id @default(cuid())
-  userId           String   @map("user_id")
-  title            String   @db.VarChar(200)
-  description      String   @default("") @db.VarChar(2000)
-  originalFilename String   @map("original_filename") @db.VarChar(255)
-  sizeBytes        BigInt   @map("size_bytes")
-  durationSeconds  Decimal? @map("duration_seconds") @db.Decimal(10, 3)
-  containerFormat  String   @map("container_format") @db.VarChar(8)
-  storagePath      String   @map("storage_path") @db.VarChar(512)
-  thumbnailPath    String?  @map("thumbnail_path") @db.VarChar(512)
-  status           String   @default("validating") @db.VarChar(16)
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                    String                 @id @default(cuid())
+  userId                String                 @map("user_id")
+  title                 String                 @db.VarChar(200)
+  description           String                 @default("") @db.VarChar(2000)
+  originalFilename      String                 @map("original_filename") @db.VarChar(255)
+  sizeBytes             BigInt                 @map("size_bytes")
+  durationSeconds       Decimal?               @map("duration_seconds") @db.Decimal(10, 3)
+  containerFormat       String                 @map("container_format") @db.VarChar(8)
+  storagePath           String                 @map("storage_path") @db.VarChar(512)
+  thumbnailPath         String?                @map("thumbnail_path") @db.VarChar(512)
+  status                String                 @default("validating") @db.VarChar(16)
+  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime               @updatedAt @map("updated_at") @db.Timestamptz(6)
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  job                   VideoJob?
+  transcription         Transcription?
+  transcriptionSegments TranscriptionSegment[]
+  summary               Summary?
+  events                VideoEvent[]
 
   @@index([userId, createdAt(sort: Desc)], map: "ix_video_user_id_created_at")
   @@index([status], map: "ix_video_status")
   @@map("video")
+}
+
+model VideoJob {
+  id               String    @id @default(cuid())
+  videoId          String    @unique @map("video_id")
+  stage            String    @default("validate") @db.VarChar(16)
+  attempt          Int       @default(0)
+  scheduledAt      DateTime  @default(now()) @map("scheduled_at") @db.Timestamptz(6)
+  leasedAt         DateTime? @map("leased_at") @db.Timestamptz(6)
+  leaseId          String?   @map("lease_id")
+  lastErrorCode    String?   @map("last_error_code") @db.VarChar(48)
+  lastErrorMessage String?   @map("last_error_message") @db.VarChar(500)
+  failedAt         DateTime? @map("failed_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  video            Video     @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@index([scheduledAt, leasedAt], map: "ix_video_job_due")
+  @@map("video_job")
+}
+
+model Transcription {
+  id               String                 @id @default(cuid())
+  videoId          String                 @unique @map("video_id")
+  detectedLanguage String?                @map("detected_language") @db.VarChar(8)
+  model            String                 @default("whisper-1") @db.VarChar(48)
+  createdAt        DateTime               @default(now()) @map("created_at") @db.Timestamptz(6)
+  video            Video                  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  segments         TranscriptionSegment[]
+
+  @@map("transcription")
+}
+
+model TranscriptionSegment {
+  id              String        @id @default(cuid())
+  transcriptionId String        @map("transcription_id")
+  videoId         String        @map("video_id")
+  segmentIndex    Int           @map("segment_index")
+  startSeconds    Decimal       @map("start_seconds") @db.Decimal(10, 3)
+  endSeconds      Decimal       @map("end_seconds") @db.Decimal(10, 3)
+  text            String        @db.VarChar(2000)
+  createdAt       DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  transcription   Transcription @relation(fields: [transcriptionId], references: [id], onDelete: Cascade)
+  video           Video         @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([videoId, segmentIndex], map: "ux_transcription_segment_order")
+  @@index([videoId, startSeconds], map: "ix_transcription_segment_time")
+  @@map("transcription_segment")
+}
+
+model Summary {
+  id        String   @id @default(cuid())
+  videoId   String   @unique @map("video_id")
+  overview  String
+  keyTopics Json     @default("[]") @map("key_topics")
+  model     String   @default("gpt-4.1-nano") @db.VarChar(48)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  video     Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@map("summary")
+}
+
+model VideoEvent {
+  id         String   @id @default(cuid())
+  videoId    String   @map("video_id")
+  userId     String   @map("user_id")
+  fromStatus String?  @map("from_status") @db.VarChar(16)
+  toStatus   String   @map("to_status") @db.VarChar(16)
+  stage      String?  @db.VarChar(16)
+  attempt    Int      @default(0)
+  errorCode  String?  @map("error_code") @db.VarChar(48)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  video      Video    @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)], map: "ix_video_event_user_created")
+  @@index([videoId, createdAt(sort: Desc)], map: "ix_video_event_video_created")
+  @@map("video_event")
 }
 
 model Session {
