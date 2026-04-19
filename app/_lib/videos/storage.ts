@@ -121,6 +121,22 @@ export async function safeUnlink(p: string): Promise<void> {
   } catch {}
 }
 
+export type RemoveVideoDirResult =
+  | { ok: true }
+  | { ok: false; reason: string };
+
+export async function removeVideoDirSafely(
+  userId: string,
+  videoId: string,
+): Promise<RemoveVideoDirResult> {
+  try {
+    await removeVideoDir(userId, videoId);
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, reason: (err as Error).message ?? "unknown" };
+  }
+}
+
 export async function readThumbnailStream(
   relativeOrAbsolute: string,
 ): Promise<{ stream: Readable; size: number } | null> {

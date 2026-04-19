@@ -14,6 +14,8 @@ model User {
   passwordHash String    @map("password_hash") @db.VarChar(255)
   isAdmin      Boolean   @default(false) @map("is_admin")
   isSuspended  Boolean   @default(false) @map("is_suspended")
+  libraryView  String    @default("grid") @map("library_view") @db.VarChar(4)
+  librarySort  String    @default("recent") @map("library_sort") @db.VarChar(16)
   createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
   sessions     Session[]

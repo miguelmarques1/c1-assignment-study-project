@@ -60,3 +60,21 @@ export async function findVideoForUser(
 export async function deleteVideoCompletely(videoId: string): Promise<void> {
   await prisma.video.delete({ where: { id: videoId } });
 }
+
+export async function deleteVideoTransactional(
+  videoId: string,
+  userId: string,
+  tx?: Prisma.TransactionClient,
+): Promise<{ deleted: boolean }> {
+  const run = async (client: Prisma.TransactionClient) => {
+    const existing = await client.video.findFirst({
+      where: { id: videoId, userId },
+      select: { id: true },
+    });
+    if (!existing) return { deleted: false };
+    await client.video.delete({ where: { id: videoId } });
+    return { deleted: true };
+  };
+  if (tx) return run(tx);
+  return prisma.$transaction(run);
+}
