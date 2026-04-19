@@ -207,6 +207,10 @@ async function checkVideoExistsForUser(id: string, userId: string): Promise<bool
   return row !== null;
 }
 
+export async function submitLibraryPreferences(formData: FormData): Promise<void> {
+  await setLibraryPreferences(undefined, formData);
+}
+
 export async function setLibraryPreferences(
   _prev: ActionState | undefined,
   formData: FormData,

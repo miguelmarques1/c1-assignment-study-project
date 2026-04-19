@@ -1,6 +1,6 @@
 "use client";
 
-import { setLibraryPreferences } from "@/app/_lib/videos/actions";
+import { submitLibraryPreferences } from "@/app/_lib/videos/actions";
 import {
   type LibrarySort,
   type LibraryView,
@@ -11,10 +11,6 @@ const SORT_LABEL: Record<LibrarySort, string> = {
   oldest: "Oldest",
   title_asc: "Title A–Z",
 };
-
-async function setPreferencesFormAction(formData: FormData) {
-  await setLibraryPreferences(undefined, formData);
-}
 
 type Props = {
   view: LibraryView;
@@ -30,7 +26,7 @@ export function LibraryHeader({ view, sort }: Props) {
       <h2 className="text-base font-semibold text-foreground">Your videos</h2>
       <div className="flex items-center gap-3">
         <form
-          action={setPreferencesFormAction}
+          action={submitLibraryPreferences}
           className="inline-flex rounded-md border border-border bg-white p-0.5"
           aria-label="View mode"
         >
@@ -56,7 +52,7 @@ export function LibraryHeader({ view, sort }: Props) {
           })}
         </form>
         <form
-          action={setPreferencesFormAction}
+          action={submitLibraryPreferences}
           className="inline-flex items-center gap-2"
           aria-label="Sort order"
         >
