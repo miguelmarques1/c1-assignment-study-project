@@ -1,14 +1,27 @@
 import { redirect } from "next/navigation";
 import { LogoutButton } from "@/app/_components/LogoutButton";
+import { LibraryClient } from "@/app/_components/library/LibraryClient";
 import { UploadDropZone } from "@/app/_components/upload/UploadDropZone";
 import { UploadProgressList } from "@/app/_components/upload/UploadProgressList";
+import { listVideosForUser } from "@/app/_lib/videos/library";
+import { readLibraryPreferences } from "@/app/_lib/videos/libraryRepository";
 import { getSession } from "@/app/_lib/session";
+
+export const dynamic = "force-dynamic";
 
 export default async function AppHomePage() {
   const session = await getSession();
   if (!session) {
     redirect("/login");
   }
+
+  const prefs =
+    (await readLibraryPreferences(session.user.id)) ?? {
+      libraryView: "grid" as const,
+      librarySort: "recent" as const,
+    };
+
+  const items = await listVideosForUser(session.user.id, prefs.librarySort);
 
   return (
     <div className="flex min-h-full flex-col">
@@ -21,7 +34,11 @@ export default async function AppHomePage() {
       <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 px-6 py-10">
         <UploadDropZone />
         <UploadProgressList />
-        <p className="text-muted">Your videos will appear here.</p>
+        <LibraryClient
+          initialItems={items}
+          initialView={prefs.libraryView}
+          initialSort={prefs.librarySort}
+        />
       </main>
     </div>
   );
