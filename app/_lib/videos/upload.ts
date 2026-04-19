@@ -1,6 +1,7 @@
 import path from "node:path";
 import type { Readable } from "node:stream";
 import { prisma } from "@/app/_lib/db";
+import { enqueuePipelineJob } from "@/app/_lib/pipeline/queue";
 import {
   containerFormatOf,
   extensionOf,
@@ -135,6 +136,22 @@ export async function uploadVideo(input: UploadVideoInput): Promise<VideoDTO> {
       thumbnailPath: thumbnailSuccess ? paths.thumbnailRelative : null,
     },
   });
+
+  try {
+    await enqueuePipelineJob(updatedRow.id);
+  } catch (err) {
+    // Non-fatal: deploy backfill + UNIQUE constraint make a missed enqueue self-healing.
+    // eslint-disable-next-line no-console
+    console.log(
+      JSON.stringify({
+        scope: "pipeline",
+        level: "warn",
+        msg: "enqueue_failed",
+        videoId: updatedRow.id,
+        error: (err as Error).message,
+      }),
+    );
+  }
 
   return toDTO(updatedRow);
 }
