@@ -23,10 +23,15 @@ export async function setSessionCookie(sessionId: string): Promise<void> {
 
 export async function clearSessionCookie(): Promise<void> {
   const store = await cookies();
-  store.set(SESSION_COOKIE_NAME, "", {
-    ...cookieBaseOptions(),
-    maxAge: 0,
-  });
+  try {
+    store.set(SESSION_COOKIE_NAME, "", {
+      ...cookieBaseOptions(),
+      maxAge: 0,
+    });
+  } catch {
+    // Cookie store is read-only inside RSC; the next mutation context
+    // (Server Action / Route Handler) will clear it. Swallow silently.
+  }
 }
 
 export async function readSessionCookie(): Promise<string | null> {
