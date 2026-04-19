@@ -4,6 +4,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: [
     "@ffmpeg-installer/ffmpeg",
     "@ffprobe-installer/ffprobe",
+    "openai",
+    "pg",
   ],
 };
 
