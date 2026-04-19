@@ -115,6 +115,18 @@ export async function removeVideoDir(userId: string, videoId: string): Promise<v
   await rm(dir, { recursive: true, force: true });
 }
 
+export async function removeUserStorageDir(userId: string): Promise<void> {
+  assertSafeId(userId, "user id");
+  const root = resolveStorageRoot();
+  const dir = path.join(root, userId);
+  const resolvedRoot = path.resolve(root);
+  const resolvedDir = path.resolve(dir);
+  if (resolvedDir === resolvedRoot || !resolvedDir.startsWith(resolvedRoot + path.sep)) {
+    throw new VideoUploadError("UPL_PATH_TRAVERSAL", "Path escapes storage root");
+  }
+  await rm(dir, { recursive: true, force: true });
+}
+
 export async function safeUnlink(p: string): Promise<void> {
   try {
     await unlink(p);
