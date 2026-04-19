@@ -29,13 +29,28 @@ export async function enqueuePipelineJob(videoId: string): Promise<VideoJob> {
   }
 }
 
+type RawJobRow = {
+  id: string;
+  video_id: string;
+  stage: string;
+  attempt: number;
+  scheduled_at: Date | string;
+  leased_at: Date | string | null;
+  lease_id: string | null;
+  last_error_code: string | null;
+  last_error_message: string | null;
+  failed_at: Date | string | null;
+  created_at: Date | string;
+  updated_at: Date | string;
+};
+
 export async function claimDueJobs(
   limit: number,
   leaseId: string,
   now: Date = new Date(),
 ): Promise<VideoJob[]> {
   // Postgres queue pattern with FOR UPDATE SKIP LOCKED to guarantee disjoint claims.
-  const rows = await prisma.$queryRawUnsafe<VideoJob[]>(
+  const rows = await prisma.$queryRawUnsafe<RawJobRow[]>(
     `UPDATE "video_job" AS j
      SET "leased_at" = $1, "lease_id" = $2, "updated_at" = $1
      WHERE "id" IN (
@@ -149,15 +164,20 @@ function truncate(s: string, n: number): string {
   return s.length <= n ? s : s.slice(0, n);
 }
 
-function coerceJobRow(row: VideoJob): VideoJob {
-  // Dates come back as Date already from $queryRawUnsafe; this is a safety pass.
+function coerceJobRow(row: RawJobRow): VideoJob {
   return {
-    ...row,
-    scheduledAt: toDate(row.scheduledAt),
-    leasedAt: toDateOrNull(row.leasedAt),
-    failedAt: toDateOrNull(row.failedAt),
-    createdAt: toDate(row.createdAt),
-    updatedAt: toDate(row.updatedAt),
+    id: row.id,
+    videoId: row.video_id,
+    stage: row.stage,
+    attempt: row.attempt,
+    scheduledAt: toDate(row.scheduled_at),
+    leasedAt: toDateOrNull(row.leased_at),
+    leaseId: row.lease_id,
+    lastErrorCode: row.last_error_code,
+    lastErrorMessage: row.last_error_message,
+    failedAt: toDateOrNull(row.failed_at),
+    createdAt: toDate(row.created_at),
+    updatedAt: toDate(row.updated_at),
   };
 }
 
