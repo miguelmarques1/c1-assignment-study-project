@@ -137,9 +137,50 @@ async function realTranscribe(params: TranscribeParams): Promise<TranscriptionRe
   }
 
   return {
-    language: typeof response.language === "string" ? response.language : null,
+    language: normalizeLanguage(response.language),
     segments,
   };
+}
+
+const LANGUAGE_ISO_MAP: Record<string, string> = {
+  english: "en",
+  portuguese: "pt",
+  spanish: "es",
+  french: "fr",
+  german: "de",
+  italian: "it",
+  japanese: "ja",
+  chinese: "zh",
+  russian: "ru",
+  arabic: "ar",
+  hindi: "hi",
+  dutch: "nl",
+  korean: "ko",
+  turkish: "tr",
+  polish: "pl",
+  swedish: "sv",
+  czech: "cs",
+  danish: "da",
+  finnish: "fi",
+  greek: "el",
+  hebrew: "he",
+  hungarian: "hu",
+  norwegian: "no",
+  romanian: "ro",
+  ukrainian: "uk",
+  vietnamese: "vi",
+  indonesian: "id",
+  thai: "th",
+  malay: "ms",
+};
+
+function normalizeLanguage(raw: unknown): string | null {
+  if (typeof raw !== "string" || raw.length === 0) return null;
+  const lower = raw.toLowerCase().trim();
+  const mapped = LANGUAGE_ISO_MAP[lower];
+  if (mapped) return mapped;
+  // Already an ISO code, or an unknown short code — keep as-is, truncated to the column width.
+  return lower.slice(0, 8);
 }
 
 async function realSummarize(params: SummarizeParams): Promise<SummaryResult> {
