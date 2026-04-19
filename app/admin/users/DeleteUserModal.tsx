@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  deleteUser,
-  type ActionResult,
-} from "@/app/_lib/admin/user-actions";
+import { deleteUser } from "@/app/_lib/admin/user-actions";
+import type { ActionResult } from "@/app/_lib/admin/errors";
 
 export const DELETE_LOCKOUT_MS = 1000;
 

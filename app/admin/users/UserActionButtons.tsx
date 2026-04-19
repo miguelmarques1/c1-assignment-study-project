@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import {
-  reactivateUser,
-  suspendUser,
-  type ActionResult,
+  reactivateUserAction,
+  suspendUserAction,
 } from "@/app/_lib/admin/user-actions";
+import type { ActionResult } from "@/app/_lib/admin/errors";
 import { DeleteUserModal } from "@/app/admin/users/DeleteUserModal";
 
 export type UserRow = {
@@ -19,60 +19,33 @@ export type UserRow = {
 export type UserActionButtonsProps = {
   row: UserRow;
   isSelf: boolean;
-  onError: (message: string) => void;
-  onSuccess?: () => void;
-  suspendAction?: (formData: FormData) => Promise<ActionResult>;
-  reactivateAction?: (formData: FormData) => Promise<ActionResult>;
   deleteAction?: (formData: FormData) => Promise<ActionResult>;
 };
 
 export function UserActionButtons({
   row,
   isSelf,
-  onError,
-  onSuccess,
-  suspendAction,
-  reactivateAction,
   deleteAction,
 }: UserActionButtonsProps) {
-  const [isPending, startTransition] = useTransition();
   const [modalOpen, setModalOpen] = useState(false);
 
-  const suspend = suspendAction ?? suspendUser;
-  const reactivate = reactivateAction ?? reactivateUser;
-
-  function callToggle() {
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.set("userId", row.id);
-      formData.set("checksum", row.checksum);
-      const action = row.isSuspended ? reactivate : suspend;
-      try {
-        const result = await action(formData);
-        if (result.ok) {
-          onSuccess?.();
-        } else {
-          onError(result.error);
-        }
-      } catch (err) {
-        onError(err instanceof Error ? err.message : "Unexpected error");
-      }
-    });
-  }
-
+  const toggleAction = row.isSuspended ? reactivateUserAction : suspendUserAction;
   const selfTitle = "You cannot suspend or delete your own admin account";
 
   return (
     <div className="flex items-center gap-2">
-      <button
-        type="button"
-        onClick={callToggle}
-        disabled={isSelf || isPending}
-        title={isSelf ? selfTitle : undefined}
-        className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted-surface disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        {row.isSuspended ? "Reactivate" : "Suspend"}
-      </button>
+      <form action={toggleAction}>
+        <input type="hidden" name="userId" value={row.id} />
+        <input type="hidden" name="checksum" value={row.checksum} />
+        <button
+          type="submit"
+          disabled={isSelf}
+          title={isSelf ? selfTitle : undefined}
+          className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted-surface disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {row.isSuspended ? "Reactivate" : "Suspend"}
+        </button>
+      </form>
       <button
         type="button"
         onClick={() => setModalOpen(true)}
@@ -91,10 +64,7 @@ export function UserActionButtons({
             checksum: row.checksum,
           }}
           onClose={() => setModalOpen(false)}
-          onDeleted={() => {
-            setModalOpen(false);
-            onSuccess?.();
-          }}
+          onDeleted={() => setModalOpen(false)}
           deleteAction={deleteAction}
         />
       ) : null}

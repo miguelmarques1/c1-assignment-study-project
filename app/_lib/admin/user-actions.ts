@@ -1,37 +1,22 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { prisma } from "@/app/_lib/db";
 import { requireAdmin } from "@/app/_lib/admin/guard";
 import { userActionChecksum } from "@/app/_lib/admin/checksum";
 import { deleteUserArtifacts } from "@/app/_lib/admin/cleanup";
-
-export type ActionError =
-  | "ADMIN_NOT_FOUND"
-  | "ADMIN_SELF_ACTION"
-  | "ADMIN_STATE_CHANGED"
-  | "ADMIN_LAST_ADMIN"
-  | "ADMIN_EMAIL_MISMATCH"
-  | "ADMIN_DELETE_FAILED";
-
-export type ActionResult =
-  | { ok: true }
-  | { ok: false; code: ActionError; error: string };
-
-const ERROR_MESSAGES: Record<ActionError, string> = {
-  ADMIN_NOT_FOUND: "User not found",
-  ADMIN_SELF_ACTION: "You cannot suspend or delete your own admin account",
-  ADMIN_STATE_CHANGED: "User state has changed — refresh the list",
-  ADMIN_LAST_ADMIN: "At least one admin account must remain",
-  ADMIN_EMAIL_MISMATCH: "Typed email does not match the user's email",
-  ADMIN_DELETE_FAILED: "Failed to delete user — please retry",
-};
+import {
+  ERROR_MESSAGES,
+  type ActionError,
+  type ActionResult,
+} from "@/app/_lib/admin/errors";
 
 function fail(code: ActionError): ActionResult {
   return { ok: false, code, error: ERROR_MESSAGES[code] };
 }
 
-export async function suspendUser(formData: FormData): Promise<ActionResult> {
+async function runSuspend(formData: FormData): Promise<ActionResult> {
   const admin = await requireAdmin();
   const userId = formData.get("userId");
   const checksum = formData.get("checksum");
@@ -61,7 +46,7 @@ export async function suspendUser(formData: FormData): Promise<ActionResult> {
   return { ok: true };
 }
 
-export async function reactivateUser(formData: FormData): Promise<ActionResult> {
+async function runReactivate(formData: FormData): Promise<ActionResult> {
   const admin = await requireAdmin();
   const userId = formData.get("userId");
   const checksum = formData.get("checksum");
@@ -92,7 +77,7 @@ export async function reactivateUser(formData: FormData): Promise<ActionResult> 
   return { ok: true };
 }
 
-export async function deleteUser(formData: FormData): Promise<ActionResult> {
+async function runDelete(formData: FormData): Promise<ActionResult> {
   const admin = await requireAdmin();
   const userId = formData.get("userId");
   const checksum = formData.get("checksum");
@@ -128,4 +113,35 @@ export async function deleteUser(formData: FormData): Promise<ActionResult> {
   revalidatePath("/admin/users");
   revalidatePath("/admin");
   return { ok: true };
+}
+
+function errorRedirect(code: ActionError): never {
+  redirect(`/admin/users?error=${encodeURIComponent(code)}`);
+}
+
+export async function suspendUser(formData: FormData): Promise<ActionResult> {
+  return runSuspend(formData);
+}
+
+export async function reactivateUser(formData: FormData): Promise<ActionResult> {
+  return runReactivate(formData);
+}
+
+export async function deleteUser(formData: FormData): Promise<ActionResult> {
+  return runDelete(formData);
+}
+
+export async function suspendUserAction(formData: FormData): Promise<void> {
+  const res = await runSuspend(formData);
+  if (!res.ok) errorRedirect(res.code);
+}
+
+export async function reactivateUserAction(formData: FormData): Promise<void> {
+  const res = await runReactivate(formData);
+  if (!res.ok) errorRedirect(res.code);
+}
+
+export async function deleteUserAction(formData: FormData): Promise<void> {
+  const res = await runDelete(formData);
+  if (!res.ok) errorRedirect(res.code);
 }

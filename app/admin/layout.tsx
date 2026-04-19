@@ -2,8 +2,6 @@ import Link from "next/link";
 import { requireAdmin } from "@/app/_lib/admin/guard";
 import { LogoutButton } from "@/app/_components/LogoutButton";
 
-export const dynamic = "force-dynamic";
-
 export default async function AdminLayout({
   children,
 }: {

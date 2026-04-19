@@ -1,8 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
 import type { AdminUserRow, SortColumn, SortDirection } from "@/app/_lib/admin/users-query";
 import { UserActionButtons } from "@/app/admin/users/UserActionButtons";
 
@@ -55,9 +53,6 @@ export function UsersTable({
   baseQuery,
   currentAdminId,
 }: UsersTableProps) {
-  const router = useRouter();
-  const [banner, setBanner] = useState<string | null>(null);
-
   if (rows.length === 0) {
     return (
       <div className="rounded-md border border-dashed border-border p-8 text-center text-sm text-muted">
@@ -68,14 +63,6 @@ export function UsersTable({
 
   return (
     <div className="flex flex-col gap-3">
-      {banner ? (
-        <div
-          role="alert"
-          className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700"
-        >
-          {banner}
-        </div>
-      ) : null}
       <div className="overflow-x-auto rounded-md border border-border">
         <table className="w-full border-collapse text-sm">
           <thead className="bg-muted-surface text-left">
@@ -138,11 +125,6 @@ export function UsersTable({
                         checksum: row.checksum,
                       }}
                       isSelf={isSelf}
-                      onError={setBanner}
-                      onSuccess={() => {
-                        setBanner(null);
-                        router.refresh();
-                      }}
                     />
                   </td>
                 </tr>
