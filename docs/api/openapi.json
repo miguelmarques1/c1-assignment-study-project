@@ -248,6 +248,212 @@
           "health"
         ]
       }
+    },
+    "/credentials": {
+      "get": {
+        "description": "Returns one entry per provider, always both, so the client never special-cases an absent credential. Key material is never included — only a mask of the last four characters.",
+        "operationId": "CredentialsController_list",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The caller’s credentials, masked.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MaskedCredentialList"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "List credentials",
+        "tags": [
+          "credentials"
+        ]
+      }
+    },
+    "/credentials/{provider}": {
+      "put": {
+        "description": "Validates against the provider before storing. A rejected key is discarded and any previously stored credential is left untouched; an unreachable provider stores the key as unverified for the daily job to retry.",
+        "operationId": "CredentialsController_save",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "gemini",
+                "azure_speech"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveCredentialRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Stored. Status is valid, or unverified when the provider could not be reached.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MaskedCredential"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "CRED001: the provider rejected the key; nothing was stored.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Save or replace a credential",
+        "tags": [
+          "credentials"
+        ]
+      },
+      "delete": {
+        "description": "Removes the stored key. The provider returns to missing, which immediately blocks the stages that depend on it without affecting any other participant.",
+        "operationId": "CredentialsController_remove",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "gemini",
+                "azure_speech"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Deleted."
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Delete a credential",
+        "tags": [
+          "credentials"
+        ]
+      }
+    },
+    "/credentials/{provider}/revalidate": {
+      "post": {
+        "description": "Re-probes the stored credential and persists the refreshed status.",
+        "operationId": "CredentialsController_revalidate",
+        "parameters": [
+          {
+            "name": "provider",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "enum": [
+                "gemini",
+                "azure_speech"
+              ],
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Re-probed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/MaskedCredential"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CRED002: no credential stored for that provider.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "CRED003: the stored credential could not be decrypted; it is now invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Re-validate on demand",
+        "tags": [
+          "credentials"
+        ]
+      }
     }
   },
   "info": {
@@ -432,6 +638,141 @@
           "dependencies"
         ],
         "additionalProperties": false
+      },
+      "SaveCredentialRequest": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 20,
+            "maxLength": 400
+          },
+          "region": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 40,
+                "pattern": "^[a-z][a-z0-9]*$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "key"
+        ]
+      },
+      "MaskedCredential": {
+        "type": "object",
+        "properties": {
+          "provider": {
+            "type": "string",
+            "enum": [
+              "gemini",
+              "azure_speech"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "valid",
+              "invalid",
+              "unverified",
+              "missing"
+            ]
+          },
+          "maskedKey": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "region": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lastValidatedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "provider",
+          "status",
+          "maskedKey",
+          "region",
+          "lastValidatedAt"
+        ],
+        "additionalProperties": false
+      },
+      "MaskedCredentialList": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "provider": {
+              "type": "string",
+              "enum": [
+                "gemini",
+                "azure_speech"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "valid",
+                "invalid",
+                "unverified",
+                "missing"
+              ]
+            },
+            "maskedKey": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "region": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "lastValidatedAt": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "provider",
+            "status",
+            "maskedKey",
+            "region",
+            "lastValidatedAt"
+          ],
+          "additionalProperties": false
+        }
       },
       "ValidationDetail": {
         "type": "object",

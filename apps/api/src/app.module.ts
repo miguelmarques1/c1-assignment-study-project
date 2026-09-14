@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 
 import { AuthModule } from './auth/auth.module';
 import { SessionGuard } from './auth/session.guard';
@@ -10,7 +11,15 @@ import { RedisModule } from './redis/redis.module';
 import { StorageModule } from './storage/storage.module';
 
 @Module({
-  imports: [PrismaModule, RedisModule, StorageModule, AuthModule, HealthModule, CredentialsModule],
+  imports: [
+    ScheduleModule.forRoot(),
+    PrismaModule,
+    RedisModule,
+    StorageModule,
+    AuthModule,
+    HealthModule,
+    CredentialsModule,
+  ],
   providers: [
     // Authentication is global: a route is protected unless it opts out with
     // @Public(), so a new controller cannot be exposed by omission.

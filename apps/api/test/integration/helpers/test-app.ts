@@ -17,6 +17,9 @@ const execFileAsync = promisify(execFile);
 
 export const TEST_SESSION_SECRET = 'test-session-secret-that-is-long-enough';
 
+/** Deterministic 32-byte master key, so a suite can assert against known ciphertext behaviour. */
+export const TEST_MASTER_KEY = Buffer.alloc(32, 7).toString('base64');
+
 export interface TestContext {
   app: INestApplication;
   prisma: PrismaClient;
@@ -33,9 +36,23 @@ export interface TestContext {
  * but the behaviour the PRD pins down - sliding TTLs, lockout windows, unique
  * constraints - only exists in the real stores.
  */
+export interface TestContextOptions {
+  extraEnv?: Record<string, string>;
+  /**
+   * Replaces a provider with a stub. Used to keep the suite from making real
+   * network calls — stubs live only here, never in production modules.
+   */
+  overrides?: Array<{ token: unknown; useValue: unknown }>;
+}
+
 export async function createTestContext(
-  extraEnv: Record<string, string> = {},
+  optionsOrEnv: TestContextOptions | Record<string, string> = {},
 ): Promise<TestContext> {
+  const options: TestContextOptions =
+    'extraEnv' in optionsOrEnv || 'overrides' in optionsOrEnv
+      ? (optionsOrEnv as TestContextOptions)
+      : { extraEnv: optionsOrEnv as Record<string, string> };
+  const extraEnv = options.extraEnv ?? {};
   const postgres = await new PostgreSqlContainer('postgres:16-alpine').start();
   const redis = await new RedisContainer('redis:7-alpine').start();
 
@@ -49,6 +66,7 @@ export async function createTestContext(
     DATABASE_URL: databaseUrl,
     REDIS_URL: redisUrl,
     SESSION_SECRET: TEST_SESSION_SECRET,
+    BYOK_MASTER_KEY: TEST_MASTER_KEY,
     S3_ENDPOINT: 'http://localhost:9000',
     S3_ACCESS_KEY: 'minioadmin',
     S3_SECRET_KEY: 'minioadmin',
@@ -60,7 +78,11 @@ export async function createTestContext(
   });
   resetEnvCache();
 
-  const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+  const builder = Test.createTestingModule({ imports: [AppModule] });
+  for (const override of options.overrides ?? []) {
+    builder.overrideProvider(override.token).useValue(override.useValue);
+  }
+  const moduleRef = await builder.compile();
 
   const app = moduleRef.createNestApplication();
   app.use(cookieParser(TEST_SESSION_SECRET));

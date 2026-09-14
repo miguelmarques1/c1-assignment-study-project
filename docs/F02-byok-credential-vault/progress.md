@@ -1,6 +1,6 @@
 # Implementation Progress: BYOK Credential Vault
 
-**Status:** in progress
+**Status:** in progress — paused after Stage 3 at the user's request; Stage 4 not started
 **Branch:** main
 **Started:** 2026-09-14
 **Last updated:** 2026-09-14
@@ -49,18 +49,33 @@ _Stage 1 commit was `289b839`._
 
 ---
 
-## Stage 3: Vault Lifecycle and the Consumption Contract — ⬜ pending
+## Stage 3: Vault Lifecycle and the Consumption Contract — ✅ done
 
-- [ ] **8. Credentials Service**
-- [ ] **9. Scoped Executor and Audit**
-- [ ] **10. Credential Endpoints**
-- [ ] **11. OpenAPI Registration**
-- [ ] **12. Daily Re-validation Job**
+- [x] **8. Credentials Service**
+- [x] **9. Scoped Executor and Audit**
+- [x] **10. Credential Endpoints**
+- [x] **11. OpenAPI Registration**
+- [x] **12. Daily Re-validation Job**
 
-**Observations:** _(none yet)_
+**Observations:**
+- Prisma types `Bytes` columns as `Uint8Array`, and Node 24's `Buffer<ArrayBufferLike>` generic does not line up with it. The conversion at the write site is explicit and deliberate — it is not cosmetic.
+- `azure_requires_a_region` passes because the **database** check constraint refuses the row, not because the request schema catches it. The API-level schema allows `region` to be absent since Gemini has none, so the constraint is the actual guarantee.
+- The executor invalidates a credential only on an authentication failure, never on a timeout or a rate limit. A throttled key is a working key; marking it invalid would block the user out of their own quota.
+- Audit writes are wrapped so they can never fail the work they audit. Losing an audit row is bad; failing a lesson analysis because an audit insert timed out would be worse.
+- **Test-helper bug, same class as F01's vacuous assertion:** `cryptoBoundTo` used `require()` inside a `try/catch` in an SWC-transformed file. The require failed, the catch swallowed it, `canDecrypt` always returned false — so three tests failed confusingly while `refuses_to_start_when_every_row_fails` **passed for the wrong reason**. Fixed with a static import, and a `the_test_helper_can_actually_decrypt` case now guards the helper itself.
+- **Environment gotcha worth carrying forward:** `env_file` is read when a container is *created*, not on restart. Adding `BYOK_MASTER_KEY` to `.env` did nothing until `docker compose up -d --force-recreate api`. The fail-fast guard did its job and named the variable, which is how this was diagnosed in one read. Every future feature that adds an env var will hit this.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** lint ✅ · typecheck ✅ · unit 49/49 ✅ · integration: credentials 23/23 ✅, boot probe 6/6 ✅ · OpenAPI regenerated, 9 operations ✅ · API boots with all four credential routes mapped ✅
+**Commit:** `F02 stage 3 - vault lifecycle and the consumption contract`
+
+_Stage 2 commit was `0724434`._
+
+---
+
+> **⏸️ Paused here at the user's request** (context budget). Stage 4 — the web
+> settings screen and the live provider verification — has not been started.
+> The API side of F02 is complete and verified; nothing is half-written.
+> Resuming re-enters at Stage 4 step 13.
 
 ---
 

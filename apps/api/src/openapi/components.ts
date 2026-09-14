@@ -4,7 +4,10 @@ import {
   currentUserSchema,
   healthReportSchema,
   loginSchema,
+  maskedCredentialListSchema,
+  maskedCredentialSchema,
   publicUserSchema,
+  saveCredentialSchema,
   validationDetailSchema,
 } from '@english-quest/shared';
 import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
@@ -42,6 +45,9 @@ export const OPENAPI_COMPONENTS: Record<string, SchemaObject> = {
   PublicUser: toOpenApi(publicUserSchema, 'output'),
   CurrentUser: toOpenApi(currentUserSchema, 'output'),
   HealthReport: toOpenApi(healthReportSchema, 'output'),
+  SaveCredentialRequest: toOpenApi(saveCredentialSchema, 'input'),
+  MaskedCredential: toOpenApi(maskedCredentialSchema, 'output'),
+  MaskedCredentialList: toOpenApi(maskedCredentialListSchema, 'output'),
   ValidationDetail: toOpenApi(validationDetailSchema, 'output'),
   ErrorEnvelope: toOpenApi(apiErrorSchema, 'output'),
 };
