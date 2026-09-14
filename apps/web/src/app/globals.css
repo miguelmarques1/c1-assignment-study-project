@@ -148,3 +148,116 @@ button.primary:disabled {
   color: var(--text-muted);
   font-size: 0.875rem;
 }
+
+/* Settings — credential cards */
+.credential-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  margin-top: 1.5rem;
+}
+
+.credential-card {
+  max-width: none;
+}
+
+.credential-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.credential-head h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+
+.badge-valid {
+  color: #1a7f37;
+  border-color: #1a7f37;
+}
+.badge-invalid {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+.badge-unverified {
+  color: #9a6700;
+  border-color: #9a6700;
+}
+
+.credential-meta {
+  margin: 0 0 1rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.credential-meta div {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.875rem;
+}
+
+.credential-meta dt {
+  color: var(--text-muted);
+}
+
+.credential-meta dd {
+  margin: 0;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.row {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.row button {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+button.secondary,
+button.danger {
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+button.danger {
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+button.secondary:disabled,
+button.danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.provider-message {
+  display: block;
+  margin-top: 0.4rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import {
   firstLine,
+  humanMessage,
   PROBE_TIMEOUT_MS,
   scrubSecret,
   type ValidationOutcome,
@@ -38,7 +39,8 @@ export class AzureSpeechValidator {
       // get an answer about the key, which is not the same as a bad key.
       if (response.status === 401 || response.status === 403) {
         const body = await response.text().catch(() => '');
-        const message = firstLine(body) || `Azure rejected this key (HTTP ${response.status}).`;
+        const message =
+          firstLine(humanMessage(body)) || `Azure rejected this key (HTTP ${response.status}).`;
         return { status: 'invalid', providerMessage: scrubSecret(message, apiKey) };
       }
 

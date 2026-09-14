@@ -42,12 +42,22 @@ describe('AzureSpeechValidator', () => {
   });
 
   it('classifies_a_rejection_as_invalid', async () => {
-    stubFetch(async () => response(401, 'Access denied due to invalid subscription key.'));
+    // The exact envelope Azure returns, captured from a live 401.
+    const body = JSON.stringify({
+      error: {
+        code: '401',
+        message:
+          'Access denied due to invalid subscription key or wrong API endpoint. Make sure to provide a valid key for an active subscription and use a correct regional API endpoint for your resource.',
+      },
+    });
+    stubFetch(async () => response(401, body));
 
     const outcome = await validator.validate(KEY, REGION);
 
     expect(outcome.status).toBe('invalid');
-    expect(outcome.providerMessage).toContain('invalid subscription key');
+    expect(outcome.providerMessage).toContain('Access denied due to invalid subscription key');
+    // The human sentence, not the JSON envelope it arrived in.
+    expect(outcome.providerMessage).not.toContain('{');
   });
 
   it('classifies_a_forbidden_response_as_invalid', async () => {

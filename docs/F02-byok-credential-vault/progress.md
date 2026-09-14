@@ -1,6 +1,6 @@
 # Implementation Progress: BYOK Credential Vault
 
-**Status:** in progress — paused after Stage 3 at the user's request; Stage 4 not started
+**Status:** success
 **Branch:** main
 **Started:** 2026-09-14
 **Last updated:** 2026-09-14
@@ -72,20 +72,52 @@ _Stage 2 commit was `0724434`._
 
 ---
 
-> **⏸️ Paused here at the user's request** (context budget). Stage 4 — the web
-> settings screen and the live provider verification — has not been started.
-> The API side of F02 is complete and verified; nothing is half-written.
-> Resuming re-enters at Stage 4 step 13.
+> _Run was paused here for context budget and resumed in a later session. Stage 4
+> below was completed in that second run._
 
 ---
 
-## Stage 4: Web Settings Screen — ⬜ pending
+## Stage 4: Web Settings Screen — ✅ done
 
-- [ ] **13. Settings Route and Provider Cards**
-- [ ] **14. Save and Delete Flows**
-- [ ] **15. Live Provider Verification**
+- [x] **13. Settings Route and Provider Cards**
+- [x] **14. Save and Delete Flows**
+- [x] **15. Live Provider Verification**
 
-**Observations:** _(none yet)_
+**Observations:**
+- **The Azure resource is an AI Services resource with a custom subdomain**, not a regional endpoint, so the portal never shows a region and the user could not find one. Recovered it from the `issueToken` JWT: its claims carry `region: eastus2`. Recorded as `TEST_AZURE_SPEECH_REGION` in `.env`. If another resource is ever added, the same trick works — POST `issueToken` to the custom endpoint and read the token's region claim.
+- **Live verification found a real UX defect the mocked tests could not.** Both providers wrap their human sentence inside `{ error: { message } }` and hand over the *whole JSON body* as the error text. Shown raw, the settings card would have been a wall of JSON where the PRD asks for the provider's own wording. `humanMessage()` in `validation-outcome.ts` extracts it, and both validators' tests now use the exact envelopes captured from live 400/401 responses.
+- **I corrupted the user's `.env` and repaired it.** The file did not end with a newline, so appending `TEST_AZURE_SPEECH_REGION=...` concatenated it onto the end of the Azure key's value. Diagnosed by dumping the raw tail with escapes; repaired by stripping the appended text and re-adding the line properly. **Never append to a file without checking it ends with a newline.**
+- The settings page was client-only at first, so the server HTML carried only "Loading…". Switched to server-rendering the list via `credentials-server.ts`, mirroring how the `(app)` layout already resolves the session. The panel keeps its client fetch as a fallback when the server could not provide the list, so the change is strictly additive.
+- **`docker compose up -d --force-recreate web` also restarts `api`** (dependency), which kills the API dev server started with `exec -d`, since the container's CMD is `sleep infinity`. Use `docker compose restart <service>` instead — it clears ghost processes without touching dependencies.
+- A ghost Next process held port 3000 through repeated `pkill -9 -f node` and `-f next`; the container has no `ps`, so the process count check was meaningless. Only a container restart cleared it. This is the third time this class of problem cost time.
+- **Gap caught by the AC re-check, not by the plan:** nothing exercised `DailyRevalidationJob`, yet an acceptance criterion says an unverified key "is retried by the daily job". Four tests added covering promotion, demotion on upstream revocation, re-probing every status, and one failing credential not stopping the sweep.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** lint ✅ · typecheck ✅ · unit 50/50 ✅ · integration 58/58 ✅ · web 13/13 ✅ · live providers: Gemini valid/invalid and Azure valid/invalid all correct ✅ · `/settings` server-renders both cards with real data, no key in the HTML ✅
+**Commit:** `F02 stage 4 - web settings screen and live verification`
+
+_Stage 3 commit was `db7bb36`._
+
+---
+
+## Final verification
+
+**Status: success.** Every Step 6 check is green.
+
+**Full suite:** lint ✅ · typecheck ✅ · **121 tests** — 50 API unit, 58 API integration, 13 web component.
+
+**Acceptance criteria:** all 7 verified. Beyond the tests, the accepted path was exercised against **real provider credentials**: both keys save as `valid` through the running API, a deliberately wrong Gemini key is rejected with `CRED001` and the clean provider sentence, the rejection leaves the previously stored good key untouched, and no response or rendered page contains key material.
+
+**Component Overview:** all 23 files present.
+
+**Deviations from the spec:**
+- `credentials.module.ts` created in Stage 1 rather than Stage 3 — the boot probe resolves the crypto service before feature modules exist.
+- Shared credential contracts and `CRED*` codes created in Stage 2 rather than Stage 3 — the validators need the provider type.
+- Two files beyond the Component Overview: `credentials-panel.tsx` (client state owner, so the page can stay a server component) and `credentials-server.ts` (server-side list fetch).
+- `humanMessage()` was not in the spec; live verification proved it necessary.
+
+**Follow-up work:** none from F02. The storage-adapter test debt inherited from F01 is still open and still scheduled against F07.
+
+**Environment notes worth carrying forward:**
+- `env_file` is read when a container is *created*, not on restart — a new variable needs `docker compose up -d --force-recreate <service>`.
+- `--force-recreate` on a service restarts its dependencies too, killing dev servers started with `exec -d`. Prefer `docker compose restart`.
+- The container's `node_modules` volume is independent from the host's; new dependencies need installing in both.

@@ -82,6 +82,25 @@ describe('GeminiValidator', () => {
     expect(outcome.providerMessage).toContain('***');
   });
 
+  it('extracts_the_human_sentence_from_googles_error_envelope', async () => {
+    // What the SDK actually throws: the whole JSON body as the message.
+    const body = JSON.stringify({
+      error: {
+        code: 400,
+        message: 'API key not valid. Please pass a valid API key.',
+        status: 'INVALID_ARGUMENT',
+        details: [{ reason: 'API_KEY_INVALID' }],
+      },
+    });
+    listMock.mockRejectedValueOnce(Object.assign(new Error(body), { status: 400 }));
+
+    const outcome = await validator.validate(KEY);
+
+    expect(outcome.status).toBe('invalid');
+    expect(outcome.providerMessage).toBe('API key not valid. Please pass a valid API key.');
+    expect(outcome.providerMessage).not.toContain('{');
+  });
+
   it('reports_only_the_first_line_of_a_multiline_error', async () => {
     listMock.mockRejectedValueOnce(
       Object.assign(new Error('API key not valid.\n  at someInternal (file.js:1:1)'), {

@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 
 import {
   firstLine,
+  humanMessage,
   scrubSecret,
   withTimeout,
   type ValidationOutcome,
@@ -36,7 +37,7 @@ export class GeminiValidator {
       return { status: 'valid', providerMessage: null };
     } catch (error) {
       const raw = error instanceof Error ? error.message : String(error);
-      const message = scrubSecret(firstLine(raw), apiKey);
+      const message = scrubSecret(firstLine(humanMessage(raw)), apiKey);
 
       return looksLikeRejection(error)
         ? { status: 'invalid', providerMessage: message }

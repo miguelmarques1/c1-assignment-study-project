@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 
 import { PasswordService } from '../../src/auth/password.service';
 import { CredentialExecutorService } from '../../src/credentials/credential-executor.service';
+import { DailyRevalidationJob } from '../../src/credentials/daily-revalidation.job';
 import { ProviderValidationService } from '../../src/credentials/validation/provider-validation.service';
 import type { ValidationOutcome } from '../../src/credentials/validation/validation-outcome';
 import { RedisService } from '../../src/redis/redis.service';
@@ -430,5 +431,76 @@ describe('credential executor', () => {
 
     const rows = await ctx.prisma.credentialUsage.findMany({ where: { userId } });
     expect(JSON.stringify(rows)).not.toContain(GEMINI_KEY);
+  });
+});
+
+describe('daily re-validation job', () => {
+  it('rechecks_an_unverified_credential_and_promotes_it', async () => {
+    // Stored while the provider was unreachable — the case the PRD says the
+    // daily job exists to pick up.
+    validateMock.mockResolvedValue({ status: 'unverified', providerMessage: 'unreachable' });
+    await request(ctx.app.getHttpServer())
+      .put('/credentials/gemini')
+      .set('Cookie', cookie)
+      .send({ key: GEMINI_KEY });
+
+    validateMock.mockResolvedValue(valid());
+    const result = await ctx.app.get(DailyRevalidationJob).run();
+
+    expect(result).toEqual({ checked: 1, changed: 1 });
+    const row = await ctx.prisma.userCredential.findFirstOrThrow({ where: { userId } });
+    expect(row.status).toBe('valid');
+  });
+
+  it('rechecks_every_stored_credential_regardless_of_status', async () => {
+    validateMock.mockResolvedValue(valid());
+    await request(ctx.app.getHttpServer())
+      .put('/credentials/gemini')
+      .set('Cookie', cookie)
+      .send({ key: GEMINI_KEY });
+    await request(ctx.app.getHttpServer())
+      .put('/credentials/azure_speech')
+      .set('Cookie', cookie)
+      .send({ key: AZURE_KEY, region: REGION });
+
+    validateMock.mockClear();
+    await ctx.app.get(DailyRevalidationJob).run();
+
+    // A valid key can be revoked upstream, so it is re-probed too.
+    expect(validateMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('demotes_a_credential_revoked_upstream', async () => {
+    validateMock.mockResolvedValue(valid());
+    await request(ctx.app.getHttpServer())
+      .put('/credentials/gemini')
+      .set('Cookie', cookie)
+      .send({ key: GEMINI_KEY });
+
+    validateMock.mockResolvedValue({ status: 'invalid', providerMessage: 'revoked' });
+    const result = await ctx.app.get(DailyRevalidationJob).run();
+
+    expect(result.changed).toBe(1);
+    const row = await ctx.prisma.userCredential.findFirstOrThrow({ where: { userId } });
+    expect(row.status).toBe('invalid');
+  });
+
+  it('one_failing_credential_does_not_stop_the_sweep', async () => {
+    validateMock.mockResolvedValue(valid());
+    await request(ctx.app.getHttpServer())
+      .put('/credentials/gemini')
+      .set('Cookie', cookie)
+      .send({ key: GEMINI_KEY });
+    await request(ctx.app.getHttpServer())
+      .put('/credentials/azure_speech')
+      .set('Cookie', cookie)
+      .send({ key: AZURE_KEY, region: REGION });
+
+    validateMock.mockReset();
+    validateMock.mockRejectedValueOnce(new Error('probe exploded')).mockResolvedValue(valid());
+
+    const result = await ctx.app.get(DailyRevalidationJob).run();
+
+    expect(result.checked).toBe(2);
   });
 });

@@ -20,7 +20,9 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
     <div className="app-shell">
       <header className="app-header">
         <strong>English Quest</strong>
-        <span className="who">{user.displayName}</span>
+        <span className="who">
+          <a href="/settings">Settings</a> · {user.displayName}
+        </span>
       </header>
       {children}
     </div>
