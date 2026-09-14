@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Accounts come from the seed command or from a direct insert. There is no
+/// registration flow, and nothing in the data model caps how many users exist.
+model User {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Always stored lowercased; a check constraint enforces it even for direct inserts.
+  email        String   @unique(map: "users_email_key") @db.VarChar(255)
+  displayName  String   @map("display_name") @db.VarChar(100)
+  /// bcrypt output at cost factor 12 — always 60 characters.
+  passwordHash String   @map("password_hash") @db.Char(60)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("users")
+}
