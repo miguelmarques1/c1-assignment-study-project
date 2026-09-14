@@ -27,3 +27,6 @@ assignment-content/**/*.mp3
 assignment-content/**/*.m4a
 assignment-content/**/*.wav
 assignment-content/**/*.ogg
+
+*.tsbuildinfo
+next-env.d.ts
