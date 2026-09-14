@@ -475,6 +475,8 @@ Session lifecycle and login throttling are exercised through the auth endpoints 
 
 **Still outstanding:** `apps/api/test/integration/storage.spec.ts`. The storage adapter is exercised indirectly — the API provisions the bucket and its prefixes at boot, and `/health` probes MinIO — but the round-trip, missing-object and re-provisioning cases named below have no automated coverage yet.
 
+This is deliberate debt, not an oversight, and it is **scheduled against F07 Lesson Recording** — the first feature that actually writes objects, and therefore the first one that would be hurt by a silent regression here. The harness in `test/integration/helpers/test-app.ts` already has the pattern; what is missing is a MinIO container started with `GenericContainer`. F07's Testing Strategy should absorb this file rather than treat it as new work.
+
 The session token must be recovered from the **signed** cookie (`s:<token>.<signature>`, URL-encoded) before it can be used as a Redis key. Using the raw cookie value addresses a key that never existed, which silently turns "the session is gone" assertions into passes for the wrong reason. `sessionTokenFrom` in the harness exists for this, and the revocation tests assert the key is present before asserting it is absent.
 
 **`apps/api/test/unit/password.service.spec.ts`**
