@@ -9,6 +9,7 @@ import { runMigrations } from './boot/run-migrations';
 import { waitForDependencies } from './boot/wait-for-dependencies';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { loadEnv } from './config/env';
+import { HealthService } from './health/health.service';
 import { StorageService } from './storage/storage.service';
 
 /**
@@ -42,8 +43,16 @@ async function bootstrap(): Promise<void> {
 
   await app.get(StorageService).ensureBucket();
 
+  // Readiness line: one probe per dependency with its latency, so a slow or
+  // missing service is visible at startup rather than at first use.
+  const report = await app.get(HealthService).check();
+  const summary = report.dependencies
+    .map((entry) => `${entry.name}=${entry.status === 'up' ? `${entry.latencyMs}ms` : 'DOWN'}`)
+    .join(' ');
+  logger.log(`Dependencies: ${summary}`);
+
   await app.listen(config.API_PORT);
-  logger.log(`API listening on http://localhost:${config.API_PORT}`);
+  logger.log(`API listening on http://localhost:${config.API_PORT} (status: ${report.status})`);
 }
 
 bootstrap().catch((error: unknown) => {
