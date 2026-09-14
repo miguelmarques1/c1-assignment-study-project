@@ -25,9 +25,10 @@ The skill only needs to locate two files and one reference source:
 ## OUTPUT
 
 - **Commits**: one per phase of `plan.md`, on the current branch (no branch creation, no branch switching).
+- **`progress.md`**: a durable implementation log written next to `spec.md` and `plan.md`, mirroring the plan's stages and steps with their real status, per-stage observations, validation results and commit references. Created before the first phase and updated as each one closes.
 - **Chat report** at the end: the feature's acceptance-criteria checklist marked ✓ / ✗ / — against actual test results, plus sections for Deviations, Soft-fails, Pre-existing failures, Overrides applied, Overrides ignored, and Phase status.
 
-No files are written besides code changes and commit objects. The chat report is ephemeral.
+No files are written besides code changes, `progress.md`, and commit objects. The chat report is ephemeral — `progress.md` is what survives it.
 
 ---
 
@@ -90,11 +91,40 @@ If the PRD has no dependency content, skip this step.
 
 ### Step 5: Execute Phases
 
-For each phase of `plan.md`, in order:
+**5.0 — Initialize the progress log** (once, before the first phase)
+
+Write `docs/<feature-id>-<kebab-name>/progress.md` mirroring `plan.md`: every stage and every numbered step, all starting unchecked. This is the run's durable record — the chat report disappears, this does not.
+
+If the file already exists (a previous run was interrupted, or phases were committed earlier), do NOT overwrite it. Read it, keep every completed step and every observation, and continue from where it stopped. Overwriting a progress log destroys exactly the notes that make a resumed run cheap.
+
+Template:
+
+```markdown
+# Implementation Progress: <Feature Name>
+
+**Status:** in progress
+**Branch:** <current branch>
+**Started:** <YYYY-MM-DD>
+**Last updated:** <YYYY-MM-DD>
+
+## Stage 1: <Stage Name> — ⬜ pending
+
+- [ ] **1. <Step name>**
+- [ ] **2. <Step name>**
+
+**Observations:** _(none yet)_
+
+**Validation:** _(not run)_
+**Commit:** _(none)_
+```
+
+Stage status markers: `⬜ pending`, `🔄 in progress`, `✅ done`, `⛔ blocked`, `⏭️ skipped (already committed)`.
 
 **5.1 — Skip if already done**
 
 Inspect the last ~20 commits on the current branch. If any commit message indicates this exact phase already ran (same feature ID + phase name or ordinal), skip the phase with status `— already committed` and move on. Detection is best-effort: match on feature ID plus normalized phase name or phase index.
+
+An existing `progress.md` is a second signal for the same question: a stage already marked `✅ done` with a commit reference was completed by an earlier run. Commit history wins when the two disagree — the log records intent, the commit records fact.
 
 **5.2 — Implement**
 
@@ -128,17 +158,31 @@ Discover validation commands at runtime: inspect `package.json` `scripts`, or fo
 
 Warnings without non-zero exit are never failures.
 
-**5.4 — Commit**
+**5.4 — Record progress**
 
-If validation passed (all hard fails resolved; only soft fails and pre-existing failures remain), stage only the files this phase touched and commit with a message summarizing the phase. Match the project's commit style by inspecting the last ~10 commit messages. Fallback: `feat(F<ID>): <phase name>`.
+Update the stage's block in `progress.md` before committing:
+
+- Set the stage marker to `✅ done`, or to `⛔ blocked` when the run is aborting here.
+- Tick every step that was actually completed. A step that was partially done stays unticked with a note saying what is missing — a half-ticked box is worse than an empty one, because it reads as finished.
+- Fill **Observations** with what a person resuming this work would need and could not get from the diff: deviations from the spec and why, decisions taken at a fork, gotchas discovered, anything deliberately deferred. Leave out what the code already says.
+- Fill **Validation** with the real command outcomes (`lint ✅ · typecheck ✅ · tests 18/18 ✅`), including soft-fails and their reason.
+- Refresh **Last updated**, and set **Status** to `aborted at stage <N>` if the run is stopping.
+
+Observations accumulate — never delete an earlier stage's notes to make room.
+
+**5.5 — Commit**
+
+If validation passed (all hard fails resolved; only soft fails and pre-existing failures remain), stage only the files this phase touched **plus `progress.md`** and commit with a message summarizing the phase. Match the project's commit style by inspecting the last ~10 commit messages. Fallback: `feat(F<ID>): <phase name>`.
 
 Stage specific files only (no `git add -A` / `git add .`). Commit on the current branch. Do not skip hooks.
 
-If an override disabled commits, skip this sub-step and keep working-tree changes.
+After committing, write the short commit SHA and subject into the stage's **Commit** field. This costs an amended commit or a trailing update at the end of the run — prefer recording it in the next stage's commit rather than amending, so history stays linear.
 
-**5.5 — Proceed**
+If an override disabled commits, skip this sub-step but still write `progress.md`; the log is the only record left when nothing is committed.
 
-Move to the next phase. A run-level abort (hard fail past retry limit, dependency missing mid-phase) stops execution and goes to Step 6 with whatever phases already committed.
+**5.6 — Proceed**
+
+Move to the next phase. A run-level abort (hard fail past retry limit, dependency missing mid-phase) stops execution and goes to Step 6 with whatever phases already committed — with `progress.md` already reflecting the abort from 5.4.
 
 ### Step 6: Final Verification
 
@@ -181,6 +225,16 @@ The run's final status is determined by this step, not by whether phases committ
 - `aborted at phase <N>` — run stopped during Step 5 before reaching here.
 
 Never report `success` when any of the checks above has an unresolved failure, even if every phase individually committed clean.
+
+**6.6 — Close the progress log**
+
+Write the outcome of Step 6 into `progress.md` and commit it:
+
+- Set **Status** to the value decided in 6.5 — the same one the chat report will carry. The two must never disagree.
+- Append a `## Final verification` section with the full-suite result, anything found under `Missing from spec`, `Regressions`, `Soft-fails` and `Pre-existing failures`, and any smoke check that could not be exercised and why.
+- List whatever remains open as explicit follow-up work, so a gap discovered here does not evaporate with the chat session.
+
+A feature reported as anything other than `success` must leave a progress log that says what is missing. That is the whole point of the file.
 
 ### Step 7: Final Report
 
@@ -241,6 +295,9 @@ If aborted, the report still lists whatever committed phases achieved and clearl
 
 **Always:**
 - Require `spec.md` + `plan.md` in the target folder; abort without them.
+- Write `progress.md` before the first phase and update it as each phase closes, committing it alongside that phase's code.
+- Preserve an existing `progress.md` on a resumed run — read it, keep every completed step and every observation, continue from there.
+- Keep `progress.md` Status identical to the status reported in chat.
 - Locate AC and dependency content in the PRD semantically, never by fixed section number.
 - Commit 1 per phase (default), staging only the files that phase touched.
 - Match the project's recent commit-message style.
@@ -253,6 +310,8 @@ If aborted, the report still lists whatever committed phases achieved and clearl
 
 **Never:**
 - Claim the run is `success` when Step 6 found regressions, missing-from-spec items, or unresolved failures — even if every phase individually committed clean.
+- Overwrite an existing `progress.md` from scratch, or delete observations recorded by an earlier stage or an earlier run.
+- Tick a step in `progress.md` that was not actually completed, or mark a stage `✅ done` while its validation is unresolved.
 - Skip the AC report or its traceability (immutable core).
 - Skip Step 6 (Final Verification).
 - Create or switch branches.
@@ -299,7 +358,11 @@ Unrecognized or contradictory overrides: default wins; logged under `Overrides i
 
 **Phase name contains special characters**: fall back to `feat(F<ID>): implement phase <N>`.
 
-**Re-invocation after a partial run**: Step 5.1 detects already-committed phases by commit-message match and skips them. Uncommitted working-tree changes from a prior interrupted run stay as-is; the skill does not clean them up.
+**Re-invocation after a partial run**: Step 5.1 detects already-committed phases by commit-message match and skips them, and an existing `progress.md` corroborates it while carrying forward the earlier run's observations. Uncommitted working-tree changes from a prior interrupted run stay as-is; the skill does not clean them up.
+
+**`progress.md` exists but `plan.md` has changed since**: the plan was regenerated between runs, so stages or steps may have been added, removed or renumbered. Rebuild the log's structure from the current `plan.md`, but carry every observation and every completed step that still maps to a surviving step. Note the reconciliation under the affected stage's observations — a step that vanished from the plan while its work was already committed is exactly the kind of thing that silently becomes dead code.
+
+**`progress.md` disagrees with commit history**: commit history wins. The log records what the skill believed; the commits record what actually landed. Correct the log and note the correction.
 
 **Hard fail past the retry limit on a step that isn't part of any AC**: abort anyway — the skill cannot judge which failures are "acceptable". User can override with `skip tests` or similar.
 
