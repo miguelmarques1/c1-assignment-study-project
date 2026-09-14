@@ -294,6 +294,7 @@ An authenticated session that expires mid-use causes the next API call to return
 **Provides:**
 - Decrypted Gemini API key with validity status, for server-side use only (used by F06, F11, F14, F15, F17)
 - Decrypted Azure Speech key and region with validity status, for server-side use only (used by F08, F10, F18)
+- Masked credential list per provider — status, last four characters, region and last-validated timestamp, never key material (used by F03)
 
 **Capabilities:**
 - Each user stores at most one Gemini API key and one Azure Speech key with its region (e.g. `brazilsouth`).
@@ -309,7 +310,7 @@ Settings shows two cards, one per provider, each with the provider name, current
 
 Adding a key opens a form with a masked input and, for Azure, a region select. Submitting disables the form and shows `Validating…` for up to 5 seconds. On success the card flips to `Valid` with a confirmation toast. On failure the form stays open with the provider's own error message surfaced verbatim beneath a plain-language line, for example: `Gemini rejected this key. API key not valid. Please pass a valid API key.` The key is not stored when validation returns an explicit rejection.
 
-The same screen exists on both clients. On mobile the input uses a secure text field with paste enabled and autocorrect disabled. Once saved, the original value cannot be revealed anywhere in either client — replacing it is the only path.
+The screen exists on both clients, but they do not arrive together: the web screen ships with this feature, and the mobile one ships with F03, which is what creates the Flutter shell it lives in. On mobile the input uses a secure text field with paste enabled and autocorrect disabled. Once saved, the original value cannot be revealed anywhere in either client — replacing it is the only path.
 
 **Error Handling:**
 - Provider unreachable during validation: the key is stored with status `unverified` and the card reads `Could not reach Gemini to verify this key. It was saved and will be retried.` Daily re-validation picks it up.
@@ -320,6 +321,9 @@ The same screen exists on both clients. On mobile the input uses a secure text f
 
 ### F03. Mobile Application Shell
 
+**Consumes:**
+- F02: masked credential list per provider — status, last four characters, region and last-validated timestamp
+
 **Capabilities:**
 - Flutter application targeting Android 8.0 (API 26) and above, and iOS 14 and above, in portrait orientation.
 - Bottom navigation with five destinations: Today, Plan, Profile, Lessons and Settings. The live classroom does not appear — it is web-only.
@@ -329,6 +333,7 @@ The same screen exists on both clients. On mobile the input uses a secure text f
 - Microphone permission request and an audio recorder producing 16 kHz mono 16-bit WAV, available to the speaking activities.
 - No offline mode: when the device has no connectivity the app renders an explicit `No connection` state with a retry action, rather than an empty list or stale content presented as current.
 - All interface text in English, matching the web client's terminology exactly.
+- Carries the mobile credentials screen, mirroring the web settings screen from F02 — two provider cards with status, masked key and the add, replace, delete and re-validate actions. It is the shell's first real screen rather than empty scaffolding, which is what makes navigation, the API client and error states verifiable on a genuine use case.
 
 **Experience:**
 First launch shows the login screen with email and password fields and the API base URL accessible behind a small settings affordance, so a developer can point at the local stack before authenticating. After a successful login the app lands on Today.
@@ -1001,7 +1006,7 @@ With fewer than 3 measurements the chart area shows `Not enough data yet — com
 |---|---------|----------|--------------|
 | F01 | Local Infrastructure and Authentication | 1 | None |
 | F02 | BYOK Credential Vault | 1 | F01 |
-| F03 | Mobile Application Shell | 1 | F01 |
+| F03 | Mobile Application Shell | 1 | F01, F02 |
 | F04 | Prompt Library | 1 | F01 |
 | F05 | Live Classroom | 1 | F01 |
 | F06 | Lesson Scenario and Role Cards | 1 | F02, F04, F05 |
@@ -1032,8 +1037,8 @@ Features within the same wave can be built in parallel. A wave starts only after
 **Note:** Foundation features (see "Foundation Features" above) cannot run in parallel in a greenfield project even if they appear together in a wave — they share scaffolding files and must be implemented sequentially until the base is in place.
 
 - **Wave 1**: F01
-- **Wave 2**: F02, F03, F04, F05, F13
-- **Wave 3**: F06, F07
+- **Wave 2**: F02, F04, F05, F13
+- **Wave 3**: F03, F06, F07
 - **Wave 4**: F08
 - **Wave 5**: F09
 - **Wave 6**: F10
@@ -1052,6 +1057,7 @@ Features within the same wave can be built in parallel. A wave starts only after
 graph TD
   F01[F01 Infrastructure] --> F02[F02 BYOK]
   F01 --> F03[F03 Mobile Shell]
+  F02 --> F03
   F01 --> F04[F04 Prompts]
   F01 --> F05[F05 Classroom]
   F01 --> F13[F13 Content Bank]
@@ -1373,6 +1379,7 @@ graph TD
 - [ ] The scenario-fit block in the analysis (F11) refers only to target expressions that appear on that participant's own role card (F06)
 - [ ] Prompt execution through the library (F04) stamps its prompt id and version onto the scenario artifacts (F06), the analysis (F11), generated items (F14), plan composition (F15) and writing corrections (F17)
 - [ ] Gemini and Azure credentials from the vault (F02) are the only credentials used by F06, F08, F10, F11, F14, F15, F17 and F18, and each is used exclusively on its own owner's data
+- [ ] The masked credential list from the vault (F02) renders on the mobile credentials screen (F03) with the same statuses the web screen shows, and no key material reaches the device
 - [ ] Pronunciation aggregates (F10) update the profile's pronunciation dimension and LLM scores (F11) update the other five (F12), with each source respecting its own weight
 - [ ] Tagged errors from the analysis (F11) appear in the ledger (F12) with their quotes, and recurrence counts increment across consecutive lessons carrying the same tag
 - [ ] The profile snapshot and due ledger records (F12) determine the target tags of generated content (F14), and every generated item's target tags intersect the user's unmastered tags
