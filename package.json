@@ -1,0 +1,28 @@
+{
+  "name": "english-quest",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Private two-person study platform for reaching CEFR C1 in English",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "up": "docker compose up -d",
+    "down": "docker compose down",
+    "logs": "docker compose logs -f",
+    "api": "docker compose exec api pnpm dev",
+    "web": "docker compose exec web pnpm dev",
+    "api:sh": "docker compose exec api bash",
+    "web:sh": "docker compose exec web bash",
+    "install:all": "docker compose exec api pnpm install",
+    "db:migrate": "docker compose exec api pnpm db:migrate",
+    "db:seed": "docker compose exec api pnpm db:seed",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}

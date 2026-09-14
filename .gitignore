@@ -1,0 +1,29 @@
+node_modules/
+dist/
+build/
+.next/
+out/
+
+.env
+.env.local
+.env.*.local
+
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+coverage/
+.nyc_output/
+
+.DS_Store
+Thumbs.db
+
+.idea/
+*.swp
+
+# Listening audio and other imported media are uploaded to object storage by the
+# importer; only the meta.json files belong in version control.
+assignment-content/**/*.mp3
+assignment-content/**/*.m4a
+assignment-content/**/*.wav
+assignment-content/**/*.ogg
