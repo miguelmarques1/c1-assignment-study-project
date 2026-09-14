@@ -1,6 +1,10 @@
+import { randomBytes } from 'node:crypto';
+
 import { describe, expect, it } from 'vitest';
 
 import { EnvValidationError, loadEnv } from '../../src/config/env';
+
+const VALID_MASTER_KEY = randomBytes(32).toString('base64');
 
 /** A complete, valid environment. Individual tests break one field at a time. */
 function validEnv(overrides: Record<string, string | undefined> = {}): NodeJS.ProcessEnv {
@@ -10,6 +14,7 @@ function validEnv(overrides: Record<string, string | undefined> = {}): NodeJS.Pr
     DATABASE_URL: 'postgresql://user:pass@localhost:5432/db?schema=public',
     REDIS_URL: 'redis://localhost:6379',
     SESSION_SECRET: 'a'.repeat(48),
+    BYOK_MASTER_KEY: VALID_MASTER_KEY,
     S3_ENDPOINT: 'http://localhost:9000',
     S3_ACCESS_KEY: 'minioadmin',
     S3_SECRET_KEY: 'minioadmin',
@@ -49,6 +54,27 @@ describe('loadEnv', () => {
   it('accepts_session_secret_at_the_boundary', () => {
     const config = loadEnv(validEnv({ SESSION_SECRET: 'a'.repeat(32) }));
     expect(config.SESSION_SECRET).toHaveLength(32);
+  });
+
+  it('rejects_missing_master_key', () => {
+    try {
+      loadEnv(validEnv({ BYOK_MASTER_KEY: undefined }));
+      expect.unreachable('should have thrown');
+    } catch (error) {
+      expect((error as EnvValidationError).issues.join('\n')).toContain('BYOK_MASTER_KEY');
+    }
+  });
+
+  it('rejects_a_master_key_that_is_not_32_bytes', () => {
+    // Valid base64, wrong length — the shape that would otherwise fail much
+    // later, at the first attempt to build an AES-256 cipher.
+    const sixteenBytes = randomBytes(16).toString('base64');
+    try {
+      loadEnv(validEnv({ BYOK_MASTER_KEY: sixteenBytes }));
+      expect.unreachable('should have thrown');
+    } catch (error) {
+      expect((error as EnvValidationError).issues.join('\n')).toContain('32 bytes of base64');
+    }
   });
 
   it('rejects_malformed_seed_users', () => {

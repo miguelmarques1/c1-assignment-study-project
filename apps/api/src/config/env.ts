@@ -65,6 +65,18 @@ const seedUsersField = z
  */
 const SESSION_SECRET_ERROR = 'SESSION_SECRET is missing or shorter than 32 characters.';
 
+const BYOK_MASTER_KEY_ERROR =
+  'BYOK_MASTER_KEY is missing or is not 32 bytes of base64. Generate one with: openssl rand -base64 32';
+
+/** AES-256 needs exactly 32 bytes; anything else is a configuration mistake, not a weak key. */
+function isThirtyTwoByteBase64(value: string): boolean {
+  try {
+    return Buffer.from(value, 'base64').length === 32;
+  } catch {
+    return false;
+  }
+}
+
 export const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   API_PORT: z.coerce.number().int().positive().default(3001),
@@ -77,6 +89,10 @@ export const envSchema = z.object({
     .string({ error: SESSION_SECRET_ERROR })
     .min(32, { error: SESSION_SECRET_ERROR }),
   SESSION_TTL_SECONDS: z.coerce.number().int().positive().default(604_800),
+
+  BYOK_MASTER_KEY: z
+    .string({ error: BYOK_MASTER_KEY_ERROR })
+    .refine(isThirtyTwoByteBase64, { error: BYOK_MASTER_KEY_ERROR }),
 
   LOGIN_MAX_ATTEMPTS: z.coerce.number().int().positive().default(5),
   LOGIN_LOCKOUT_SECONDS: z.coerce.number().int().positive().default(900),

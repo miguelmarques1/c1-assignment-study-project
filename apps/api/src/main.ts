@@ -7,8 +7,11 @@ import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 import { runMigrations } from './boot/run-migrations';
 import { waitForDependencies } from './boot/wait-for-dependencies';
+import { verifyCredentialDecryptability } from './boot/verify-credential-decryptability';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { loadEnv } from './config/env';
+import { CredentialCryptoService } from './credentials/credential-crypto.service';
+import { PrismaService } from './prisma/prisma.service';
 import { HealthService } from './health/health.service';
 import { setupOpenApi } from './openapi/setup';
 import { StorageService } from './storage/storage.service';
@@ -45,6 +48,20 @@ async function bootstrap(): Promise<void> {
   setupOpenApi(app);
 
   await app.get(StorageService).ensureBucket();
+
+  // Before serving anything: confirm the stored credentials are readable with
+  // the configured master key. Starting with unreadable credentials would turn
+  // every pipeline into a confusing "missing key" failure.
+  const decryptability = await verifyCredentialDecryptability({
+    prisma: app.get(PrismaService),
+    crypto: app.get(CredentialCryptoService),
+    log: (message) => logger.warn(message),
+  });
+  if (decryptability.checked > 0) {
+    logger.log(
+      `Credential vault: ${decryptability.checked} stored, ${decryptability.invalidated} unreadable`,
+    );
+  }
 
   // Readiness line: one probe per dependency with its latency, so a slow or
   // missing service is visible at startup rather than at first use.

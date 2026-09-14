@@ -19,5 +19,48 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
+  credentials     UserCredential[]
+  credentialUsage CredentialUsage[]
+
   @@map("users")
+}
+
+/// One row per user per provider. The master key lives in the environment, never
+/// here, so a database dump on its own reveals nothing usable.
+model UserCredential {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  provider        String    @db.VarChar(32)
+  ciphertext      Bytes
+  iv              Bytes
+  authTag         Bytes     @map("auth_tag")
+  /// Plain, for display only — the settings screen must not decrypt to render.
+  lastFour        String    @map("last_four") @db.Char(4)
+  region          String?   @db.VarChar(40)
+  status          String    @default("unverified") @db.VarChar(16)
+  lastValidatedAt DateTime? @map("last_validated_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider], map: "user_credentials_user_provider_key")
+  @@map("user_credentials")
+}
+
+/// Append-only audit of every key use. Deliberately has no column that could
+/// carry key material.
+model CredentialUsage {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  provider   String   @db.VarChar(32)
+  feature    String   @db.VarChar(64)
+  outcome    String   @db.VarChar(24)
+  errorCode  String?  @map("error_code") @db.VarChar(64)
+  occurredAt DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, provider, occurredAt(sort: Desc)], map: "ix_credential_usage_user_provider_time")
+  @@map("credential_usage")
 }
