@@ -257,6 +257,14 @@ Both profiles belong to a pair of motivated adults running an experiment on them
 - As a user, I want to see which vocabulary domains we have already covered so that I can tell whether our lessons are varied
 - As a user, I want my activity completion statistics so that I can tell whether the plans are realistic for my routine
 
+### F21. Design System
+- As a user, I want every screen to use the same visual language so that a status badge means the same thing wherever I see it
+- As a user, I want the interface to be legible and operable by keyboard and screen reader so that using it is not a fight
+- As a user, I want loading, empty and error states everywhere so that a slow or failed screen tells me what happened instead of showing nothing
+- As a developer, I want tokens for spacing, colour, type and radius so that a new screen composes from decisions already made rather than inventing new ones
+- As a developer, I want a documented component library so that I can see what exists before writing a fourth kind of card
+- As a developer, I want the same component vocabulary named identically on web and mobile so that the two clients cannot drift apart
+
 ## 6. Functionalities
 
 ### F01. Local Infrastructure and Authentication
@@ -323,6 +331,7 @@ The screen exists on both clients, but they do not arrive together: the web scre
 
 **Consumes:**
 - F02: masked credential list per provider — status, last four characters, region and last-validated timestamp
+- F21: generated Dart theme and the component vocabulary — button variants, badge statuses, meter states — that the Flutter client mirrors
 
 **Capabilities:**
 - Flutter application targeting Android 8.0 (API 26) and above, and iOS 14 and above, in portrait orientation.
@@ -943,6 +952,46 @@ The rating distribution is rendered as a single stacked bar with its three segme
 
 With fewer than 3 measurements the chart area shows `Not enough data yet — complete 3 lessons to see trends.` rather than a misleading two-point line.
 
+### F21. Design System
+
+**Provides:**
+- Design tokens covering spacing, colour, typography, radius, elevation and motion, as the single source of styling values (used by F03, F05, F06, F15, F16, F17, F18, F19, F20)
+- Component library with the primitives every screen composes from, plus the loading, empty and error page-state conventions (used by F03, F05, F06, F15, F16, F17, F18, F19, F20)
+
+**Core Scope:**
+- Tokens, the primitive components, the three page states, and migration of the screens that already exist.
+
+**Full Scope additions:**
+- Browsable component documentation, visual regression coverage, and the paired light and dark themes.
+
+**Capabilities:**
+- **One framework-neutral token source**, `packages/design-tokens/tokens.json`, from which a build step generates three artefacts: CSS custom properties for the web client, a typed TypeScript module for type-safe access in web code, and a Dart theme for the Flutter client. A value is written once and reaches both clients by generation, never by copying — which is what makes the parity the product requires structural rather than a matter of discipline.
+- Token values come from `design/english_quest_design_system`, taking the palette the reference screens actually render: primary `#AE3115`, surface `#FBF8FC`, Plus Jakarta Sans, the 13-step type scale, the 5-step spacing scale and the 6 radii. Where that file's prose disagrees with its own frontmatter, the frontmatter wins, because it is what the approved screens use; the prose is corrected to match rather than left contradicting itself.
+- The visual identity is a 2px solid `#18181B` outline paired with a hard offset shadow rather than a blur, and generous radii — `rounded-2xl` on cards, full pills on status chips. Interactive elements press mechanically: on active they translate by the shadow offset and the shadow snaps to nothing.
+- No component may use a raw hex value or a hard-coded pixel spacing.
+- **Contrast is required where text is read, and waived where identity depends on it.** Every reading surface — body copy, labels, transcripts, error messages, badge text — meets WCAG AA at 4.5:1, asserted by a test over the token values. Labels sitting on a filled interactive control are explicitly exempt: the coral and blue fills measure between 2.8:1 and 3.8:1 against white, and they carry the brand. The exemption is a named list in the token test, so it is a recorded decision rather than an oversight, and adding to that list is a deliberate act.
+- Primitive components: **Button** (4 variants, 3 sizes, loading and disabled states), **Card**, **Badge** (one per status vocabulary the product uses), **Meter** (a 0-100 score with optional delta and a warming-up state), **Chip** (error tags, target expressions, vocabulary domains), **Field** (label, input, hint, error), and **Stack** and **Grid** layout primitives.
+- Page states as components rather than conventions: **Loading** renders a skeleton shaped like the content that is coming, never a bare spinner; **Empty** states what is missing and the single action that fixes it; **Error** says what failed in plain language and offers a retry.
+- Every interactive component is reachable and operable by keyboard, carries a visible focus ring drawn from tokens, and exposes the ARIA role its behaviour implies. Status is never carried by colour alone — every badge and meter pairs colour with text or shape.
+- Light and dark themes share one token contract. Light is the designed default and the reference screens define it. **Dark is derived, and it needs one structural substitution rather than a value swap**: a hard black offset shadow is invisible against a dark surface, so in dark mode elevation is carried by a 2px light outline and a raised surface token instead. Every other token is a value change. The theme follows the system preference and can be overridden.
+- A component documentation page, served by the web client in development, rendering every component with its variants and states side by side in both themes. It is the answer to "does something for this already exist", which is the question that otherwise goes unasked.
+- The two screens that already exist — login and settings — are migrated onto the system, and the ad-hoc CSS classes they introduced are deleted.
+- Component names, variants and status vocabulary are the contract F03 mirrors in Flutter: the same four button variants, the same badge statuses, the same meter states. Flutter reimplements the rendering and consumes the generated Dart theme; it never reimplements the vocabulary and never copies a value by hand.
+
+- The reference screens carry vocabulary the product does not have — XP, levels, streaks, achievement badges, a "Pro" tier and Google sign-in — none of which exist in this PRD, and several of which Section 7 excludes outright. The visual language is adopted; that vocabulary is not. The amber accent role it used for XP is kept and repurposed for warnings and the profile's warming-up state, which the product does have.
+
+**Experience:**
+A developer building a new screen imports primitives and composes them. The screen inherits spacing, colour, focus behaviour and the three page states without deciding any of them. Reaching for a raw hex value or a magic pixel number is a lint failure, not a matter of taste.
+
+The documentation page renders each component with every variant and state, live, in both themes. It exists so that what already exists is discoverable.
+
+For the user the result is that a status badge, a score meter and an empty state look and behave identically on the settings screen, in a lesson result and on the progress dashboard — and that the mobile app, when it arrives, speaks the same language rather than a dialect of it.
+
+**Error Handling:**
+- A token referenced but never defined: the build fails rather than falling back to a browser default, because a missing token is invisible until somebody notices the spacing looks wrong.
+- A colour pair below its contrast threshold: the token test fails naming the pair and the measured ratio, so it cannot merge.
+- An interactive component used without an accessible name: the lint rule fails the build, since an icon-only button with no label is unusable and nothing about it looks broken.
+
 ## 7. Out of Scope
 
 **Lesson experience**
@@ -1005,11 +1054,12 @@ With fewer than 3 measurements the chart area shows `Not enough data yet — com
 | # | Feature | Priority | Dependencies |
 |---|---------|----------|--------------|
 | F01 | Local Infrastructure and Authentication | 1 | None |
+| F21 | Design System | 1 | F01 |
 | F02 | BYOK Credential Vault | 1 | F01 |
-| F03 | Mobile Application Shell | 1 | F01, F02 |
+| F03 | Mobile Application Shell | 1 | F01, F02, F21 |
 | F04 | Prompt Library | 1 | F01 |
-| F05 | Live Classroom | 1 | F01 |
-| F06 | Lesson Scenario and Role Cards | 1 | F02, F04, F05 |
+| F05 | Live Classroom | 1 | F01, F21 |
+| F06 | Lesson Scenario and Role Cards | 1 | F02, F04, F05, F21 |
 | F07 | Lesson Recording | 1 | F05 |
 | F08 | Speech-to-Text Transcription | 1 | F02, F07 |
 | F09 | Excerpt Selection | 1 | F08 |
@@ -1018,16 +1068,17 @@ With fewer than 3 measurements the chart area shows `Not enough data yet — com
 | F12 | Learning Profile and Error Ledger | 1 | F10, F11 |
 | F13 | Content Bank and Curated Import | 1 | F01 |
 | F14 | AI Content Generation with Difficulty Gate | 1 | F02, F04, F12, F13 |
-| F15 | Study Plan Generation | 1 | F02, F04, F12, F13, F14 |
-| F16 | Objective Activity Execution | 1 | F03, F12, F13, F15 |
-| F17 | Writing Activity with AI Correction | 2 | F02, F03, F04, F12, F15 |
-| F18 | Speaking and Pronunciation Activities | 2 | F02, F03, F08, F10, F12, F15 |
-| F19 | Lesson History and Individual Results | 1 | F03, F06, F08, F10, F11 |
-| F20 | Progress and Evolution Dashboard | 2 | F03, F06, F12, F15 |
+| F15 | Study Plan Generation | 1 | F02, F04, F12, F13, F14, F21 |
+| F16 | Objective Activity Execution | 1 | F03, F12, F13, F15, F21 |
+| F17 | Writing Activity with AI Correction | 2 | F02, F03, F04, F12, F15, F21 |
+| F18 | Speaking and Pronunciation Activities | 2 | F02, F03, F08, F10, F12, F15, F21 |
+| F19 | Lesson History and Individual Results | 1 | F03, F06, F08, F10, F11, F21 |
+| F20 | Progress and Evolution Dashboard | 2 | F03, F06, F12, F15, F21 |
 
 ### Foundation Features
 These features set up shared project infrastructure. In a greenfield project they must be implemented sequentially before or alongside any feature that depends on them:
 - **F01 Local Infrastructure and Authentication** — scaffolds the Docker Compose stack, the Next.js and NestJS applications, database migrations, the S3-compatible storage adapter, and the session and authentication middleware every later feature assumes.
+- **F21 Design System** - establishes the token layer, the primitive components and the page-state conventions every screen composes from, plus the component vocabulary the Flutter client mirrors. Its ID sits at the end of the sequence because F01 and F02 were already implemented when it was added; its position in this table is topological, not by ID.
 - **F03 Mobile Application Shell** — scaffolds the Flutter project, navigation, secure session storage, the authenticated API client and the audio recorder that every mobile-facing feature builds on.
 - **F04 Prompt Library** — establishes the YAML prompt format, the boot-time loader and validator, and the structured-output execution and retry path that every AI-consuming feature calls instead of the model directly.
 
@@ -1061,6 +1112,7 @@ graph TD
   F01 --> F04[F04 Prompts]
   F01 --> F05[F05 Classroom]
   F01 --> F13[F13 Content Bank]
+  F01 --> F21[F21 Design System]
   F02 --> F06[F06 Scenario]
   F04 --> F06
   F05 --> F06
@@ -1111,6 +1163,15 @@ graph TD
   F06 --> F20
   F12 --> F20
   F15 --> F20
+  F21 --> F03
+  F21 --> F05
+  F21 --> F06
+  F21 --> F15
+  F21 --> F16
+  F21 --> F17
+  F21 --> F18
+  F21 --> F19
+  F21 --> F20
 ```
 
 ## 9. Acceptance Criteria
@@ -1366,6 +1427,21 @@ graph TD
 - [ ] Domain coverage lists all 15 vocabulary domains with lesson counts, dimming those never used
 - [ ] Activity statistics show completions per week for 8 weeks, plan completion rate and the difficulty rating distribution
 - [ ] Both clients render the same data and ranges
+
+### F21. Design System
+- [ ] Every spacing, colour, radius and type value in the web client resolves to a token; no raw hex or magic pixel value survives a lint pass
+- [ ] Every reading surface meets WCAG AA at 4.5:1, asserted by a test reporting the measured ratio on failure; the interactive-fill exemptions are a named list in that test rather than silent omissions
+- [ ] Button, Card, Badge, Meter, Chip, Field, Stack and Grid all exist with the variants and states listed in the capabilities
+- [ ] Loading, Empty and Error are components, and each renders the content shape, the missing thing, or the failure and its retry respectively
+- [ ] Every interactive component is operable by keyboard alone, with a visible focus ring drawn from tokens
+- [ ] No status is carried by colour alone; every badge and meter pairs its colour with text or shape
+- [ ] Light and dark themes render every component legibly across the full documentation page, with elevation carried by outline rather than shadow in dark mode
+- [ ] `tokens.json` generates CSS custom properties, a typed TypeScript module and a Dart theme, and changing one value there changes all three outputs
+- [ ] No hex value or spacing number appears in more than one place across the token outputs
+- [ ] No screen or component carries XP, levels, streaks, achievement badges, a paid tier or third-party sign-in
+- [ ] The documentation page lists every component with each variant and state, in both themes
+- [ ] The login and settings screens render entirely from the system, and the ad-hoc classes they introduced no longer exist
+- [ ] A component referencing an undefined token fails the build rather than falling back to a browser default
 
 ### Cross-Feature Integration
 - [ ] A lesson session opened in the classroom (F05) is the session the scenario (F06) attaches to, and the scenario's participants match the session's participant identities
