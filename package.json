@@ -18,7 +18,7 @@
     "install:all": "docker compose exec api pnpm install",
     "db:migrate": "docker compose exec api pnpm db:migrate",
     "db:seed": "docker compose exec api pnpm db:seed",
-    "lint": "eslint apps/api/src apps/api/test packages/shared/src --max-warnings 0",
+    "lint": "eslint apps/api/src apps/api/test apps/web/src apps/web/test packages/shared/src --max-warnings 0",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test"
   },
