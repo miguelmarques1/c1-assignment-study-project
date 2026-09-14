@@ -25,18 +25,26 @@
 **Validation:** lint ✅ (0 warnings) · typecheck ✅ (`pnpm -r typecheck`, all 4 packages) · tests ✅ (design-tokens 17/17, api 108/108 unaffected, web 13/13 unaffected)
 **Commit:** _(pending — recorded after this commit lands)_
 
-## Stage 2: Theme Layer and Primitives — ⬜ pending
+## Stage 2: Theme Layer and Primitives — ✅ done
 
-- [ ] **6. Tailwind adoption**
-- [ ] **7. Global stylesheet replacement**
-- [ ] **8. Typography and font wiring**
-- [ ] **9. Interaction utilities**
-- [ ] **10. Primitive components**
+- [x] **6. Tailwind adoption**
+- [x] **7. Global stylesheet replacement**
+- [x] **8. Typography and font wiring**
+- [x] **9. Interaction utilities**
+- [x] **10. Primitive components**
 
-**Observations:** _(none yet)_
+**Observations:**
+- `globals.css` now imports `tailwindcss` and `@english-quest/design-tokens/css` and declares a single `@custom-variant dark`. Since the pre-paint theme script (Stage 3) always stamps a concrete `data-theme` attribute before anything renders — never leaving it unset for "system dark" — a plain `[data-theme='dark']`-keyed variant is sufficient for any component that needs a `dark:` conditional; the generated stylesheet's own `prefers-color-scheme` block is strictly a pre-script flash guard, not a second styling path.
+- **Font delivery deviation from the token literal:** `tokens.json`'s `meta.fontFamily` stays the plain string `"Plus Jakarta Sans"` (correct default, and what the Dart target needs verbatim). The web target instead rebinds `--font-sans` in `globals.css` to `var(--font-plus-jakarta-sans)`, the CSS variable `next/font/google` publishes on `<html>` in `layout.tsx`, so delivery is self-hosted and optimized rather than asking the browser to fetch the family by name. This works because Tailwind's `@theme`-declared variables live in a cascade layer, and unlayered rules (this override) always beat layered ones regardless of source order — confirmed by inspecting the built CSS.
+- Two interaction-physics utilities (`press-button`, `press-card`) and one decorative one (`meter-track-warming`) are hand-written in `globals.css` rather than generated, each with a literal pixel offset the design reference specifies (rest/hover/active shadow deltas; the hatch stripe geometry). These are the one place such numbers are allowed to live as literals — they're interaction/decoration constants, not duplicated design tokens, and Stage 5's raw-value guard is scoped to catch duplicated *token* values, not this category.
+- **Button variants simplified from the reference's mixed fill/outline treatment to four solid fills**, each reusing a semantic pair the token suite already validates (`on-primary/primary`, `on-secondary/secondary`, `on-surface/surface-container-lowest`, `on-error/error`) rather than inventing an outlined destructive style whose hover-state contrast was never registered. Every button variant's contrast is therefore provably correct by the existing token tests, not just visually plausible.
+- **Grid's `columns` prop reflows proportionally, not identically, to the 12/8/4 architecture** for values that don't divide evenly (3 and 6 shown as `md:grid-cols-3`/`lg:grid-cols-6` rather than forcing the fixed 8/12 counts) — the spec's "reflowing to 8 and 4 columns" describes the architecture's own top-level grid, and a `columns={3}` instance reflowing to a literal 8-column tablet layout would look broken, not intentional.
+- Confirmed the "don't interpolate a token name into a Tailwind class string" trap before it shipped: `Stack`/`Grid` initially used `` `gap-${gap}` `` template literals, which Tailwind's static content scanner cannot see (it reads source text, not evaluated JS) — rewrote both as lookup tables of complete literal class strings before running anything.
+- Ran `pnpm --filter @english-quest/web build` as the Stage 2 runtime check (no page consumes the new primitives yet — that starts in Stage 3 with the docs page — so this validates the CSS/PostCSS/font pipeline, which every existing page already goes through via `globals.css`). Inspected the built bundle directly: `--color-primary` resolves differently under `[data-theme=dark]` and `[data-theme=light]` selectors, `prefers-color-scheme:dark` is present, and `press-button`/`text-label-lg` utilities generated correctly from the token `@theme` block.
+- Login and settings screens are now visually broken (every ad-hoc class from the old stylesheet is gone) until Stage 4 migrates them onto the primitives — expected and called out in the plan itself.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** lint ✅ (web + design-tokens, 0 warnings) · typecheck ✅ (`pnpm -r typecheck`) · tests ✅ (web 13/13 unaffected — RTL queries by role/text, not CSS class, so the stylesheet rewrite doesn't touch them) · `next build` ✅ (production build + CSS pipeline smoke check, described above)
+**Commit:** _(pending — recorded after this commit lands)_
 
 ## Stage 3: Page States, Theming and Documentation — ⬜ pending
 
