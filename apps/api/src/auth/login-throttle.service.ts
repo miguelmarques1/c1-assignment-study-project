@@ -14,11 +14,16 @@ import { RedisService } from '../redis/redis.service';
  */
 @Injectable()
 export class LoginThrottleService {
-  constructor(
-    private readonly redis: RedisService,
-    private readonly maxAttempts: number = env().LOGIN_MAX_ATTEMPTS,
-    private readonly lockoutSeconds: number = env().LOGIN_LOCKOUT_SECONDS,
-  ) {}
+  private readonly maxAttempts: number;
+  private readonly lockoutSeconds: number;
+
+  // Scalars are read here rather than injected; Nest would otherwise try to
+  // resolve Number providers for them and fail to start.
+  constructor(private readonly redis: RedisService) {
+    const config = env();
+    this.maxAttempts = config.LOGIN_MAX_ATTEMPTS;
+    this.lockoutSeconds = config.LOGIN_LOCKOUT_SECONDS;
+  }
 
   private static hash(email: string): string {
     return createHash('sha256').update(email.trim().toLowerCase()).digest('hex');

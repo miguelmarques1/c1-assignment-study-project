@@ -28,7 +28,10 @@ export class StorageService {
   private readonly client: S3Client;
   readonly bucket: string;
 
-  constructor(config = env()) {
+  // No constructor parameters: Nest resolves them as providers, and a config
+  // object argument makes the container look for an Object provider.
+  constructor() {
+    const config = env();
     this.bucket = config.S3_BUCKET;
     this.client = new S3Client({
       endpoint: config.S3_ENDPOINT,

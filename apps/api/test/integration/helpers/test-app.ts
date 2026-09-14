@@ -96,8 +96,33 @@ export async function applyMigrations(databaseUrl: string): Promise<void> {
   });
 }
 
-/** Extracts a cookie value from a Set-Cookie header list. */
+/** Extracts a raw cookie value from a Set-Cookie header list. */
 export function cookieValue(setCookie: string[] | undefined, name: string): string | undefined {
   const header = setCookie?.find((entry) => entry.startsWith(`${name}=`));
   return header?.split(';')[0]?.slice(name.length + 1);
 }
+
+/**
+ * Recovers the session token from the signed cookie.
+ *
+ * The cookie is set with `signed: true`, so its wire value is
+ * `s:<token>.<signature>`, URL-encoded. Using that string as a Redis key looks
+ * plausible and is always wrong — it addresses a key that never existed, which
+ * makes "the session is gone" assertions pass for the wrong reason.
+ */
+export function sessionTokenFrom(setCookie: string[] | undefined): string | undefined {
+  const raw = cookieValue(setCookie, SESSION_COOKIE_NAME);
+  if (!raw) {
+    return undefined;
+  }
+
+  const decoded = decodeURIComponent(raw);
+  const unprefixed = decoded.startsWith('s:') ? decoded.slice(2) : decoded;
+
+  // The token is base64url and contains no dots; the signature is appended
+  // after the final one.
+  const lastDot = unprefixed.lastIndexOf('.');
+  return lastDot === -1 ? unprefixed : unprefixed.slice(0, lastDot);
+}
+
+export const SESSION_COOKIE_NAME = 'eq_session';

@@ -4,7 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { PasswordService } from '../../src/auth/password.service';
 import { RedisService } from '../../src/redis/redis.service';
-import { createTestContext, cookieValue, type TestContext } from './helpers/test-app';
+import { createTestContext, sessionTokenFrom, type TestContext } from './helpers/test-app';
 
 const EMAIL = 'learner@example.com';
 const PASSWORD = 'a perfectly fine password';
@@ -55,7 +55,7 @@ describe('authentication', () => {
     expect(header).toContain('HttpOnly');
     expect(header).toContain('SameSite=Lax');
 
-    const token = cookieValue(setCookie, 'eq_session');
+    const token = sessionTokenFrom(setCookie);
     expect(token).toBeTruthy();
   });
 
@@ -150,7 +150,7 @@ describe('authentication', () => {
     await seedUser();
     const session = await login();
     const cookie = (session.headers['set-cookie'] as unknown as string[])[0]!;
-    const token = cookieValue(session.headers['set-cookie'] as unknown as string[], 'eq_session')!;
+    const token = sessionTokenFrom(session.headers['set-cookie'] as unknown as string[])!;
 
     const redis = ctx.app.get(RedisService);
     await redis.client.expire(RedisService.sessionKey(token), 100);
@@ -166,14 +166,18 @@ describe('authentication', () => {
     await seedUser();
     const session = await login();
     const cookie = (session.headers['set-cookie'] as unknown as string[])[0]!;
-    const token = cookieValue(session.headers['set-cookie'] as unknown as string[], 'eq_session')!;
+    const token = sessionTokenFrom(session.headers['set-cookie'] as unknown as string[])!;
+
+    const redis = ctx.app.get(RedisService);
+    // Prove the key exists first, or "it is gone afterwards" passes for the
+    // wrong reason whenever the token is computed incorrectly.
+    expect(await redis.client.get(RedisService.sessionKey(token))).not.toBeNull();
 
     const logout = await request(ctx.app.getHttpServer())
       .post('/auth/logout')
       .set('Cookie', cookie);
     expect(logout.status).toBe(204);
 
-    const redis = ctx.app.get(RedisService);
     expect(await redis.client.get(RedisService.sessionKey(token))).toBeNull();
 
     const reused = await request(ctx.app.getHttpServer()).get('/auth/me').set('Cookie', cookie);
@@ -184,7 +188,10 @@ describe('authentication', () => {
     const userId = await seedUser();
     const session = await login();
     const cookie = (session.headers['set-cookie'] as unknown as string[])[0]!;
-    const token = cookieValue(session.headers['set-cookie'] as unknown as string[], 'eq_session')!;
+    const token = sessionTokenFrom(session.headers['set-cookie'] as unknown as string[])!;
+
+    const redis = ctx.app.get(RedisService);
+    expect(await redis.client.get(RedisService.sessionKey(token))).not.toBeNull();
 
     await ctx.prisma.user.delete({ where: { id: userId } });
 
@@ -194,7 +201,6 @@ describe('authentication', () => {
     expect(response.body.error.message).toBe('Session no longer valid.');
 
     // The orphaned session is cleaned up rather than re-checked every request.
-    const redis = ctx.app.get(RedisService);
     expect(await redis.client.get(RedisService.sessionKey(token))).toBeNull();
   });
 

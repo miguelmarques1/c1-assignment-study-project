@@ -36,7 +36,9 @@ services:
       start_period: 5s
 
   minio:
-    image: minio/minio:latest
+    # MinIO is published on quay.io, not Docker Hub — pulling minio/minio fails
+    # with "pull access denied" even when authenticated.
+    image: quay.io/minio/minio:latest
     restart: unless-stopped
     command: ["server", "/data", "--console-address", ":9001"]
     environment:

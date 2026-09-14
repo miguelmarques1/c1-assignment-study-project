@@ -12,8 +12,12 @@ import { env } from '../config/env';
 export class RedisService implements OnModuleDestroy {
   readonly client: Redis;
 
-  constructor(url: string = env().REDIS_URL) {
-    this.client = new Redis(url, {
+  // Configuration is read inside the constructor rather than taken as a
+  // parameter: Nest resolves constructor parameters as providers, so a
+  // `url: string` argument makes the container look for a String provider and
+  // fail at boot, default value or not.
+  constructor() {
+    this.client = new Redis(env().REDIS_URL, {
       maxRetriesPerRequest: 3,
       lazyConnect: false,
     });

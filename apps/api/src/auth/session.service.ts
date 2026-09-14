@@ -27,10 +27,13 @@ export interface ResolvedSession extends SessionRecord {
  */
 @Injectable()
 export class SessionService {
-  constructor(
-    private readonly redis: RedisService,
-    private readonly ttlSeconds: number = env().SESSION_TTL_SECONDS,
-  ) {}
+  private readonly ttlSeconds: number;
+
+  // Only injectable services belong in the parameter list; scalar config is
+  // read here, or Nest tries to resolve a Number provider and fails at boot.
+  constructor(private readonly redis: RedisService) {
+    this.ttlSeconds = env().SESSION_TTL_SECONDS;
+  }
 
   get ttl(): number {
     return this.ttlSeconds;
