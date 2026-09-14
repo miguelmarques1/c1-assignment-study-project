@@ -1,0 +1,103 @@
+import { execFile } from 'node:child_process';
+import { resolve } from 'node:path';
+import { promisify } from 'node:util';
+
+import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testcontainers/postgresql';
+import { RedisContainer, type StartedRedisContainer } from '@testcontainers/redis';
+import { Test } from '@nestjs/testing';
+import type { INestApplication } from '@nestjs/common';
+import { PrismaClient } from '@prisma/client';
+import cookieParser from 'cookie-parser';
+
+import { AppModule } from '../../../src/app.module';
+import { HttpExceptionFilter } from '../../../src/common/http-exception.filter';
+import { resetEnvCache } from '../../../src/config/env';
+
+const execFileAsync = promisify(execFile);
+
+export const TEST_SESSION_SECRET = 'test-session-secret-that-is-long-enough';
+
+export interface TestContext {
+  app: INestApplication;
+  prisma: PrismaClient;
+  postgres: StartedPostgreSqlContainer;
+  redis: StartedRedisContainer;
+  databaseUrl: string;
+  redisUrl: string;
+  close: () => Promise<void>;
+}
+
+/**
+ * Boots real PostgreSQL and Redis containers, applies the migrations and wires
+ * a Nest application configured exactly like production. Slower than mocking,
+ * but the behaviour the PRD pins down - sliding TTLs, lockout windows, unique
+ * constraints - only exists in the real stores.
+ */
+export async function createTestContext(
+  extraEnv: Record<string, string> = {},
+): Promise<TestContext> {
+  const postgres = await new PostgreSqlContainer('postgres:16-alpine').start();
+  const redis = await new RedisContainer('redis:7-alpine').start();
+
+  const databaseUrl = `${postgres.getConnectionUri()}?schema=public`;
+  const redisUrl = redis.getConnectionUrl();
+
+  await applyMigrations(databaseUrl);
+
+  Object.assign(process.env, {
+    NODE_ENV: 'test',
+    DATABASE_URL: databaseUrl,
+    REDIS_URL: redisUrl,
+    SESSION_SECRET: TEST_SESSION_SECRET,
+    S3_ENDPOINT: 'http://localhost:9000',
+    S3_ACCESS_KEY: 'minioadmin',
+    S3_SECRET_KEY: 'minioadmin',
+    S3_BUCKET: 'english-quest-test',
+    LIVEKIT_URL: 'http://localhost:7880',
+    LIVEKIT_API_KEY: 'devkey',
+    LIVEKIT_API_SECRET: 'devsecret',
+    ...extraEnv,
+  });
+  resetEnvCache();
+
+  const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
+
+  const app = moduleRef.createNestApplication();
+  app.use(cookieParser(TEST_SESSION_SECRET));
+  app.useGlobalFilters(new HttpExceptionFilter());
+  await app.init();
+
+  const prisma = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
+
+  return {
+    app,
+    prisma,
+    postgres,
+    redis,
+    databaseUrl,
+    redisUrl,
+    close: async () => {
+      await prisma.$disconnect().catch(() => undefined);
+      await app.close().catch(() => undefined);
+      await redis.stop().catch(() => undefined);
+      await postgres.stop().catch(() => undefined);
+      resetEnvCache();
+    },
+  };
+}
+
+export async function applyMigrations(databaseUrl: string): Promise<void> {
+  const cwd = resolve(__dirname, '../../..');
+  await execFileAsync('prisma', ['migrate', 'deploy'], {
+    cwd,
+    shell: true,
+    env: { ...process.env, DATABASE_URL: databaseUrl },
+    windowsHide: true,
+  });
+}
+
+/** Extracts a cookie value from a Set-Cookie header list. */
+export function cookieValue(setCookie: string[] | undefined, name: string): string | undefined {
+  const header = setCookie?.find((entry) => entry.startsWith(`${name}=`));
+  return header?.split(';')[0]?.slice(name.length + 1);
+}
