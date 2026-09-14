@@ -40,6 +40,8 @@
 | LiveKit health is probed with an HTTP GET against its signalling port | LiveKit exposes no dedicated health route; a successful HTTP response on 7880 proves the process is reachable |
 | `SESSION_SECRET` replaces the PRD's `AUTH_JWT_SECRET` | With opaque tokens there is no JWT to sign; the secret signs the session cookie instead, preserving the boot-time guard the PRD requires |
 | App containers start idle; dev servers are started manually | Requested during the interview so the developer can run only what is needed; documented commands replace auto-start |
+| MinIO is pulled from `quay.io/minio/minio` | MinIO is not published on Docker Hub; `minio/minio` fails with "pull access denied" even when authenticated. The image carries both `mc` and `curl`, so the `mc ready local` healthcheck is valid |
+| No injectable service takes scalar or plain-object constructor parameters | Nest resolves every constructor parameter as a provider, so `url: string = env().REDIS_URL` makes the container search for a String provider and abort at boot — a default value does not help. Configuration is read inside the constructor body instead. This binds every service added by later features |
 
 ## 2. Architecture Impact
 
@@ -125,6 +127,9 @@ graph TD
 | `.env.example` | New | Environment contract | Documents every variable the API and web client read, with safe local defaults |
 | `livekit.yaml` | New | LiveKit server config | Dev API key and secret, room settings; consumed by the livekit container |
 | `README.md` | New | Developer entry point | Setup steps, the `docker compose exec` commands for dev servers, migrations and seed |
+| `tsconfig.base.json` | New | Shared TypeScript config | CommonJS target every package extends; decorator metadata enabled for Nest |
+| `eslint.config.mjs` | New | Lint configuration | Single flat config for all packages; lint runs from the root rather than per package |
+| `.gitignore` | New | Version-control exclusions | Node modules, build output, `.env`, and imported listening media |
 
 **Shared package:**
 
@@ -150,6 +155,9 @@ graph TD
 | `apps/api/src/common/app-error.ts` | New | Typed errors | Application error class carrying a code, HTTP status and user-facing message |
 | `apps/api/src/common/http-exception.filter.ts` | New | Error envelope | Converts application errors and unhandled exceptions into the shared envelope |
 | `apps/api/src/common/zod-validation.pipe.ts` | New | Request validation | Validates body, query and params against a shared Zod schema, raising a typed validation error |
+| `apps/api/src/prisma/prisma.module.ts` | New | Module wiring | Exposes the Prisma client globally |
+| `apps/api/src/redis/redis.module.ts` | New | Module wiring | Exposes the Redis client globally |
+| `apps/api/src/storage/storage.module.ts` | New | Module wiring | Exposes the storage adapter globally |
 
 **API — authentication:**
 
@@ -162,7 +170,8 @@ graph TD
 | `apps/api/src/auth/login-throttle.service.ts` | New | Brute-force defence | Counts failures per email, applies and reports the lockout window |
 | `apps/api/src/auth/session.guard.ts` | New | Request authentication | Resolves the cookie to a session, rejects when absent, expired or orphaned |
 | `apps/api/src/auth/public.decorator.ts` | New | Guard opt-out | Marks routes reachable without a session |
-| `apps/api/src/auth/current-user.decorator.ts` | New | Handler ergonomics | Injects the resolved user into controller methods |
+| `apps/api/src/auth/current-user.decorator.ts` | New | Handler ergonomics | Injects the resolved user and the active session into controller methods |
+| `apps/api/src/auth/auth.module.ts` | New | Module wiring | Registers the auth controller, services and guard |
 
 **API — health and seed:**
 
@@ -171,7 +180,8 @@ graph TD
 | `apps/api/src/health/health.controller.ts` | New | Health endpoint | Public route returning the aggregated dependency report |
 | `apps/api/src/health/health.service.ts` | New | Dependency probes | Measures reachability and latency for PostgreSQL, Redis, MinIO and LiveKit |
 | `apps/api/src/seed/seed.ts` | New | Seed entry point | Standalone script invoked by `pnpm db:seed` |
-| `apps/api/src/seed/seed.service.ts` | New | Seed logic | Parses `SEED_USERS`, upserts by lowercased email, detects a missing schema, prints the result |
+| `apps/api/src/seed/seed.service.ts` | New | Seed logic | Upserts by lowercased email, detects a missing schema, reports created versus updated |
+| `apps/api/src/health/health.module.ts` | New | Module wiring | Registers the health controller and its probes |
 
 **Web client:**
 
@@ -183,8 +193,11 @@ graph TD
 | `apps/web/src/app/(app)/layout.tsx` | New | Authenticated layout | Server-side session check, expiry banner handling |
 | `apps/web/src/app/(app)/dashboard/page.tsx` | New | Dashboard placeholder | Authenticated landing target for a successful login |
 | `apps/web/src/middleware.ts` | New | Route protection | Redirects unauthenticated requests on protected paths to `/login` |
-| `apps/web/src/lib/api-client.ts` | New | API access | Sends credentials with every request, converts a 401 into a redirect with the expiry banner |
-| `apps/web/src/app/globals.css` | New | Global styles | Base tokens and resets |
+| `apps/web/src/lib/api-client.ts` | New | Browser API access | Sends credentials with every request, converts the error envelope into a typed exception |
+| `apps/web/src/lib/server-session.ts` | New | Server-side session read | Forwards the session cookie to `/auth/me` from server components; the API is the authority on validity |
+| `apps/web/src/app/page.tsx` | New | Root route | Redirects to the dashboard; the middleware decides where an anonymous visitor lands |
+| `apps/web/src/app/globals.css` | New | Global styles | Base tokens and resets, light and dark |
+| `apps/web/next.config.mjs` | New | Next configuration | Exposes the internal API hostname to server components |
 
 **Database:**
 
@@ -452,13 +465,17 @@ CREATE TRIGGER users_set_updated_at
 | `apps/api/test/unit/password.service.spec.ts` | Unit | `PasswordService` | 95% |
 | `apps/api/test/unit/env.spec.ts` | Unit | `config/env.ts` | 95% |
 | `apps/api/test/unit/http-exception.filter.spec.ts` | Unit | Error envelope | 90% |
-| `apps/api/test/integration/auth.spec.ts` | Integration | Auth endpoints, Testcontainers Postgres + Redis | 85% |
-| `apps/api/test/integration/session.spec.ts` | Integration | `SessionService` against a real Redis | 90% |
-| `apps/api/test/integration/throttle.spec.ts` | Integration | `LoginThrottleService` against a real Redis | 90% |
+| `apps/api/test/integration/helpers/test-app.ts` | Harness | Boots Postgres and Redis containers, applies migrations, wires the Nest app | n/a |
+| `apps/api/test/integration/auth.spec.ts` | Integration | Auth endpoints, sessions and throttling against real Postgres + Redis | 85% |
 | `apps/api/test/integration/health.spec.ts` | Integration | `/health` with dependencies up and forcibly down | 85% |
 | `apps/api/test/integration/seed.spec.ts` | Integration | `db:seed` idempotency and missing-schema path | 85% |
-| `apps/api/test/integration/storage.spec.ts` | Integration | Storage adapter against a MinIO container | 80% |
 | `apps/web/test/login-form.spec.tsx` | Component | Login form states | 80% |
+
+Session lifecycle and login throttling are exercised through the auth endpoints in `auth.spec.ts` rather than in dedicated `session.spec.ts` and `throttle.spec.ts` files: both behaviours are only meaningful as observed through a request, and splitting them would mean booting a second pair of containers to assert the same thing twice.
+
+**Still outstanding:** `apps/api/test/integration/storage.spec.ts`. The storage adapter is exercised indirectly — the API provisions the bucket and its prefixes at boot, and `/health` probes MinIO — but the round-trip, missing-object and re-provisioning cases named below have no automated coverage yet.
+
+The session token must be recovered from the **signed** cookie (`s:<token>.<signature>`, URL-encoded) before it can be used as a Redis key. Using the raw cookie value addresses a key that never existed, which silently turns "the session is gone" assertions into passes for the wrong reason. `sessionTokenFrom` in the harness exists for this, and the revocation tests assert the key is present before asserting it is absent.
 
 **`apps/api/test/unit/password.service.spec.ts`**
 
@@ -514,7 +531,7 @@ CREATE TRIGGER users_set_updated_at
 | `directly_inserted_user_can_log_in` | PRD capability | A row inserted with a bcrypt hash authenticates successfully with no seed change |
 | `fails_clearly_before_migrations` | Missing schema | Against an empty database, exits non-zero with the exact PRD message |
 
-**`apps/api/test/integration/storage.spec.ts`**
+**`apps/api/test/integration/storage.spec.ts`** *(not yet written — see "Still outstanding" above)*
 
 | Test Function | Description | Assertions |
 |---|---|---|
@@ -544,6 +561,6 @@ CREATE TRIGGER users_set_updated_at
 | Login with correct credentials sets an HTTP-only cookie and redirects to the dashboard | `auth.spec.ts::login_success_sets_cookie`, `login-form.spec.tsx::submits_valid_credentials` |
 | Wrong password and unknown email return the same message and comparable timing | `auth.spec.ts::login_unknown_email_is_indistinguishable` |
 | The sixth failure within 15 minutes is rejected even with the correct password | `auth.spec.ts::sixth_failure_locks_even_with_correct_password` |
-| An expired session returns 401 and the client redirects with the expiry banner | `auth.spec.ts::me_without_cookie_returns_401`, `session.spec.ts` expiry case |
+| An expired session returns 401 and the client redirects with the expiry banner | `auth.spec.ts::me_without_cookie_returns_401`, `::logout_destroys_session_server_side`, plus the middleware redirect verified against a running client |
 | The API refuses to boot when the session secret is missing or under 32 characters | `env.spec.ts::rejects_missing_session_secret`, `::rejects_short_session_secret` |
 | No registration or password-reset endpoint exists | `auth.spec.ts::no_registration_or_reset_routes_exist`, `login-form.spec.tsx::has_no_register_or_reset_links` |

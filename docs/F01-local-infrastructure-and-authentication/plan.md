@@ -3,7 +3,7 @@
 **Prerequisites:**
 - Docker Desktop with Compose v2
 - Node 22 LTS and pnpm 9 (only needed on the host for editor tooling; all commands run inside containers)
-- Container images: `postgres:16`, `redis:7`, `minio/minio`, `livekit/livekit-server`, `node:22-bookworm-slim`
+- Container images: `postgres:16-alpine`, `redis:7-alpine`, `quay.io/minio/minio` (MinIO is not on Docker Hub), `livekit/livekit-server`, `node:22-bookworm-slim`
 - Libraries: NestJS 11, Next.js 15, Prisma 6, Zod 4, bcrypt, ioredis, `@aws-sdk/client-s3`, cookie-parser, Vitest 3, Testcontainers
 - Environment variables: `DATABASE_URL`, `REDIS_URL`, `SESSION_SECRET`, `SEED_USERS`, `S3_ENDPOINT`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_BUCKET`, `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `API_PORT`, `WEB_PORT`, `NEXT_PUBLIC_API_URL`
 - Configuration files: `pnpm-workspace.yaml`, `docker-compose.yml`, `.env.example`, `livekit.yaml`
