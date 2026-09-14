@@ -1,7 +1,7 @@
 import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
-export default tseslint.config(
+export default [
   {
     ignores: [
       '**/dist/**',
@@ -46,4 +46,4 @@ export default tseslint.config(
       'no-console': 'off',
     },
   },
-);
+];
