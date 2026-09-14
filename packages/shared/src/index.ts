@@ -16,6 +16,13 @@ export {
 } from './types/api';
 
 export {
+  apiErrorSchema,
+  dependencyHealthSchema,
+  healthReportSchema,
+  validationDetailSchema,
+} from './schemas/api';
+
+export {
   changePasswordSchema,
   currentUserSchema,
   emailField,

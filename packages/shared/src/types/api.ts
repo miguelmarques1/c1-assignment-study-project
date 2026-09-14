@@ -1,4 +1,11 @@
+import type { z } from 'zod';
+
 import type { ErrorCode } from '../errors/codes';
+import type {
+  dependencyHealthSchema,
+  healthReportSchema,
+  validationDetailSchema,
+} from '../schemas/api';
 
 /** Successful responses always nest the payload under `data`. */
 export interface ApiSuccess<T> {
@@ -20,21 +27,8 @@ export function isApiError<T>(response: ApiResponse<T>): response is ApiError {
   return 'error' in response;
 }
 
-/** One field-level problem, as surfaced by the validation pipe. */
-export interface ValidationDetail {
-  path: string;
-  message: string;
-}
-
-/** Shape returned by the health endpoint for each probed dependency. */
-export interface DependencyHealth {
-  name: 'postgres' | 'redis' | 'minio' | 'livekit';
-  status: 'up' | 'down';
-  latencyMs: number | null;
-  error: string | null;
-}
-
-export interface HealthReport {
-  status: 'ok' | 'degraded';
-  dependencies: DependencyHealth[];
-}
+// Inferred from the schemas rather than declared twice, so the runtime
+// contract and the compile-time type cannot drift apart.
+export type ValidationDetail = z.infer<typeof validationDetailSchema>;
+export type DependencyHealth = z.infer<typeof dependencyHealthSchema>;
+export type HealthReport = z.infer<typeof healthReportSchema>;

@@ -10,6 +10,7 @@ import { waitForDependencies } from './boot/wait-for-dependencies';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { loadEnv } from './config/env';
 import { HealthService } from './health/health.service';
+import { setupOpenApi } from './openapi/setup';
 import { StorageService } from './storage/storage.service';
 
 /**
@@ -41,6 +42,8 @@ async function bootstrap(): Promise<void> {
   app.enableCors({ origin: config.WEB_ORIGIN, credentials: true });
   app.enableShutdownHooks();
 
+  setupOpenApi(app);
+
   await app.get(StorageService).ensureBucket();
 
   // Readiness line: one probe per dependency with its latency, so a slow or
@@ -53,6 +56,7 @@ async function bootstrap(): Promise<void> {
 
   await app.listen(config.API_PORT);
   logger.log(`API listening on http://localhost:${config.API_PORT} (status: ${report.status})`);
+  logger.log(`OpenAPI UI on /docs · document on /docs-json`);
 }
 
 bootstrap().catch((error: unknown) => {

@@ -62,6 +62,7 @@ Redis answer. It logs a readiness line listing every dependency with its latency
 | Task | Command |
 |---|---|
 | Shell into the API container | `docker compose exec api bash` |
+| Regenerate the OpenAPI snapshot | `docker compose exec api sh -c 'cd apps/api && pnpm openapi:generate'` |
 | Apply migrations | `docker compose exec api pnpm db:migrate` |
 | Seed the configured accounts | `docker compose exec api pnpm db:seed` |
 | Run the API test suite | `docker compose exec api pnpm test` |
@@ -85,6 +86,23 @@ for when pnpm is available on the host.
 | livekit | 7880 / 7881 | Self-hosted WebRTC server |
 
 Health of every dependency: `curl http://localhost:3001/health`.
+
+## API documentation
+
+| Surface | Where |
+|---|---|
+| Swagger UI | <http://localhost:3001/docs> |
+| OpenAPI document | <http://localhost:3001/docs-json> · <http://localhost:3001/docs-yaml> |
+| Committed snapshot | [`docs/api/openapi.json`](docs/api/openapi.json) |
+
+The snapshot is what you import into **Postman or Insomnia** — no running stack required.
+Enable the client's cookie jar and a `POST /auth/login` keeps you authenticated for
+everything else; the session cookie is HttpOnly, so there is no token to copy by hand.
+
+Schemas are generated from the Zod contracts in `packages/shared`, so the document always
+matches what the API enforces. **Every new or changed route must be annotated and the
+snapshot regenerated** — `test/unit/openapi.spec.ts` fails the build otherwise. The full
+convention is in [F01's spec, section 5](docs/F01-local-infrastructure-and-authentication/spec.md).
 
 ## Accounts
 

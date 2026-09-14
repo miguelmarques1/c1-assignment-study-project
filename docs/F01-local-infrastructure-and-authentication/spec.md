@@ -219,6 +219,25 @@ graph TD
 
 All responses use the shared envelope. Success bodies are `{ "data": ... }`; failures are `{ "error": { "code", "message", "details" } }`.
 
+### Standing directive: every route is documented in OpenAPI
+
+This is a project-wide convention established here and binding on **every feature that adds or changes an endpoint**, not just F01. The API publishes an OpenAPI 3.1 document so it can be imported into Postman or Insomnia without anyone transcribing routes by hand.
+
+**When you add or change a route:**
+
+1. Annotate the handler: `@ApiTags` on the controller, `@ApiOperation({ summary, description })` on every operation, `@ApiResponse` for each status it can return — success *and* the error codes — and `@ApiCookieAuth(SESSION_SECURITY_SCHEME)` on anything that is not `@Public()`.
+2. Reference schemas from `apps/api/src/openapi/components.ts`, never hand-written inline objects. Components are produced from the Zod contracts in `@english-quest/shared` via `z.toJSONSchema()`, so the document is a projection of what the API actually enforces. A schema written by hand drifts the first time only one of the two is edited.
+3. Wrap success bodies with `dataEnvelope('ComponentName')` so the `{ data: ... }` envelope is visible in the document rather than implied.
+4. Regenerate the committed snapshot: `pnpm --filter @english-quest/api openapi:generate`, then commit `docs/api/openapi.json` with the code change.
+
+**What enforces it:** `test/unit/openapi.spec.ts` regenerates the document and fails when the committed snapshot is stale, when any operation lacks a summary, when a protected route does not declare the session cookie, or when the document stops targeting 3.1. The convention is a test, not a habit.
+
+**Why 3.1 rather than the 3.0 default:** Zod emits JSON Schema 2020-12, which 3.1 adopts wholesale. Under 3.0 the nullable fields serialize as `type: "null"`, which is invalid there, and importers either reject the document or silently drop the field.
+
+**Surfaces:** Swagger UI at `/docs`, the raw document at `/docs-json` and `/docs-yaml` while the API runs, and the committed snapshot at `docs/api/openapi.json` for when it does not.
+
+**Adding a new schema:** define it as Zod in `@english-quest/shared`, export it, then register it in `OPENAPI_COMPONENTS`. Do not declare response shapes as bare TypeScript interfaces — infer them from the schema, the way `HealthReport` and `DependencyHealth` are.
+
 ### Endpoint: Login
 
 - **Method:** POST
