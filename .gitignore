@@ -30,3 +30,4 @@ assignment-content/**/*.ogg
 
 *.tsbuildinfo
 next-env.d.ts
+.pnpm-store/
