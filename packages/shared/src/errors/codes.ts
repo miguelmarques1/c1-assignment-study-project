@@ -11,6 +11,12 @@ export const ERROR_CODES = {
   AUTH_SESSION_INVALID: 'AUTH003',
   /** Password change was attempted with the wrong current password. */
   AUTH_WRONG_CURRENT_PASSWORD: 'AUTH004',
+  /** The provider refused the key during validation; nothing was stored. */
+  CREDENTIAL_REJECTED: 'CRED001',
+  /** No usable credential for this provider — absent, or already marked invalid. */
+  CREDENTIAL_UNAVAILABLE: 'CRED002',
+  /** The stored credential exists but could not be decrypted. */
+  CREDENTIAL_UNREADABLE: 'CRED003',
   /** Request body, query or params failed schema validation. */
   VALIDATION_FAILED: 'VAL001',
   /** At least one infrastructure dependency is unreachable. */
@@ -27,6 +33,9 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   [ERROR_CODES.AUTH_LOCKED_OUT]: 429,
   [ERROR_CODES.AUTH_SESSION_INVALID]: 401,
   [ERROR_CODES.AUTH_WRONG_CURRENT_PASSWORD]: 400,
+  [ERROR_CODES.CREDENTIAL_REJECTED]: 400,
+  [ERROR_CODES.CREDENTIAL_UNAVAILABLE]: 409,
+  [ERROR_CODES.CREDENTIAL_UNREADABLE]: 500,
   [ERROR_CODES.VALIDATION_FAILED]: 400,
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 503,
   [ERROR_CODES.INTERNAL_ERROR]: 500,
@@ -41,6 +50,10 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ERROR_CODES.AUTH_LOCKED_OUT]: 'Too many attempts. Try again in 15 minutes.',
   [ERROR_CODES.AUTH_SESSION_INVALID]: 'Session no longer valid.',
   [ERROR_CODES.AUTH_WRONG_CURRENT_PASSWORD]: 'Your current password is incorrect.',
+  [ERROR_CODES.CREDENTIAL_REJECTED]: 'The provider rejected this key.',
+  [ERROR_CODES.CREDENTIAL_UNAVAILABLE]: 'No usable key for this provider.',
+  [ERROR_CODES.CREDENTIAL_UNREADABLE]:
+    'This stored key could not be read. Please enter it again.',
   [ERROR_CODES.VALIDATION_FAILED]: 'Some of the values you entered are not valid.',
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 'One or more dependencies are unavailable.',
   [ERROR_CODES.INTERNAL_ERROR]: 'Something went wrong on our side.',

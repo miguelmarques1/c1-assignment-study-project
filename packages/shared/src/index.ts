@@ -16,6 +16,21 @@ export {
 } from './types/api';
 
 export {
+  apiKeyField,
+  azureRegionField,
+  credentialProviderSchema,
+  credentialStatusSchema,
+  maskedCredentialListSchema,
+  maskedCredentialSchema,
+  providerLabels,
+  saveCredentialSchema,
+  type CredentialProvider,
+  type CredentialStatus,
+  type MaskedCredential,
+  type SaveCredentialInput,
+} from './schemas/credentials';
+
+export {
   apiErrorSchema,
   dependencyHealthSchema,
   healthReportSchema,

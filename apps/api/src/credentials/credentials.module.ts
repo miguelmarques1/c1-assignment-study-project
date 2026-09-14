@@ -1,6 +1,9 @@
 import { Global, Module } from '@nestjs/common';
 
 import { CredentialCryptoService } from './credential-crypto.service';
+import { AzureSpeechValidator } from './validation/azure-speech.validator';
+import { GeminiValidator } from './validation/gemini.validator';
+import { ProviderValidationService } from './validation/provider-validation.service';
 
 /**
  * Global because the boot probe resolves the crypto service before any feature
@@ -8,7 +11,12 @@ import { CredentialCryptoService } from './credential-crypto.service';
  */
 @Global()
 @Module({
-  providers: [CredentialCryptoService],
-  exports: [CredentialCryptoService],
+  providers: [
+    CredentialCryptoService,
+    GeminiValidator,
+    AzureSpeechValidator,
+    ProviderValidationService,
+  ],
+  exports: [CredentialCryptoService, ProviderValidationService],
 })
 export class CredentialsModule {}

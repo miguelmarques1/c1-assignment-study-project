@@ -462,6 +462,9 @@
                   "AUTH002",
                   "AUTH003",
                   "AUTH004",
+                  "CRED001",
+                  "CRED002",
+                  "CRED003",
                   "VAL001",
                   "HEALTH001",
                   "ERR500"
