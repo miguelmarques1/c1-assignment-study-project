@@ -4,6 +4,7 @@ import { ERROR_CODES, loginSchema } from '@english-quest/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
+import { Button, Card, Field, Stack, fieldControlClassName } from '@/components/ui';
 import { ApiRequestError, apiFetch } from '@/lib/api-client';
 
 interface LockoutState {
@@ -92,49 +93,59 @@ export function LoginForm() {
   const seconds = lockout ? lockout.secondsLeft % 60 : 0;
 
   return (
-    <form className="card" onSubmit={handleSubmit} noValidate>
-      <h1>English Quest</h1>
-      <p className="subtitle">Sign in to continue.</p>
+    <Card as="div" className="w-full max-w-sm">
+      <form onSubmit={handleSubmit} noValidate>
+        <Stack gap="md">
+          <div>
+            <h1 className="text-headline-md text-on-surface">English Quest</h1>
+            <p className="text-body-sm text-on-surface-variant">Sign in to continue.</p>
+          </div>
 
-      <div className="field">
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="username"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          disabled={submitting || locked}
-          required
-        />
-      </div>
+          <Field label="Email">
+            {(props) => (
+              <input
+                {...props}
+                name="email"
+                type="email"
+                autoComplete="username"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                disabled={submitting || locked}
+                required
+                className={fieldControlClassName}
+              />
+            )}
+          </Field>
 
-      <div className="field">
-        <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          ref={passwordRef}
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          disabled={submitting || locked}
-          required
-        />
-      </div>
+          <Field label="Password">
+            {(props) => (
+              <input
+                {...props}
+                ref={passwordRef}
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                disabled={submitting || locked}
+                required
+                className={fieldControlClassName}
+              />
+            )}
+          </Field>
 
-      <button className="primary" type="submit" disabled={submitting || locked}>
-        {submitting ? 'Signing in…' : 'Sign in'}
-      </button>
+          <Button type="submit" fullWidth loading={submitting} loadingLabel="Signing in…" disabled={locked}>
+            Sign in
+          </Button>
 
-      {error ? (
-        <p className="error" role="alert">
-          {error}
-          {locked ? ` (${minutes}:${String(seconds).padStart(2, '0')})` : null}
-        </p>
-      ) : null}
-    </form>
+          {error ? (
+            <p className="text-body-sm text-error" role="alert">
+              {error}
+              {locked ? ` (${minutes}:${String(seconds).padStart(2, '0')})` : null}
+            </p>
+          ) : null}
+        </Stack>
+      </form>
+    </Card>
   );
 }

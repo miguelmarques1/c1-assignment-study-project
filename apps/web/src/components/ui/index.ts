@@ -3,7 +3,7 @@ export { Card, type CardProps } from './card';
 export { Badge, type BadgeProps } from './badge';
 export { Meter, type MeterProps } from './meter';
 export { Chip, type ChipProps } from './chip';
-export { Field, type FieldControlProps } from './field';
+export { Field, fieldControlClassName, type FieldControlProps } from './field';
 export { Stack } from './stack';
 export { Grid } from './grid';
 export { Skeleton } from './skeleton';

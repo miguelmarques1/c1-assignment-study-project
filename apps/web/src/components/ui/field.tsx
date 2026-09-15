@@ -8,6 +8,14 @@ export interface FieldControlProps {
   'aria-invalid'?: boolean;
 }
 
+/**
+ * Shared styling for the text control every Field consumer renders through
+ * the render prop — Field itself never renders the control, so this is the
+ * one place its visual treatment is written rather than copied per caller.
+ */
+export const fieldControlClassName =
+  'rounded-md border-2 border-outline-strong bg-surface-container-lowest px-md py-sm text-body-md text-on-surface disabled:cursor-not-allowed disabled:opacity-60';
+
 interface FieldProps {
   label: string;
   hint?: string;

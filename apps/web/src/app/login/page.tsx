@@ -16,10 +16,13 @@ export default async function LoginPage({
   const params = await searchParams;
 
   return (
-    <main className="centered">
-      <div style={{ width: '100%', maxWidth: '24rem' }}>
+    <main className="flex min-h-screen items-center justify-center p-md">
+      <div className="flex w-full max-w-sm flex-col gap-md">
         {params.expired ? (
-          <p className="banner" role="status">
+          <p
+            role="status"
+            className="rounded-md border-2 border-outline-strong bg-surface-container-lowest px-md py-sm text-body-sm text-on-surface-variant"
+          >
             Your session expired. Please sign in again.
           </p>
         ) : null}

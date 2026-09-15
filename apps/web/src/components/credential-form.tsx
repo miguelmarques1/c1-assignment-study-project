@@ -3,6 +3,8 @@
 import { azureRegionField, type CredentialProvider } from '@english-quest/shared';
 import { useState, type FormEvent } from 'react';
 
+import { Button, Field, Stack, fieldControlClassName } from '@/components/ui';
+
 interface Props {
   provider: CredentialProvider;
   submitting: boolean;
@@ -25,6 +27,7 @@ export function CredentialForm({
   const [localError, setLocalError] = useState<string | null>(null);
 
   const needsRegion = provider === 'azure_speech';
+  const shownError = localError ?? error;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -50,55 +53,61 @@ export function CredentialForm({
 
   return (
     <form onSubmit={handleSubmit} noValidate>
-      <div className="field">
-        <label htmlFor={`${provider}-key`}>API key</label>
-        <input
-          id={`${provider}-key`}
-          type="password"
-          autoComplete="off"
-          autoCorrect="off"
-          spellCheck={false}
-          value={key}
-          onChange={(event) => setKey(event.target.value)}
-          disabled={submitting}
-          required
-        />
-      </div>
+      <Stack gap="md">
+        <Field label="API key">
+          {(props) => (
+            <input
+              {...props}
+              type="password"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+              value={key}
+              onChange={(event) => setKey(event.target.value)}
+              disabled={submitting}
+              required
+              className={fieldControlClassName}
+            />
+          )}
+        </Field>
 
-      {needsRegion ? (
-        <div className="field">
-          <label htmlFor={`${provider}-region`}>Region</label>
-          <input
-            id={`${provider}-region`}
-            type="text"
-            placeholder="brazilsouth"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            value={region}
-            onChange={(event) => setRegion(event.target.value)}
-            disabled={submitting}
-            required
-          />
-        </div>
-      ) : null}
+        {needsRegion ? (
+          <Field label="Region">
+            {(props) => (
+              <input
+                {...props}
+                type="text"
+                placeholder="brazilsouth"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                value={region}
+                onChange={(event) => setRegion(event.target.value)}
+                disabled={submitting}
+                required
+                className={fieldControlClassName}
+              />
+            )}
+          </Field>
+        ) : null}
 
-      <div className="row">
-        <button className="primary" type="submit" disabled={submitting}>
-          {submitting ? 'Validating…' : 'Save and validate'}
-        </button>
-        <button className="secondary" type="button" onClick={onCancel} disabled={submitting}>
-          Cancel
-        </button>
-      </div>
+        <Stack direction="row" gap="sm">
+          <Button variant="primary" type="submit" loading={submitting} loadingLabel="Validating…">
+            Save and validate
+          </Button>
+          <Button variant="neutral" type="button" onClick={onCancel} disabled={submitting}>
+            Cancel
+          </Button>
+        </Stack>
 
-      {localError ?? error ? (
-        <p className="error" role="alert">
-          {localError ?? error}
-          {/* The provider's own wording, verbatim, beneath the plain-language line. */}
-          {providerMessage ? <span className="provider-message">{providerMessage}</span> : null}
-        </p>
-      ) : null}
+        {shownError ? (
+          <p className="text-body-sm text-error" role="alert">
+            {shownError}
+            {/* The provider's own wording, verbatim, beneath the plain-language line. */}
+            {providerMessage ? <span className="block font-mono text-body-sm text-on-surface-variant">{providerMessage}</span> : null}
+          </p>
+        ) : null}
+      </Stack>
     </form>
   );
 }

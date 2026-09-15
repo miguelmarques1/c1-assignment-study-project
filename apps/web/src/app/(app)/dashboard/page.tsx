@@ -9,9 +9,9 @@ export const metadata = {
  */
 export default function DashboardPage() {
   return (
-    <main>
-      <h2>Dashboard</h2>
-      <p style={{ color: 'var(--text-muted)' }}>
+    <main className="flex flex-col gap-sm">
+      <h2 className="text-headline-sm text-on-surface">Dashboard</h2>
+      <p className="text-body-md text-on-surface-variant">
         You are signed in. Lessons, your study plan and your progress will appear here as the
         remaining features land.
       </p>

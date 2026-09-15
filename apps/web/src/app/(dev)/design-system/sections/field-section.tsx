@@ -2,12 +2,9 @@
 
 import { useState } from 'react';
 
-import { Field } from '@/components/ui';
+import { Field, fieldControlClassName } from '@/components/ui';
 
 import { SectionShell } from './section-shell';
-
-const INPUT_CLASSES =
-  'rounded-md border-2 border-outline-strong bg-surface-container-lowest px-md py-sm text-body-md';
 
 export function FieldSection() {
   const [value, setValue] = useState('');
@@ -22,15 +19,15 @@ export function FieldSection() {
               type="email"
               value={value}
               onChange={(event) => setValue(event.target.value)}
-              className={INPUT_CLASSES}
+              className={fieldControlClassName}
             />
           )}
         </Field>
         <Field label="With a hint" hint="This is optional guidance text.">
-          {(props) => <input {...props} type="text" className={INPUT_CLASSES} />}
+          {(props) => <input {...props} type="text" className={fieldControlClassName} />}
         </Field>
         <Field label="With an error" error="This field is required.">
-          {(props) => <input {...props} type="text" className={INPUT_CLASSES} />}
+          {(props) => <input {...props} type="text" className={fieldControlClassName} />}
         </Field>
       </div>
     </SectionShell>

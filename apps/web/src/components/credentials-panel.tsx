@@ -1,8 +1,9 @@
 'use client';
 
 import type { CredentialProvider, MaskedCredential } from '@english-quest/shared';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
+import { ErrorState, Grid, LoadingState } from '@/components/ui';
 import { listCredentials } from '@/lib/credentials';
 import { CredentialCard } from './credential-card';
 
@@ -15,13 +16,8 @@ export function CredentialsPanel({ initial = null }: Props) {
   const [credentials, setCredentials] = useState<MaskedCredential[] | null>(initial);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Only fetch when the server could not provide the list — otherwise the
-    // first paint is already correct and a refetch would just flicker.
-    if (initial) {
-      return;
-    }
-
+  const load = useCallback(() => {
+    setError(null);
     let cancelled = false;
 
     listCredentials()
@@ -35,7 +31,16 @@ export function CredentialsPanel({ initial = null }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [initial]);
+  }, []);
+
+  useEffect(() => {
+    // Only fetch when the server could not provide the list — otherwise the
+    // first paint is already correct and a refetch would just flicker.
+    if (initial) {
+      return;
+    }
+    return load();
+  }, [initial, load]);
 
   function replace(next: MaskedCredential) {
     setCredentials((current) =>
@@ -55,18 +60,20 @@ export function CredentialsPanel({ initial = null }: Props) {
 
   if (error) {
     return (
-      <p className="error" role="alert">
-        {error}
-      </p>
+      <ErrorState
+        title="Could not load your credentials"
+        description="Check your connection and try again."
+        onRetry={load}
+      />
     );
   }
 
   if (!credentials) {
-    return <p className="subtitle">Loading…</p>;
+    return <LoadingState variant="card-grid" label="Loading your credentials…" />;
   }
 
   return (
-    <div className="credential-grid">
+    <Grid columns={2} gap="md">
       {credentials.map((credential) => (
         <CredentialCard
           key={credential.provider}
@@ -75,6 +82,6 @@ export function CredentialsPanel({ initial = null }: Props) {
           onRemoved={clear}
         />
       ))}
-    </div>
+    </Grid>
   );
 }

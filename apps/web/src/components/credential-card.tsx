@@ -9,6 +9,7 @@ import {
 } from '@english-quest/shared';
 import { useState } from 'react';
 
+import { Badge, Button, Card, Stack, type BadgeProps } from '@/components/ui';
 import { ApiRequestError } from '@/lib/api-client';
 import {
   deleteCredential,
@@ -32,6 +33,14 @@ const STATUS_LABEL: Record<CredentialStatus, string> = {
   missing: 'Missing',
 };
 
+/** The design system has no idea what a "credential" is — the mapping lives here, at the call site. */
+const STATUS_BADGE: Record<CredentialStatus, BadgeProps['status']> = {
+  valid: 'success',
+  invalid: 'danger',
+  unverified: 'warning',
+  missing: 'neutral',
+};
+
 interface Props {
   credential: MaskedCredential;
   onChanged: (next: MaskedCredential) => void;
@@ -46,6 +55,7 @@ export function CredentialCard({ credential, onChanged, onRemoved }: Props) {
 
   const label = providerLabels[credential.provider];
   const isMissing = credential.status === 'missing';
+  const titleId = `${credential.provider}-title`;
 
   async function handleSave(key: string, region: string | null) {
     setBusy(true);
@@ -99,71 +109,76 @@ export function CredentialCard({ credential, onChanged, onRemoved }: Props) {
   }
 
   return (
-    <section className="card credential-card" aria-labelledby={`${credential.provider}-title`}>
-      <header className="credential-head">
-        <h3 id={`${credential.provider}-title`}>{label}</h3>
-        <span className={`badge badge-${credential.status}`}>
-          {STATUS_LABEL[credential.status]}
-        </span>
-      </header>
-
-      {isMissing ? (
-        <p className="subtitle">{MISSING_COPY[credential.provider]}</p>
-      ) : (
-        <dl className="credential-meta">
-          <div>
-            <dt>Key</dt>
-            <dd className="mono">{credential.maskedKey}</dd>
-          </div>
-          {credential.region ? (
-            <div>
-              <dt>Region</dt>
-              <dd className="mono">{credential.region}</dd>
-            </div>
-          ) : null}
-          <div>
-            <dt>Last checked</dt>
-            <dd>{relativeTime(credential.lastValidatedAt)}</dd>
-          </div>
-        </dl>
-      )}
-
-      {editing ? (
-        <CredentialForm
-          provider={credential.provider}
-          submitting={busy}
-          error={error}
-          providerMessage={providerMessage}
-          onSubmit={handleSave}
-          onCancel={() => {
-            setEditing(false);
-            setError(null);
-            setProviderMessage(null);
-          }}
-        />
-      ) : (
-        <div className="row">
-          <button className="primary" type="button" onClick={() => setEditing(true)} disabled={busy}>
-            {isMissing ? 'Add key' : 'Replace key'}
-          </button>
-          {!isMissing ? (
-            <>
-              <button className="secondary" type="button" onClick={handleRevalidate} disabled={busy}>
-                {busy ? 'Checking…' : 'Re-check'}
-              </button>
-              <button className="danger" type="button" onClick={handleDelete} disabled={busy}>
-                Delete
-              </button>
-            </>
-          ) : null}
+    <Card
+      aria-labelledby={titleId}
+      header={
+        <div className="flex items-center justify-between gap-md">
+          <h3 id={titleId} className="text-title-md text-on-surface">
+            {label}
+          </h3>
+          <Badge status={STATUS_BADGE[credential.status]}>{STATUS_LABEL[credential.status]}</Badge>
         </div>
-      )}
+      }
+    >
+      <Stack gap="md">
+        {isMissing ? (
+          <p className="text-body-md text-on-surface-variant">{MISSING_COPY[credential.provider]}</p>
+        ) : (
+          <dl className="flex flex-col gap-xs">
+            <div className="flex justify-between gap-md text-body-sm">
+              <dt className="text-on-surface-variant">Key</dt>
+              <dd className="font-mono text-on-surface">{credential.maskedKey}</dd>
+            </div>
+            {credential.region ? (
+              <div className="flex justify-between gap-md text-body-sm">
+                <dt className="text-on-surface-variant">Region</dt>
+                <dd className="font-mono text-on-surface">{credential.region}</dd>
+              </div>
+            ) : null}
+            <div className="flex justify-between gap-md text-body-sm">
+              <dt className="text-on-surface-variant">Last checked</dt>
+              <dd className="text-on-surface">{relativeTime(credential.lastValidatedAt)}</dd>
+            </div>
+          </dl>
+        )}
 
-      {!editing && error ? (
-        <p className="error" role="alert">
-          {error}
-        </p>
-      ) : null}
-    </section>
+        {editing ? (
+          <CredentialForm
+            provider={credential.provider}
+            submitting={busy}
+            error={error}
+            providerMessage={providerMessage}
+            onSubmit={handleSave}
+            onCancel={() => {
+              setEditing(false);
+              setError(null);
+              setProviderMessage(null);
+            }}
+          />
+        ) : (
+          <Stack direction="row" gap="sm" wrap>
+            <Button variant="primary" type="button" onClick={() => setEditing(true)} disabled={busy}>
+              {isMissing ? 'Add key' : 'Replace key'}
+            </Button>
+            {!isMissing ? (
+              <>
+                <Button variant="neutral" type="button" onClick={handleRevalidate} disabled={busy}>
+                  {busy ? 'Checking…' : 'Re-check'}
+                </Button>
+                <Button variant="destructive" type="button" onClick={handleDelete} disabled={busy}>
+                  Delete
+                </Button>
+              </>
+            ) : null}
+          </Stack>
+        )}
+
+        {!editing && error ? (
+          <p className="text-body-sm text-error" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </Stack>
+    </Card>
   );
 }

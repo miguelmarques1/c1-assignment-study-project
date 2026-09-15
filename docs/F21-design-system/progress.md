@@ -23,7 +23,7 @@
 - Two proof-of-failure fixtures included in the suite (`the_build_refuses_to_emit_when_a_pair_fails_its_threshold`, `the_literal_value_guard_can_actually_fail`) so the contrast gate and the raw-value guard are demonstrated to actually fail on bad input, not just pass on good input.
 
 **Validation:** lint ✅ (0 warnings) · typecheck ✅ (`pnpm -r typecheck`, all 4 packages) · tests ✅ (design-tokens 17/17, api 108/108 unaffected, web 13/13 unaffected)
-**Commit:** _(pending — recorded after this commit lands)_
+**Commit:** `f786123` — F21 stage 1 - token source and generation pipeline
 
 ## Stage 2: Theme Layer and Primitives — ✅ done
 
@@ -44,7 +44,7 @@
 - Login and settings screens are now visually broken (every ad-hoc class from the old stylesheet is gone) until Stage 4 migrates them onto the primitives — expected and called out in the plan itself.
 
 **Validation:** lint ✅ (web + design-tokens, 0 warnings) · typecheck ✅ (`pnpm -r typecheck`) · tests ✅ (web 13/13 unaffected — RTL queries by role/text, not CSS class, so the stylesheet rewrite doesn't touch them) · `next build` ✅ (production build + CSS pipeline smoke check, described above)
-**Commit:** _(pending — recorded after this commit lands)_
+**Commit:** `243c596` — F21 stage 2 - Tailwind v4 theme layer and the eight primitives
 
 ## Stage 3: Page States, Theming and Documentation — ✅ done
 
@@ -63,19 +63,27 @@
 - `Grid`'s `columns` reflow table (from Stage 2) and `Meter`'s warming-up hatch utility (added this stage, in `globals.css`) are exercised directly by the `GridSection`/`MeterSection` showcase blocks, which double as the Stage 5 visual-regression subjects.
 
 **Validation:** lint ✅ (0 warnings) · typecheck ✅ (including the `@ts-expect-error` fixtures, confirmed non-vacuous) · tests ✅ (web 37/37: 13 ui-primitives + 6 page-states + 5 theme + 8 credential-card + 5 login-form, all passing) · `next build` ✅ twice, with the second run's static HTML output inspected directly for all 11 documentation sections
+**Commit:** `dc8b5b6` — F21 stage 3 - page states, theme toggle and the documentation page
+
+## Stage 4: Screen Migration — ✅ done
+
+- [x] **15. Application shell and login**
+- [x] **16. Settings screen**
+- [x] **17. Ad-hoc style removal**
+- [x] **18. Existing suite verification**
+
+**Observations:**
+- `Field` gained an exported `fieldControlClassName` constant so the four call sites rendering a text `<input>` through its render prop (login email/password, credential key/region, and the Stage 3 documentation section) share one literal Tailwind class string instead of four copies of the same composition — retrofitted into `field-section.tsx` too, since duplicating it there would have been exactly the drift this feature exists to prevent.
+- `LoginForm`'s outer `<form className="card">` couldn't become `<Card as="form">` — Card's `as` union is `'section' | 'article' | 'div'` by contract (spec's Component contracts table), not `'form'`. Restructured as `<Card as="div">` wrapping a `<form>` child instead; functionally identical, and the AC/tests only check by role and label, not by which element wraps which.
+- `CredentialCard` maps the four credential statuses (`valid`/`invalid`/`unverified`/`missing`) onto badge statuses (`success`/`danger`/`warning`/`neutral`) in a `STATUS_BADGE` lookup at the top of the file, per the plan's explicit instruction that "the design system stays unaware of credentials" — `Badge`/`BadgeStatus` never see the word "credential".
+- `CredentialsPanel`'s fetch-failed path was a static `<p role="alert">Could not load your credentials.</p>` before this stage. `ErrorState` cannot be constructed without `onRetry` (a type-level guarantee from Stage 3), so satisfying that contract required actually building a retry path: the fetch was extracted into a `useCallback`'d `load()` used both by the mount effect and by `ErrorState`'s `onRetry`. This is a small real behavior improvement forced by the primitive's own contract, not a cosmetic swap.
+- `CredentialsPanel`'s loading state moved from `<p className="subtitle">Loading…</p>` to `<LoadingState variant="card-grid" label="Loading your credentials…" />`, and its two-column layout moved from a CSS `repeat(auto-fit, minmax(20rem, 1fr))` grid to `<Grid columns={2} gap="md">` — a fixed breakpoint-driven layout rather than content-driven auto-fit, which is what the Grid primitive's contract offers; with exactly two credentials this is visually equivalent.
+- Ran a whole-repo scan for every retired class name (`card`, `field`, `primary`, `secondary`, `danger`, `subtitle`, `banner`, `app-shell`, `app-header`, `centered`, `mono`, `provider-message`, `credential-card`/`-head`/`-meta`/`-grid`, `row`, bare `badge`) as a standalone class token (not as a substring of a Tailwind utility like `text-error` or `font-mono`, which a naive grep flags as false positives) — zero survivors. The one remaining `style={{...}}` in the whole web client is `Meter`'s dynamic fill-percentage width, which is data-driven and not a duplicated token value; Stage 5's raw-value guard is designed to let a `%` width through while still catching a literal `px`/`rem`/hex.
+- **Full end-to-end runtime verification, not just component tests:** brought up a standalone `next start` on a free port (3000 was held by the project's own running `docker compose` stack), logged into the real API container with a seeded user (email/password read out of `.env` and piped directly into `curl` without ever being echoed to the terminal), and hit `/login`, `/dashboard` and `/settings` with the resulting session cookie. `/settings` rendered real database-backed credential data through the fully migrated `CredentialsPanel → CredentialCard → Badge` chain (`Gemini`, `Azure Speech`, a `Valid` status badge all present in the response HTML) — not a mock, the actual seeded row. This is a stronger check than the component-level RTL tests alone, since it exercises the real HTTP/auth/DB path the component tests stub out.
+- Re-ran `login-form.spec.tsx` (5/5) and `credential-card.spec.tsx` (8/8) unchanged from before the migration — per the plan's step 18 instruction, any breakage would have been fixed in the components, not the tests; none was needed.
+
+**Validation:** lint ✅ (0 warnings) · typecheck ✅ · tests ✅ (web 37/37, all pre-existing and Stage 3 suites unchanged and passing) · `next build` ✅ · runtime ✅ — `/login` (200, unauthenticated), `/dashboard` and `/settings` (200 with a real session cookie, real seeded credential data rendered)
 **Commit:** _(pending — recorded after this commit lands)_
-
-## Stage 4: Screen Migration — ⬜ pending
-
-- [ ] **15. Application shell and login**
-- [ ] **16. Settings screen**
-- [ ] **17. Ad-hoc style removal**
-- [ ] **18. Existing suite verification**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 5: Enforcement and Visual Regression — ⬜ pending
 
