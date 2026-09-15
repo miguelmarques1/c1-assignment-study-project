@@ -1,9 +1,9 @@
 # Implementation Progress: Design System
 
-**Status:** in progress
+**Status:** success
 **Branch:** main
 **Started:** 2026-09-14
-**Last updated:** 2026-09-14
+**Last updated:** 2026-09-15
 
 ## Stage 1: Token Source and Generation Pipeline — ✅ done
 
@@ -118,9 +118,55 @@
 - **Logo added** (`design/english_quest_logo`) at the user's request, into `components/ui/logo.tsx` as inline SVG using `fill-`/`stroke-` token utilities rather than the reference's literal hex — `#FF6B4A` maps exactly to our `primary-container`; the reference's light-peach tile has no token equivalent and maps to `outline-variant`, the nearest declared warm-light role. Placed in the login card header and the authenticated shell's header (linked to `/dashboard`); not added to the `/design-system` showcase list, to avoid an unrelated baseline-recapture for a brand asset rather than a primitive.
 
 **Validation:** lint ✅ (0 warnings, whole repo) · typecheck ✅ (whole repo) · tests ✅ (design-tokens 17/17, web 48/48, api 108/108 — every workspace, not just the touched one) · `next build` ✅ · Playwright visual suite ✅ (3/3, containerised, 22 baselines committed and stable on a clean re-run) · both regressions found here were root-caused and fixed within this same stage, not deferred
-**Commit:** _(pending — recorded after this commit lands)_
+**Commit:** `a05dfd4` — F21 stage 5 - accessibility lint, raw-value guards and visual regression
 
-**Observations:** _(none yet)_
+## Final Verification
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+Performed independently of the five stages above, per the implement-feature skill's Step 6 — a fresh pass over the whole feature, not a trust of what each stage already claimed.
+
+**Full-suite validation (fresh, whole repo, not filtered to touched files):**
+- `pnpm lint` — 0 warnings across `apps/api`, `apps/web` (including `e2e/` and `playwright.config.ts`), `packages/shared`, `packages/design-tokens`.
+- `pnpm typecheck` — clean across all 4 packages.
+- `pnpm test` — **design-tokens 17/17 · web 48/48 · api 108/108**, all fresh, none reused from an earlier stage's run.
+- `pnpm --filter web build` (production) — clean, all 6 routes compiled.
+
+**Component Overview walk-through:** enumerated all 71 files spec.md's Component Overview tables list (design-tokens package, web theme layer, all 8 primitives + `cn.ts` + barrel, 3 page states, documentation page + 11 section files + shared shell, 4 migrated app components, 4 migrated pages, Playwright config + spec + 22 baseline PNGs, `docker-compose.yml`, `eslint.config.mjs`, `vitest.config.ts`) — **all present**, none missing.
+
+**AC re-check (fresh test runs, not trusted from earlier stages), mapped per spec.md's Testing Strategy:**
+
+| PRD acceptance criterion | Result |
+|---|---|
+| No raw hex/magic pixel value survives a lint pass | ✓ `no-raw-values.spec.ts` (7/7) |
+| Every reading surface AA 4.5:1 / border 3:1 in both themes; exemption registry empty | ✓ `design-tokens/test/tokens.spec.ts` |
+| Button/Card/Badge/Meter/Chip/Field/Stack/Grid exist with their variants/states | ✓ `ui-primitives.spec.tsx` (13/13) |
+| Loading/Empty/Error render the right content shape | ✓ `page-states.spec.tsx` (6/6) |
+| Keyboard-operable with a token focus ring | ✓ `ui-primitives.spec.tsx` |
+| No status carried by colour alone | ✓ `ui-primitives.spec.tsx` |
+| Both themes legible on the docs page; elevation by outline in dark | ✓ Playwright visual suite (fresh re-run, 3/3) + `dark_elevation_substitutes_outline_for_shadow` |
+| `tokens.json` → 3 outputs, one change moves all three | ✓ `design-tokens/test/emit.spec.ts` |
+| No hex/spacing number in more than one place across outputs | ✓ `the_generator_contains_no_literal_token_values` |
+| No XP/levels/streaks/badges/paid tier/third-party sign-in | ✓ manual grep across `apps/web/src` for the excluded vocabulary — zero matches |
+| Documentation page lists every component, both themes | ✓ `the_documentation_page_lists_every_component` (fresh re-run) |
+| Login/settings render entirely from the system; ad-hoc classes gone | ✓ whole-repo grep for every retired class name (zero survivors) + `login-form.spec.tsx`/`credential-card.spec.tsx` unchanged |
+| Undefined token fails the build | ✓ `token-resolution.spec.ts`, including the `an_unknown_utility_is_detected` fixture |
+
+Every AC has a passing test re-run fresh in this pass; none rest on an earlier stage's cached result.
+
+**Environment smoke check:** the most substantial part of this pass. Brought the full `docker compose` stack up (postgres/redis/minio/livekit/api/web, plus the `visual` service), and along the way surfaced and fixed two problems that only a real environment could show:
+
+- **`.next` corruption from mixing a host-run `next build` (production) with the container's `next dev` (development) against the same bind-mounted `.next` directory** — manifested as `Cannot find module './928.js'` and a 500 on every route once both had touched it. Not a product bug; a operational artifact of testing the same feature from both a production build and a live dev container in the same session. Fixed by deleting `.next` and letting the container's dev server regenerate it; documented here so a future session doesn't mistake it for a real regression. The host build was re-verified clean immediately afterward, then `.next` was deleted again and the container's dev server restarted, leaving the environment in the same state it would be in for a normal `docker compose exec web pnpm dev` session.
+- Re-confirmed, after the above fix, that both the containerised Playwright suite (3/3) and a full authenticated walkthrough (`/login` unauthenticated 200, `/dashboard` and `/settings` with a real seeded-user session cookie, both 200 with real database-backed content) work end to end.
+- The two regressions logged under Stage 5 (`max-w-sm` collision, theme-default SSR placeholder + visual-suite dark-mode mechanism) were found *during* this same environment verification, fixed, and re-verified by screenshot and by a clean Playwright re-run before this report was written — they are not open items.
+
+**Missing from spec:** none.
+**Regressions:** none outstanding — both found during this verification pass were fixed within it (see Stage 5 observations and the smoke-check note above).
+**Pre-existing failures:** none — the API's 108-test suite (unrelated to F21, from F01/F02) passed unchanged.
+**Soft-fails:** none.
+
+**Status: success.** Every Step 6 check is green: full suite passes fresh, every Component Overview file is present, every AC's test passes on this pass, every smoke check passed.
+
+**Closed out before this report, not left open:**
+- `design/english_quest_design_system/DESIGN.md`'s prose contradicted its own frontmatter — the PRD commits to correcting this "in the same step" as the token source document (plan.md Stage 1 step 2), but the prose was never actually edited during Stage 1, only read past. Fixed now: the Palette Architecture section is rewritten to the frontmatter's actual values with a note on why (the earlier prose's hexes appear far less often in the reference screens than the frontmatter's, per Stage 1's measured hex-frequency analysis); a naming note added to Shapes spelling out the `rounded-2xl`→`rounded-lg` / `rounded-xl`→`rounded-md` mapping the spec's Data Model already worked out; and the two remaining mentions of excluded gamification vocabulary (XP, levels, streaks) in Brand Personality and Typography reworded to point at the PRD's exclusion instead.
+
+**Follow-up work knowingly left open** (not required by this feature's acceptance criteria, but worth a future session's attention):
+- `max-w-{xs,sm,md,lg,xl}` remains a live trap for any future Tailwind usage — our own spacing tokens share those exact names with Tailwind's built-in named container/max-width scale, and Tailwind resolves the collision silently in the spacing scale's favour. No lint rule catches this today; the two known occurrences are fixed, but a new one elsewhere would reproduce the same "layout the mislabeled `.5rem` wide" state.

@@ -148,23 +148,25 @@ This design system blends **Soft Neo-brutalism** with a **Warm Editorial** sensi
 - **Crisp & Authoritative:** High-contrast typography and intentional editorial layout balance the playful neo-brutalism with academic clarity.
 
 ### Target Audience & Emotional Impact
-Designed for language learners, students, and professionals engaging in conversational roleplays, AI speech practice, and daily quests. The interface builds confidence through clear visual states, tactile feedback on button presses, satisfying milestone badges (XP, Levels, Fluency streaks), and zero visual ambiguity.
+Designed for language learners, students, and professionals engaging in conversational roleplays and AI speech practice. The interface builds confidence through clear visual states, tactile feedback on button presses, status badges, and zero visual ambiguity. (This reference's gamification vocabulary — XP, levels, streaks — is visual inspiration only; the product excludes it, per Section 7 of `docs/prd.md`.)
 
 ## Colors
 
-The palette establishes a high-contrast yet soothing atmosphere. The default color mode is strictly **light**, using rich, sun-baked paper tones for the background and clean white paper for content surfaces.
+The palette establishes a high-contrast yet soothing atmosphere. The default color mode is strictly **light**, using a soft violet-tinted paper tone for the background and clean white paper for content surfaces.
+
+*Corrected against the frontmatter above, which is what the rendered reference screens actually use and is authoritative — an earlier draft of this prose named a different, unused palette (`#FF6B4A` primary, `#F8F4EE` canvas, `#3B82F6` secondary, `#10B981` tertiary, `#FBBF24` amber, `#EF4444` danger). Measured against the screens, those hexes appear far less often than the frontmatter's and were never the palette actually shipped.*
 
 ### Palette Architecture
 - **Canvas / Backgrounds:**
-  - Base Canvas: Warm Cream (`#F8F4EE`)
-  - Sub-canvas / Page Alt: Light Cream (`#F5EFEB`)
-  - Surface Pure: Crisp Paper White (`#FFFFFF`)
-- **Primary (Terracotta / Coral):** `#FF6B4A` — Used for main calls-to-action, active study streaks, daily challenge banners, and focus accents.
-- **Secondary (Electric / Sky Blue):** `#3B82F6` — Used for AI conversational roleplays, speech status, audio playback controls, and link interactions.
-- **Tertiary (Mint / Emerald):** `#10B981` — Signifies successful validation, speech accuracy checkmarks, verified API connections, and XP gains.
-- **Warning & Accent Amber:** `#FBBF24` — Dedicated to XP rewards, badges, and caution notices.
-- **Danger / Destructive:** `#EF4444` — Explicitly reserved for delete actions, connection dropouts, and errors.
-- **Structural Black / Neutral:** `#18181B` (or `#000000`) — Forms every 2px stroke, typographic header, and hard drop shadow that anchors the neo-brutalist aesthetic.
+  - Base Canvas: `surface` (`#FBF8FC`)
+  - Content Surface: `surface-container-lowest` (`#FFFFFF`)
+  - Elevated Surface: `surface-container` (`#F0EDF1`) / `surface-container-highest` (`#E4E1E6`)
+- **Primary (Terracotta / Coral):** `#AE3115`, with `primary-container` `#FF6B4A` reserved for decorative washes (its contrast against white is too low for body text — pair it only with `on-primary-container` `#18181B`). Used for main calls-to-action and focus accents.
+- **Secondary (Electric / Sky Blue):** `#0058BE`, with `secondary-container` `#2170E4` — used for AI conversational roleplays, speech status, audio playback controls, and link interactions.
+- **Tertiary (Mint / Emerald):** `#006C49`, with `tertiary-container` `#00B07A` — signifies successful validation and verified API connections.
+- **Warning & Accent Amber:** repurposed in the product for warnings and the profile's "warming up" state, not XP (see Section 7 of `docs/prd.md` for what this product excludes).
+- **Danger / Destructive:** `#BA1A1A`, with `error-container` `#FFDAD6` — reserved for delete actions, connection dropouts, and errors.
+- **Structural Black / Neutral:** `#18181B` (`outline-strong`) — forms every 2px stroke, typographic header, and hard drop shadow that anchors the neo-brutalist aesthetic. In dark mode this role flips to a light outline (`#E4E1E6`), since a black shadow is invisible on a dark surface — elevation there is carried by the outline, not the shadow.
 
 ## Typography
 
@@ -173,7 +175,7 @@ The palette establishes a high-contrast yet soothing atmosphere. The default col
 ### Hierarchy Guidelines
 - **Headlines & Titles:** Set in `FontWeight 700` and `800` with tight letter tracking (`-0.02em`). Keep titles punchy and authoritative.
 - **Body & Dialogue Microcopy:** Set in `FontWeight 400` or `500` with generous line-height (`1.6x`) to prevent eye fatigue during prolonged reading and speech analysis sessions.
-- **Badges & Labels:** Set with strong `FontWeight 700` or `800`, often coupled with uppercase styling and slight tracking (`+0.04em`) to punctuate tags like `XP`, `LEVEL 4`, `VALID`, or `SCENARIO`.
+- **Badges & Labels:** Set with strong `FontWeight 700` or `800`, often coupled with uppercase styling and slight tracking (`+0.04em`) to punctuate tags like `VALID`, `WARMING UP`, or `SCENARIO`.
 
 ## Layout & Spacing
 
@@ -211,6 +213,8 @@ The design system tempers hard-edged neo-brutalism with generous, friendly round
 - **Buttons & Interactive Badges:** `rounded-xl` (12px) to `rounded-2xl` (16px).
 - **Status Chips & Pills:** Full pill (`rounded-full` / 9999px) with a 2px solid `#18181B` border.
 - **Form Inputs:** `rounded-xl` (12px) with a crisp 2px solid `#18181B` border.
+
+> **Naming note:** these `rounded-*` names describe stock Tailwind's default radius scale, which this system's `radius` frontmatter (`sm .25rem`, `DEFAULT .5rem`, `md .75rem`, `lg 1rem`, `xl 1.5rem`, `full 9999px`) does not match key-for-key. Reading this section's names literally against the token scale above picks the wrong value. The mapping actually implemented: prose `rounded-2xl` (16–20px) → token `rounded-lg` (1rem); prose `rounded-xl` (12px) → token `rounded-md` (0.75rem); `rounded-full` is unambiguous in both.
 
 ## Components
 
