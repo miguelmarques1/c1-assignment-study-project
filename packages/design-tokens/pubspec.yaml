@@ -1,0 +1,15 @@
+name: english_quest_tokens
+description: >-
+  Generated Flutter theme for English Quest: colors, spacing, radius,
+  elevation and text styles derived from tokens.json. Never hand-edited —
+  regenerate with `pnpm tokens:build` from the repo root.
+version: 0.0.0
+publish_to: 'none'
+
+environment:
+  sdk: ^3.12.0
+  flutter: ">=3.44.0"
+
+dependencies:
+  flutter:
+    sdk: flutter

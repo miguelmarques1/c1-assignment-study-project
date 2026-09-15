@@ -1,0 +1,20 @@
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # Imports: dead imports are already a standing analyzer warning
+    # (unused_import); these two catch what that warning doesn't — imports
+    # of packages not declared as direct dependencies, and unordered/ungrouped
+    # directives that make a stray import easy to miss in review.
+    depend_on_referenced_packages: true
+    directives_ordering: true
+
+    # Comments: keep TODOs accountable and doc-comment references valid.
+    # Dart's linter has no rule that flags "this comment restates the code" —
+    # that judgment call stays on us in review.
+    flutter_style_todos: true
+    comment_references: true
+
+    # Formatting: trailing commas are what drive dart format's line-wrapping
+    # and indentation of multi-line calls/literals.
+    require_trailing_commas: true

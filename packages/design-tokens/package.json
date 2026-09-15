@@ -14,7 +14,8 @@
   },
   "files": [
     "dist",
-    "generated"
+    "generated",
+    "lib"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

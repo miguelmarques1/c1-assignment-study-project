@@ -1,0 +1,10 @@
+node_modules/
+dist/
+src/
+test/
+generated/
+*.tsbuildinfo
+package.json
+pnpm-lock.yaml
+tsconfig*.json
+vitest.config.ts

@@ -68,10 +68,12 @@ export function buildTokens(sourcePath?: string): void {
   const generatedDir = join(PACKAGE_ROOT, 'generated');
   writeFileSync(join(generatedDir, 'tokens.css'), emitCss(tokens), 'utf-8');
   writeFileSync(join(generatedDir, 'tokens.ts'), emitTs(tokens), 'utf-8');
-  writeFileSync(join(generatedDir, 'tokens.dart'), emitDart(tokens), 'utf-8');
+  // A pub package's library code must live under `lib/`, so the Dart target
+  // is the one artifact that doesn't sit alongside its CSS/TS siblings.
+  writeFileSync(join(PACKAGE_ROOT, 'lib', 'english_quest_tokens.dart'), emitDart(tokens), 'utf-8');
 }
 
 if (require.main === module) {
   buildTokens();
-  console.warn('Generated tokens.css, tokens.ts and tokens.dart from tokens.json');
+  console.warn('Generated tokens.css, tokens.ts and lib/english_quest_tokens.dart from tokens.json');
 }

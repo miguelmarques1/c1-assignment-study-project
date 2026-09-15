@@ -131,7 +131,9 @@ describe('generation drift guard', () => {
 
     expect(emitCss(tokens)).toBe(readFileSync(join(generatedDir, 'tokens.css'), 'utf-8'));
     expect(emitTs(tokens)).toBe(readFileSync(join(generatedDir, 'tokens.ts'), 'utf-8'));
-    expect(emitDart(tokens)).toBe(readFileSync(join(generatedDir, 'tokens.dart'), 'utf-8'));
+    expect(emitDart(tokens)).toBe(
+      readFileSync(join(PACKAGE_ROOT, 'lib', 'english_quest_tokens.dart'), 'utf-8'),
+    );
   });
 });
 

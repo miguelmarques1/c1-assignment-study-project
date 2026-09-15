@@ -32,6 +32,10 @@ assignment-content/**/*.ogg
 next-env.d.ts
 .pnpm-store/
 
+# Dart tooling cache for packages/design-tokens' pub side; apps/mobile carries
+# its own Flutter-generated .gitignore for everything else Dart/Flutter.
+.dart_tool/
+
 # Playwright's per-run failure artifacts and HTML report — the committed
 # baselines live in apps/web/e2e/__screenshots__, which this does not touch.
 apps/web/test-results/
