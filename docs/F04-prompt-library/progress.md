@@ -1,6 +1,6 @@
 # Implementation Progress: Prompt Library
 
-**Status:** in progress
+**Status:** success
 **Branch:** main
 **Started:** 2026-09-15
 **Last updated:** 2026-09-15
@@ -67,13 +67,57 @@
 **Validation:** lint ✅ (0 warnings) · typecheck ✅ · tests 27/27 new (7 renderer + 4 validator + 10 execution service + 6 telemetry) · full `apps/api` suite 156/156 ✅ (the OpenAPI drift guard failed once for the expected reason — new error codes not yet in the committed snapshot — resolved by regenerating it, not a real bug) · live smoke test ✅ against the real Gemini API and real Postgres
 **Commit:** _(pending)_
 
-## Stage 4: Integration and Verification — ⬜ pending
+## Stage 4: Integration and Verification — ✅ done
 
-- [ ] **10. Error Registry Additions**
-- [ ] **11. Module Registration**
-- [ ] **12. Full Prompt Verification**
+- [x] **10. Error Registry Additions** — already done in Stage 2 (registry's `get()` had a real dependency on `PROMPT002`); nothing left to do here.
+- [x] **11. Module Registration** — already done: `PromptsModule` has registered/exported the registry since Stage 2 and gained the execution + telemetry services in Stage 3; `AppModule` has imported it since Stage 2.
+- [x] **12. Full Prompt Verification**
 
-**Observations:** _(none yet)_
+**Observations:**
+- Ran all nine MVP prompts once each against the real Gemini API (throwaway script, deleted after the run) with representative variables per prompt. All nine succeeded on the **first** attempt — `retried: false` across the board, zero schema failures. Confirmed via `psql` that all nine `prompt_execution` rows landed with outcome `ok` and plausible token/latency figures (e.g. `reading-generate`: 534 in / 1006 out / 7.7s; `scenario-situation`: 382 in / 166 out / 2.9s).
+- This is the strongest evidence the feature works: every one of the nine hand-authored `response_schema` definitions — each derived from a different consuming feature's PRD acceptance criteria — is simultaneously valid JSON Schema, accepted by Gemini's `responseJsonSchema` config, and actually satisfied by the model's real output, on the first try, for every prompt in the MVP set.
+- No further code changes were needed in this stage — it was verification only, so there is nothing new to commit beyond this progress log update.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** live verification ✅ — 9/9 prompts, 0 retries, 0 hard failures, real telemetry rows confirmed in Postgres
+**Commit:** _(this stage produced no code changes; see Final Verification below for the closing commit)_
+
+## Final verification
+
+**6.1 — Full-suite validation (whole repo, not just touched files):**
+- `pnpm lint` (repo-wide eslint across apps/api, apps/web, packages/shared, packages/design-tokens) — ✅ 0 errors, 0 warnings
+- `pnpm typecheck` (`pnpm -r typecheck`) — ✅ all 4 workspaces clean
+- `pnpm test` (`pnpm -r test`) — ✅ 249/249 total: apps/api 156/156, apps/web 76/76, packages/design-tokens 17/17, packages/shared 0/0 (no test files). Zero failures, zero regressions. Some intentionally-noisy stderr output appears mid-run (a deliberately-invalid Azure region, a scrubbed fake connection string, a forced "db is down") — these are existing tests exercising error paths on purpose, not real failures; every one of them is marked ✓.
+
+**6.2 — Component Overview walk-through:** every file listed in spec.md's Component Overview exists with its described role:
+- All 9 prompt YAMLs under `apps/api/prompts/` ✓
+- All 9 files under `apps/api/src/prompts/` (`prompt-types.ts`, `prompt-envelope.schema.ts`, `prompt-file-loader.ts`, `prompt-registry.service.ts`, `template-renderer.ts`, `response-validator.ts`, `prompt-execution.service.ts`, `prompt-execution-telemetry.service.ts`, `prompts.module.ts`) ✓
+- `apps/api/src/boot/load-prompts.ts` ✓
+- `apps/api/prisma/migrations/0003_prompt_execution/migration.sql` ✓ (renumbered from the spec's first-draft `0004` to the actually-correct next-free number, `0003`, during the spec review — the shipped migration matches the corrected spec)
+- `main.ts`, `app.module.ts`, `packages/shared/src/errors/codes.ts`, `apps/api/package.json` modified as described ✓
+- Nothing missing.
+
+**6.3 — AC re-check** (PRD Section 9, F04 — tests re-run fresh in 6.1, not just trusted from earlier phases):
+
+| PRD criterion | Test | Result |
+|---|---|---|
+| All nine MVP prompts load at boot with one log line each naming id, version, model and schema status | `prompt-boot.spec.ts::loads_all_nine_mvp_prompts_with_one_log_line_each` | ✓ pass |
+| A malformed YAML file, a missing required field or an invalid `response_schema` prevents API startup with the file and path named | `prompt-boot.spec.ts::refuses_to_start_on_any_malformed_file`, `prompt-file-loader.spec.ts::rejects_a_missing_required_field`, `::rejects_an_invalid_response_schema` | ✓ pass |
+| Rendering fails loudly when a required variable is absent or empty | `template-renderer.spec.ts::throws_when_a_required_variable_is_absent_or_empty` | ✓ pass |
+| Model output violating `response_schema` triggers exactly one retry with the validation errors appended | `prompt-execution.service.spec.ts::retries_once_and_recovers` | ✓ pass |
+| A second schema violation raises a hard error to the caller and retains the raw response | `prompt-execution.service.spec.ts::hard_fails_after_a_second_invalid_response`, `prompt-execution-telemetry.spec.ts::records_raw_response_only_on_hard_error` | ✓ pass |
+| Every execution records prompt id, version, model, token counts, latency and outcome | `prompt-execution-telemetry.spec.ts::records_token_counts_and_latency` | ✓ pass |
+| Every artifact produced by a prompt stores that prompt's id and version | `prompt-execution.service.spec.ts::stamps_the_returned_prompt_version_from_the_registry_at_call_time` | ✓ pass for F04's half of the contract (the value is correct and returned); persisting it onto F06/F11/F14/F15/F17's own artifacts is those features' job, not testable here since none of them exist yet |
+
+**Cross-feature integration:** the PRD's criterion ("Prompt execution through the library (F04) stamps its prompt id and version onto the scenario artifacts (F06), the analysis (F11), generated items (F14), plan composition (F15) and writing corrections (F17)") is satisfied on F04's side — proven above — but its consumer half cannot be exercised until those features exist. Not a gap in F04; recorded here so it isn't mistaken for one later.
+
+**6.4 — Environment smoke check:** all runtime surfaces were exercised for real, not just mocked:
+- Boot: real Docker stack restarted, real log output showed all nine "Loaded prompt …" lines plus "Prompt library: 9 prompts loaded", `/health` returned 200 afterward.
+- Execution: a throwaway script (deleted after each run) called `PromptExecutionService.execute()` against the real Gemini API through the real BYOK-stored key for `you@example.com`, for **all nine** MVP prompts, with representative variables. All nine succeeded on the first attempt (`retried: false`), and all nine real `prompt_execution` rows were confirmed via `psql` with plausible token counts and latencies.
+- No smoke check was skipped or soft-failed — Docker was available throughout this run, unlike earlier features in this project's history.
+
+**6.5 — Status decision:** `success`. Full suite green, every Component Overview item present, every AC's test passes on this fresh re-check, every smoke check passed for real (none needed to soft-fail).
+
+**Follow-up work (not gaps in F04, but the natural next steps once later features exist):**
+- F06, F11, F14, F15 and F17 each need to call `PromptExecutionService.execute()` and persist `promptId`/`promptVersion` on their own artifacts — F04 only guarantees the value is correct and available.
+- The pre-existing `updated_at` DEFAULT drift between `schema.prisma` and the `0001`/`0002` migration history (surfaced by `prisma migrate dev --create-only`'s shadow-DB diff while building this feature, described in Stage 3's observations) is unrelated to F04 and was deliberately left untouched — worth a look whenever someone next touches those tables.
+- Wording quality of the nine prompts' `system`/`user_template` content is expected to be refined by whichever feature actually consumes each one; F04 only guarantees structural correctness (schema-valid, boot-valid, and proven against the live model once).
