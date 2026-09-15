@@ -24,7 +24,7 @@
 - Not yet started: `livekit-server-sdk` / `livekit-client` are not yet added as dependencies (Stage 2 step 5 / Stage 4 step 12); no classroom module, controller, service, or web code exists yet.
 
 **Validation:** `pnpm --filter @english-quest/shared build` ✅ · `pnpm --filter @english-quest/api typecheck` ✅ · `pnpm --filter @english-quest/api test:unit` ✅ 85/85 (includes the OpenAPI committed-snapshot check and the new/extended `env.spec.ts` cases) · migration applied cleanly against local Postgres, Prisma client regenerated without error.
-**Commit:** _(pending — see note below)_
+**Commit:** `97fb1dc` — F05 spec/plan and stage 1 - infrastructure, contracts and data model
 
 ## Stage 2: LiveKit access and the join path — ⬜ pending (not started)
 
