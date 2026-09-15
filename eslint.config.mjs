@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import jsxA11y from 'eslint-plugin-jsx-a11y';
 import tseslint from 'typescript-eslint';
 
 export default [
@@ -44,6 +45,19 @@ export default [
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       'no-console': 'off',
+    },
+  },
+  {
+    ...jsxA11y.flatConfigs.recommended,
+    files: ['apps/web/src/**/*.tsx'],
+  },
+  {
+    files: ['apps/web/src/**/*.tsx'],
+    rules: {
+      // The case the PRD's error handling names by name: an interactive
+      // control with no accessible name fails the build, not a visual
+      // inspection. Promoted explicitly rather than trusted to the preset.
+      'jsx-a11y/control-has-associated-label': 'error',
     },
   },
 ];

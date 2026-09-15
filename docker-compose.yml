@@ -99,6 +99,7 @@ services:
       - api-node-modules:/workspace/apps/api/node_modules
       - web-node-modules:/workspace/apps/web/node_modules
       - shared-node-modules:/workspace/packages/shared/node_modules
+      - design-tokens-node-modules:/workspace/packages/design-tokens/node_modules
     depends_on:
       postgres:
         condition: service_healthy
@@ -127,8 +128,31 @@ services:
       - api-node-modules:/workspace/apps/api/node_modules
       - web-node-modules:/workspace/apps/web/node_modules
       - shared-node-modules:/workspace/packages/shared/node_modules
+      - design-tokens-node-modules:/workspace/packages/design-tokens/node_modules
     depends_on:
       - api
+
+  # Runs the visual regression suite against the web service. The official
+  # Playwright image ships browsers pinned to one exact Playwright version,
+  # which must match @playwright/test in apps/web/package.json. Fonts and
+  # rendering come from Linux inside the container regardless of the host
+  # OS, which is what makes the committed baselines stable for anyone who
+  # runs this suite.
+  visual:
+    image: mcr.microsoft.com/playwright:v1.63.0-noble
+    working_dir: /workspace/apps/web
+    environment:
+      VISUAL_BASE_URL: http://web:3000
+    volumes:
+      - .:/workspace
+      - root-node-modules:/workspace/node_modules
+      - api-node-modules:/workspace/apps/api/node_modules
+      - web-node-modules:/workspace/apps/web/node_modules
+      - shared-node-modules:/workspace/packages/shared/node_modules
+      - design-tokens-node-modules:/workspace/packages/design-tokens/node_modules
+    command: ["sleep", "infinity"]
+    depends_on:
+      - web
 
 volumes:
   postgres-data:
@@ -138,3 +162,4 @@ volumes:
   api-node-modules:
   web-node-modules:
   shared-node-modules:
+  design-tokens-node-modules:

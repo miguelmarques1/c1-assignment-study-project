@@ -64,15 +64,10 @@ export function emitCss(tokens: Tokens): string {
     '}',
   ].join('\n');
 
-  const darkSystemBlock = [
-    '@media (prefers-color-scheme: dark) {',
-    "  :root:not([data-theme='light']) {",
-    ...colorLines(tokens.color.dark).map((line) => `  ${line}`),
-    '',
-    ...shadowLines(tokens.shadow.dark).map((line) => `  ${line}`),
-    '  }',
-    '}',
-  ].join('\n');
-
-  return [GENERATED_BANNER, themeBlock, '', darkAttributeBlock, '', darkSystemBlock, ''].join('\n');
+  // No prefers-color-scheme fallback: light is the product's designed
+  // default regardless of OS preference, so nothing here should key off it.
+  // Dark is reachable only through an explicit choice, applied via the
+  // data-theme attribute above — by the init script, or by JS disabled
+  // (which simply leaves the @theme block's light values in effect).
+  return [GENERATED_BANNER, themeBlock, '', darkAttributeBlock, ''].join('\n');
 }

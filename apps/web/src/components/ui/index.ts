@@ -11,4 +11,5 @@ export { LoadingState, type LoadingVariant } from './loading-state';
 export { EmptyState } from './empty-state';
 export { ErrorState } from './error-state';
 export { ThemeToggle } from './theme-toggle';
+export { Logo } from './logo';
 export { cn } from './cn';

@@ -31,3 +31,9 @@ assignment-content/**/*.ogg
 *.tsbuildinfo
 next-env.d.ts
 .pnpm-store/
+
+# Playwright's per-run failure artifacts and HTML report — the committed
+# baselines live in apps/web/e2e/__screenshots__, which this does not touch.
+apps/web/test-results/
+apps/web/playwright-report/
+apps/web/blob-report/

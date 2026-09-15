@@ -13,11 +13,13 @@ const LABEL: Record<ThemePreference, string> = {
 
 export function ThemeToggle() {
   // The lazy initializer reads the real preference on the client's first
-  // render, which will not match the server's static 'system' default —
-  // exactly the case suppressHydrationWarning below exists for, per Next's
-  // own documented pattern for this kind of pre-hydration state.
+  // render, which will not match the server's static 'light' guess whenever
+  // a stored override exists — exactly the case suppressHydrationWarning
+  // below exists for, per Next's own documented pattern for this kind of
+  // pre-hydration state. 'light' is the guess, not 'system', because light
+  // is what an untouched install actually shows before any script runs.
   const [preference, setPreference] = useState<ThemePreference>(() =>
-    typeof window === 'undefined' ? 'system' : readStoredPreference(),
+    typeof window === 'undefined' ? 'light' : readStoredPreference(),
   );
 
   function cycle() {

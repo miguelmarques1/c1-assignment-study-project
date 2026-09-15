@@ -14,17 +14,15 @@ describe('emitCss', () => {
       expect(css).toContain(`--color-${role}: ${tokens.color.light[role]};`);
     }
     for (const role of Object.keys(tokens.color.dark)) {
-      const occurrences = css.split(`--color-${role}: ${tokens.color.dark[role]};`).length - 1;
-      // Once under the [data-theme='dark'] attribute selector, once under the
-      // prefers-color-scheme fallback — the two paths to the same dark value.
-      expect(occurrences).toBeGreaterThanOrEqual(2);
+      expect(css).toContain(`--color-${role}: ${tokens.color.dark[role]};`);
     }
   });
 
-  it('css_declares_the_system_preference_fallback', () => {
+  it('dark_is_reachable_only_through_the_explicit_attribute', () => {
+    // Light is the designed default regardless of OS preference: dark must
+    // never key off prefers-color-scheme, only off an explicit data-theme.
     const css = emitCss(loadTokens());
-    expect(css).toContain('@media (prefers-color-scheme: dark)');
-    expect(css).toContain(":root:not([data-theme='light'])");
+    expect(css).not.toContain('prefers-color-scheme');
     expect(css).toContain(":root[data-theme='dark']");
   });
 });

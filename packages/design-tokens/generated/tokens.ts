@@ -105,7 +105,18 @@ export const typeScale = {
   'label-sm': '11px / 14px / 800',
 } as const;
 
+/** Names only — shadow values differ by theme and reference a colour role, so they aren't a static JS value. */
+export const shadowNames = ['card', 'button', 'modal', 'input-focus'] as const;
+
+export const motion = {
+  'duration-press': '120ms',
+  'duration-base': '200ms',
+  'ease-snappy': 'cubic-bezier(0.2, 0, 0, 1)',
+} as const;
+
 export type ColorRole = keyof typeof color;
+export type ShadowName = (typeof shadowNames)[number];
+export type MotionToken = keyof typeof motion;
 export type SpacingToken = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 export type RadiusToken = keyof typeof radius;
 export type TypeStep = keyof typeof typeScale;

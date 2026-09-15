@@ -11,17 +11,19 @@ export function resolveTheme(preference: ThemePreference): ResolvedTheme {
   return preference === 'system' ? systemTheme() : preference;
 }
 
+/**
+ * Light is the product's designed default — an untouched install must not
+ * silently follow the visitor's OS preference into dark. "System" stays
+ * available as an explicit choice in the toggle; it just isn't where a
+ * first-ever load lands.
+ */
 export function readStoredPreference(): ThemePreference {
   const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-  return stored === 'light' || stored === 'dark' ? stored : 'system';
+  return stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'light';
 }
 
 export function persistPreference(preference: ThemePreference): void {
-  if (preference === 'system') {
-    window.localStorage.removeItem(THEME_STORAGE_KEY);
-  } else {
-    window.localStorage.setItem(THEME_STORAGE_KEY, preference);
-  }
+  window.localStorage.setItem(THEME_STORAGE_KEY, preference);
 }
 
 export function applyTheme(preference: ThemePreference): ResolvedTheme {
@@ -38,4 +40,4 @@ export function applyTheme(preference: ThemePreference): ResolvedTheme {
  * it runs outside any bundle, so it cannot import readStoredPreference or
  * resolveTheme above — the logic is duplicated in serialized form instead.
  */
-export const THEME_INIT_SCRIPT = `(function(){try{var k='${THEME_STORAGE_KEY}';var s=localStorage.getItem(k);var pref=(s==='light'||s==='dark')?s:'system';var resolved=pref==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):pref;document.documentElement.setAttribute('data-theme',resolved);}catch(e){}})();`;
+export const THEME_INIT_SCRIPT = `(function(){try{var k='${THEME_STORAGE_KEY}';var s=localStorage.getItem(k);var pref=(s==='light'||s==='dark'||s==='system')?s:'light';var resolved=pref==='system'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):pref;document.documentElement.setAttribute('data-theme',resolved);}catch(e){}})();`;

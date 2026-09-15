@@ -18,7 +18,7 @@
     "install:all": "docker compose exec api pnpm install",
     "db:migrate": "docker compose exec api pnpm db:migrate",
     "db:seed": "docker compose exec api pnpm db:seed",
-    "lint": "eslint apps/api/src apps/api/test apps/web/src apps/web/test packages/shared/src packages/design-tokens/src packages/design-tokens/test --max-warnings 0",
+    "lint": "eslint apps/api/src apps/api/test apps/web/src apps/web/test apps/web/e2e apps/web/playwright.config.ts packages/shared/src packages/design-tokens/src packages/design-tokens/test --max-warnings 0",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "tokens:build": "pnpm --filter @english-quest/design-tokens tokens:build"
@@ -26,6 +26,7 @@
   "devDependencies": {
     "@eslint/js": "^9.18.0",
     "eslint": "^9.18.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
     "typescript": "^5.7.3",
     "typescript-eslint": "^8.20.0"
   }

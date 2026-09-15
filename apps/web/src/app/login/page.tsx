@@ -17,7 +17,10 @@ export default async function LoginPage({
 
   return (
     <main className="flex min-h-screen items-center justify-center p-md">
-      <div className="flex w-full max-w-sm flex-col gap-md">
+      {/* max-w-96 = 24rem via Tailwind's numeric spacing scale, not max-w-sm:
+          max-w-sm collides with our own --spacing-sm token name and would
+          resolve to 0.5rem instead of Tailwind's built-in container size. */}
+      <div className="flex w-full max-w-96 flex-col gap-md">
         {params.expired ? (
           <p
             role="status"

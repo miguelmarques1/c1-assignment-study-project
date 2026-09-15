@@ -28,7 +28,15 @@ afterEach(() => {
 });
 
 describe('theme resolution', () => {
-  it('default_follows_the_system_preference', () => {
+  it('default_is_light_regardless_of_system_preference', () => {
+    mockMatchMedia(true);
+    expect(readStoredPreference()).toBe('light');
+
+    mockMatchMedia(false);
+    expect(readStoredPreference()).toBe('light');
+  });
+
+  it('an_explicit_system_choice_still_follows_the_os', () => {
     mockMatchMedia(true);
     expect(resolveTheme('system')).toBe('dark');
 
@@ -53,10 +61,10 @@ describe('theme resolution', () => {
     expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('dark');
   });
 
-  it('persisting_system_clears_the_stored_override', () => {
+  it('persisting_system_is_stored_explicitly_and_survives_a_reload', () => {
     persistPreference('dark');
     persistPreference('system');
-    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
+    expect(window.localStorage.getItem(THEME_STORAGE_KEY)).toBe('system');
     expect(readStoredPreference()).toBe('system');
   });
 });
@@ -66,14 +74,13 @@ describe('ThemeToggle', () => {
     mockMatchMedia(false);
     render(<ThemeToggle />);
 
-    const button = screen.getByRole('button', { name: /system theme/i });
+    const button = screen.getByRole('button', { name: /light theme/i });
     expect(button).toBeInTheDocument();
 
     await userEvent.click(button);
-    expect(screen.getByRole('button', { name: /light theme/i })).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole('button', { name: /light theme/i }));
     expect(screen.getByRole('button', { name: /dark theme/i })).toBeInTheDocument();
-    expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
+
+    await userEvent.click(screen.getByRole('button', { name: /dark theme/i }));
+    expect(screen.getByRole('button', { name: /system theme/i })).toBeInTheDocument();
   });
 });

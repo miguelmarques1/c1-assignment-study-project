@@ -44,7 +44,16 @@ export const radius = ${objectLiteral(tokens.radius)};
 /** Each value is "size / lineHeight / weight", exactly as declared in tokens.json. */
 export const typeScale = ${objectLiteral(typeEntries)};
 
+/** Names only — shadow values differ by theme and reference a colour role, so they aren't a static JS value. */
+export const shadowNames = [${Object.keys(tokens.shadow.light)
+    .map((name) => `'${name}'`)
+    .join(', ')}] as const;
+
+export const motion = ${objectLiteral(tokens.motion)};
+
 export type ColorRole = keyof typeof color;
+export type ShadowName = (typeof shadowNames)[number];
+export type MotionToken = keyof typeof motion;
 export type SpacingToken = ${spacingSteps.map((step) => `'${step}'`).join(' | ')};
 export type RadiusToken = keyof typeof radius;
 export type TypeStep = keyof typeof typeScale;

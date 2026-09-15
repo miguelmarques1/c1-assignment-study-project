@@ -4,7 +4,7 @@ import { ERROR_CODES, loginSchema } from '@english-quest/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
-import { Button, Card, Field, Stack, fieldControlClassName } from '@/components/ui';
+import { Button, Card, Field, Logo, Stack, fieldControlClassName } from '@/components/ui';
 import { ApiRequestError, apiFetch } from '@/lib/api-client';
 
 interface LockoutState {
@@ -93,12 +93,17 @@ export function LoginForm() {
   const seconds = lockout ? lockout.secondsLeft % 60 : 0;
 
   return (
-    <Card as="div" className="w-full max-w-sm">
+    // max-w-96 = 24rem via Tailwind's numeric spacing scale; max-w-sm would
+    // collide with our own --spacing-sm token and resolve to 0.5rem instead.
+    <Card as="div" className="w-full max-w-96">
       <form onSubmit={handleSubmit} noValidate>
         <Stack gap="md">
-          <div>
-            <h1 className="text-headline-md text-on-surface">English Quest</h1>
-            <p className="text-body-sm text-on-surface-variant">Sign in to continue.</p>
+          <div className="flex items-center gap-sm">
+            <Logo size={40} />
+            <div>
+              <h1 className="text-headline-md text-on-surface">English Quest</h1>
+              <p className="text-body-sm text-on-surface-variant">Sign in to continue.</p>
+            </div>
           </div>
 
           <Field label="Email">

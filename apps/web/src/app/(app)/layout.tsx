@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 
-import { ThemeToggle } from '@/components/ui';
+import { Logo, ThemeToggle } from '@/components/ui';
 import { getCurrentUser } from '@/lib/server-session';
 
 /**
@@ -20,7 +20,10 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
   return (
     <div className="mx-auto flex max-w-4xl flex-col gap-lg p-lg">
       <header className="flex items-center justify-between gap-md border-b-2 border-outline-strong pb-md">
-        <strong className="text-title-lg text-on-surface">English Quest</strong>
+        <a href="/dashboard" className="flex items-center gap-sm">
+          <Logo size={32} />
+          <strong className="text-title-lg text-on-surface">English Quest</strong>
+        </a>
         <div className="flex items-center gap-sm text-body-sm text-on-surface-variant">
           <a href="/settings" className="text-secondary underline">
             Settings
