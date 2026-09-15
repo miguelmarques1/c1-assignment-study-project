@@ -265,6 +265,14 @@ Both profiles belong to a pair of motivated adults running an experiment on them
 - As a developer, I want a documented component library so that I can see what exists before writing a fourth kind of card
 - As a developer, I want the same component vocabulary named identically on web and mobile so that the two clients cannot drift apart
 
+### F22. Design Reference and Visual Realignment
+- As a user, I want the login screen to guide me through its two fields so that signing in reads as deliberate rather than as a bare form
+- As a user, I want to reveal the password I just typed so that I can fix a typo instead of retyping the whole thing blind
+- As a user, I want the header to show me which screen I am on so that navigating does not depend on remembering
+- As a user, I want to see at a glance whether my credentials are ready so that I learn a key is missing before a lesson fails, not after
+- As a developer, I want a document mapping every mockup to the features that own its parts so that building a screen starts from a decision already made instead of a fresh interpretation
+- As a developer, I want the parts of the mockups that contradict the product recorded with the reason they were dropped so that nobody reintroduces a streak counter six months from now
+
 ## 6. Functionalities
 
 ### F01. Local Infrastructure and Authentication
@@ -374,6 +382,9 @@ On boot the API logs one line per loaded prompt — `Loaded prompt reading-gener
 
 ### F05. Live Classroom
 
+**Consumes:**
+- F21: design tokens and the primitive components, plus the loading, empty and error page-state conventions the screen composes from
+
 **Provides:**
 - Live lesson session with room identity, participant identities, and lesson start and end events (used by F06, F07)
 
@@ -417,6 +428,7 @@ Clicking `End lesson` opens a confirmation dialog naming the consequence: `End t
 - F02: decrypted Gemini API key with validity status
 - F04: rendered prompt execution with structured, schema-validated model output and the prompt id and version used
 - F05: live lesson session with room identity, participant identities, and lesson start and end events
+- F21: design tokens and the primitive components, plus the loading, empty and error page-state conventions the screen composes from
 
 **Provides:**
 - Shared lesson situation: setting, premise, the list of role labels with the relationships between them, vocabulary domain and discussion hooks (used by F11, F19, F20)
@@ -738,6 +750,7 @@ For the curator, generation is fully traceable. Each generated item carries its 
 - F12: profile snapshot — competency scores, recurring weaknesses and compact summary — and error ledger records due for review
 - F13: content item candidate metadata — id, type, CEFR level, topic, accent, skills, difficulty, target tags and duration
 - F14: generated content items with target tags and prompt id and version
+- F21: design tokens and the primitive components, plus the loading, empty and error page-state conventions the screen composes from
 
 **Provides:**
 - Study plan with daily sessions, ordered activity entries referencing content item ids, target tags, estimated minutes and per-activity rationale, together with the activity state update contract (used by F16, F17, F18)
@@ -784,6 +797,7 @@ When a new plan replaces the old one, carried-over activities are marked with a 
 - F12: error taxonomy and the outcome ingestion contract for recording new error occurrences and activity-sourced measurements
 - F13: full content item payload — body or transcript, questions, answers, explanations and media object key
 - F15: study plan activity entries referencing content item ids, target tags and estimated minutes, together with the activity state update contract
+- F21: design tokens and the primitive components, plus the loading, empty and error page-state conventions the screen composes from
 
 **Core Scope:**
 - Multiple choice and fill-in-the-blank formats, automatic correction, per-question feedback, the difficulty rating, and error ingestion into the ledger.
@@ -827,6 +841,7 @@ Returning to a half-finished activity shows `Resume` rather than `Start`, and re
 - F04: rendered prompt execution with structured, schema-validated model output and the prompt id and version used
 - F12: error taxonomy and the outcome ingestion contract for recording new error occurrences and activity-sourced measurements
 - F15: study plan activity entries referencing content item ids, target tags and estimated minutes, together with the activity state update contract
+- F21: design tokens and the primitive components, plus the loading, empty and error page-state conventions the screen composes from
 
 **Capabilities:**
 - The task statement is 80–150 words and explicitly targets the user's weak structures — for example requiring a hypothetical past scenario when `grammar:conditional-3` is unmastered.
@@ -861,6 +876,7 @@ On a phone the same flow works with the text area expanding to fill the screen a
 - F10: pronunciation assessment capability for a single audio clip against a reference text, returning pronunciation, accuracy, fluency, prosody and completeness scores plus word-level and phoneme-level detail
 - F12: error taxonomy and the outcome ingestion contract for recording new error occurrences and activity-sourced measurements
 - F15: study plan activity entries referencing content item ids, target tags and estimated minutes, together with the activity state update contract
+- F21: design tokens and the primitive components, plus the loading, empty and error page-state conventions the screen composes from
 
 **Capabilities:**
 - Two activity shapes. **Read-aloud**: a reference text of 25–60 words, chosen to contain the user's failing phonemes, assessed directly against that text. **Open response**: a prompt or question answered in 30–90 seconds of unscripted speech, transcribed first and then assessed against its own transcript.
@@ -894,6 +910,7 @@ The attempt counter is always visible — `Attempt 2 of 3` — and previous atte
 - F08: per-participant utterances with start and end timestamps, text and recognition confidence
 - F10: per-lesson pronunciation aggregates — pronunciation, accuracy, fluency, prosody and completeness scores, worst phonemes and worst words — together with per-excerpt scores, their time ranges and reference text
 - F11: per-participant lesson analysis — competency scores, strengths, tagged errors, recurring tags, scenario fit and topics to practice
+- F21: design tokens and the primitive components, plus the loading, empty and error page-state conventions the screen composes from
 
 **Capabilities:**
 - The lesson list shows every lesson newest first with date, duration, participants, vocabulary domain, overall processing status and, when ready, a one-line summary of the viewer's own result.
@@ -926,6 +943,7 @@ Both clients render the same four areas with the same information.
 - F06: shared lesson situation — vocabulary domain per lesson
 - F12: profile snapshot — competency scores with measurement count and trend, recurring weaknesses and recent improvements — and error ledger records with occurrence counts and lifecycle state
 - F15: plan completion history — activities completed per plan, completion rate and difficulty ratings
+- F21: design tokens and the primitive components, plus the loading, empty and error page-state conventions the screen composes from
 
 **Core Scope:**
 - The competency trend chart, the current profile snapshot, and the recurring weaknesses list with trends.
@@ -956,8 +974,8 @@ With fewer than 3 measurements the chart area shows `Not enough data yet — com
 ### F21. Design System
 
 **Provides:**
-- Design tokens covering spacing, colour, typography, radius, elevation and motion, as the single source of styling values (used by F03, F05, F06, F15, F16, F17, F18, F19, F20)
-- Component library with the primitives every screen composes from, plus the loading, empty and error page-state conventions (used by F03, F05, F06, F15, F16, F17, F18, F19, F20)
+- Design tokens covering spacing, colour, typography, radius, elevation and motion, as the single source of styling values (used by F03, F05, F06, F15, F16, F17, F18, F19, F20, F22)
+- Component library with the primitives every screen composes from, plus the loading, empty and error page-state conventions (used by F03, F05, F06, F15, F16, F17, F18, F19, F20, F22)
 
 **Core Scope:**
 - Tokens, the primitive components, the three page states, and migration of the screens that already exist.
@@ -992,6 +1010,41 @@ For the user the result is that a status badge, a score meter and an empty state
 - A token referenced but never defined: the build fails rather than falling back to a browser default, because a missing token is invisible until somebody notices the spacing looks wrong.
 - A colour pair below its contrast threshold: the token test fails naming the pair and the measured ratio, so it cannot merge.
 - An interactive component used without an accessible name: the lint rule fails the build, since an icon-only button with no label is unusable and nothing about it looks broken.
+
+### F22. Design Reference and Visual Realignment
+
+**Consumes:**
+- F02: masked credential list per provider — validity status per provider, which the settings status chip aggregates into a single readiness state
+- F21: the token layer, the primitive components and the page-state conventions the realigned screens compose from, and which this feature may extend
+
+**Core Scope:**
+- Realignment of the three surfaces that already carry real content — login, the authenticated shell header, and settings
+- The design reference document mapping every mockup to its owning features and recording what was dropped and why
+
+**Full Scope additions:**
+- The settings help card made functional: real links to the Google AI Studio and Azure Portal pages where each key is issued, replacing the static card shipped in Core Scope
+
+**Capabilities:**
+- The reference mockups are the four directories under `design/`: `english_quest_sign_in`, `english_quest_settings`, `english_quest_dashboard` and `english_quest_logo`. Each carries a rendered `screen.png` and its `code.html`.
+- **Login** gains, from the sign-in mockup: a leading icon inside each of the two fields, an example-address hint aligned to the right of the email label, a reveal control on the password field, and the mockup's larger full-width primary action. The screen is additive only — every element the mockup shows that this product excludes is already absent from the implementation.
+- Five sign-in mockup elements are dropped with a recorded reason: the `QUEST SEASON 3` badge and the `+XP` vocabulary (Section 7 excludes streaks and badges), the Google block with its divider and the account-creation link (Section 7 excludes social login and public registration), the password-reset link (Section 7 excludes reset by email), and the `Daily Conversational Roleplay` value card (a marketing panel with no audience on a two-person private platform).
+- **Header** gains the mockup's pill navigation with the active destination visibly selected, and the circular avatar treatment. It carries exactly the destinations that exist — today Dashboard and Settings — and the existing theme toggle. The streak and XP chips are dropped under the same Section 7 exclusion. A later feature adds its destination to the same pill rather than redesigning the header.
+- **Settings** gains the mockup's heading treatment with its leading icon, the BYOK explanation promoted from a paragraph to a distinguished card, and per-provider cards carrying a provider icon, the masked key rendered as a field rather than loose text, the region chip, and the last-checked line. Actions become `Replace key`, `Re-check` and a compact icon-only delete carrying an accessible name.
+- The settings status chip reflects a real aggregate rather than decoration: it reads ready only when both providers hold a key whose status is `valid`, and an attention state whenever either is `missing`, `invalid` or `unverified` — the same condition that determines whether the processing pipeline can run at all.
+- Three settings mockup elements are dropped: the copy control on the masked key (the value is masked and Section 6's F02 forbids revealing the original, so the control promises what it cannot deliver), the `Visual Pattern Guide` block showing a screenshot of an earlier iteration, and the Privacy Policy / Terms of Service / Support Desk footer, none of which exist for a private two-person deployment.
+- The help card ships as a static card in Core Scope, carrying no link, so the layout it balances is correct from the start and only its content changes later.
+- The design reference document is committed under `design/` and carries one entry per mockup with three columns: the mockup region, the feature that owns it, and its status — one of `implemented`, `deferred to F<ID>`, or `dropped` with the Section 7 clause that excludes it. Every region of every mockup appears exactly once, so a region with no entry is a gap in the document rather than an undocumented decision.
+- Regions recorded as deferred, with their owning feature: the dashboard hero banner and its primary action (F05), the module cards (F05, F15, F16), the recommended-scenario card (F06), the three statistic cards (F20), and the `Scenarios & Practice` navigation destination (F06). A mock of any of these now would constrain the feature that owns it, which is why they are deferred rather than approximated.
+- This feature may extend F21's token layer and primitives where a realignment needs it. Any such change propagates to the Flutter mirror within this same feature, so the two clients never carry different vocabularies for the same component. The visual regression baselines and the component documentation page are regenerated as part of the change.
+
+**Experience:**
+Signing in, the two fields now read as a designed pair rather than two stacked inputs: each carries its own leading icon, the email label shows an example address so the expected format is visible before typing, and the password field offers a reveal control for correcting a typo without clearing the field. The primary action spans the card at the mockup's weight. Nothing that the product does not support appears — there is no third-party provider, no account creation, no reset link — so the screen offers exactly the one path that works.
+
+Inside the application the header carries a pill holding the destinations that exist, with the current one visibly selected, so the answer to "where am I" is on screen rather than inferred from the page heading. The user's identity sits at the right as a circular avatar beside the theme toggle.
+
+On settings the BYOK explanation is a card rather than a run of prose, which is what makes it read as a standing condition of the product instead of an introductory paragraph to be skimmed once. Beside the heading a status chip states whether the environment is ready: both keys valid reads as ready, and anything else reads as needing attention, which surfaces a missing or expired key at the moment the screen is opened rather than at the moment a lesson fails to process. Each provider card leads with its own icon, shows the masked key in a field so it reads as a stored value rather than as decoration, and offers replace, re-check and delete — the last as a compact icon carrying its accessible name, so it is reachable by screen reader and does not compete with the two actions used more often.
+
+For a developer the second half of this feature is the part that lasts. Before building a screen, the mockup that covers it is already annotated: which regions are implemented, which belong to a feature not yet built, and which were dropped along with the Section 7 clause that excludes them. The analysis that decided a streak counter contradicts "wants evidence, not encouragement" is written down once, so the next person reading the dashboard mockup does not have to rediscover it — or worse, implement it.
 
 ## 7. Out of Scope
 
@@ -1044,6 +1097,11 @@ For the user the result is that a status badge, a score meter and an empty state
 - A monitoring, alerting or log aggregation stack beyond container logs and the health endpoint.
 - Data export, account deletion, and GDPR-style subject access flows.
 
+**Design and visual alignment**
+- Building the dashboard, the statistic cards, the module cards or the recommended-scenario card from the mockups ahead of the features that own their data — each is built by its owning feature (F05, F06, F15, F16, F20) after reviewing the design reference, because a mock placed now would constrain the implementation that follows it.
+- A second visual language, a per-screen theme, or any styling decision made outside the token layer.
+- Redesigning the token layer, the primitive components or the page-state conventions themselves; realignment composes what F21 established and extends it only where a screen genuinely needs it.
+
 **Pedagogy**
 - Formal CEFR level certification or an official level placement test.
 - Full mock examination simulation for a specific certification, with timing and scoring bands.
@@ -1075,6 +1133,7 @@ For the user the result is that a status badge, a score meter and an empty state
 | F18 | Speaking and Pronunciation Activities | 2 | F02, F03, F08, F10, F12, F15, F21 |
 | F19 | Lesson History and Individual Results | 1 | F03, F06, F08, F10, F11, F21 |
 | F20 | Progress and Evolution Dashboard | 2 | F03, F06, F12, F15, F21 |
+| F22 | Design Reference and Visual Realignment | 2 | F01, F02, F03, F21 |
 
 ### Foundation Features
 These features set up shared project infrastructure. In a greenfield project they must be implemented sequentially before or alongside any feature that depends on them:
@@ -1089,16 +1148,17 @@ Features within the same wave can be built in parallel. A wave starts only after
 **Note:** Foundation features (see "Foundation Features" above) cannot run in parallel in a greenfield project even if they appear together in a wave — they share scaffolding files and must be implemented sequentially until the base is in place.
 
 - **Wave 1**: F01
-- **Wave 2**: F02, F04, F05, F13
-- **Wave 3**: F03, F06, F07
-- **Wave 4**: F08
-- **Wave 5**: F09
-- **Wave 6**: F10
-- **Wave 7**: F11
-- **Wave 8**: F12, F19
-- **Wave 9**: F14
-- **Wave 10**: F15
-- **Wave 11**: F16, F17, F18, F20
+- **Wave 2**: F02, F04, F13, F21
+- **Wave 3**: F03, F05
+- **Wave 4**: F06, F07, F22
+- **Wave 5**: F08
+- **Wave 6**: F09
+- **Wave 7**: F10
+- **Wave 8**: F11
+- **Wave 9**: F12, F19
+- **Wave 10**: F14
+- **Wave 11**: F15
+- **Wave 12**: F16, F17, F18, F20
 
 ### Priority levels
 - **1** = Essential — product does not work without it
@@ -1173,6 +1233,10 @@ graph TD
   F21 --> F18
   F21 --> F19
   F21 --> F20
+  F01 --> F22[F22 Visual Realignment]
+  F02 --> F22
+  F03 --> F22
+  F21 --> F22
 ```
 
 ## 9. Acceptance Criteria
@@ -1445,6 +1509,23 @@ graph TD
 - [ ] The login and settings screens render entirely from the system, and the ad-hoc classes they introduced no longer exist
 - [ ] A component referencing an undefined token fails the build rather than falling back to a browser default
 
+### F22. Design Reference and Visual Realignment
+- [ ] The login email and password fields each render a leading icon, the email label carries an example address, and the password field has a working reveal control that toggles the value between masked and visible
+- [ ] The login screen contains no third-party sign-in provider, no account-creation link, no password-reset link, no season or XP badge, and no marketing value card
+- [ ] The header renders a pill navigation containing exactly Dashboard and Settings, with the destination matching the current route visibly selected, plus the circular avatar and the theme toggle
+- [ ] The header contains no streak counter and no XP total
+- [ ] The settings screen renders the BYOK explanation as a distinguished card, and each provider card shows a provider icon, the masked key in a field, the region where applicable, and the last-checked time
+- [ ] The settings status chip reads ready when both providers are `valid`, and reads as needing attention when any provider is `missing`, `invalid` or `unverified`
+- [ ] The settings delete action is an icon-only control carrying an accessible name, and is reachable and announced by keyboard and screen reader
+- [ ] The settings screen contains no copy control on the masked key, no visual pattern guide block, and no Privacy Policy, Terms of Service or Support Desk footer
+- [ ] The help card renders with static content and exposes no link, and the accompanying plan records making it functional as outstanding work
+- [ ] The design reference document exists under `design/`, covers all four mockups, and every region of every mockup carries exactly one status of `implemented`, `deferred to F<ID>` or `dropped`
+- [ ] Every region recorded as `dropped` names the Section 7 clause that excludes it
+- [ ] Every region recorded as `deferred` names the feature that owns it, and the dashboard hero, module cards, recommended-scenario card, statistic cards and `Scenarios & Practice` destination are all present as deferred entries
+- [ ] No dashboard content, statistic card or scenario card is implemented or mocked by this feature; the dashboard continues to render its placeholder
+- [ ] Any primitive or token changed by this feature is reflected in the Flutter mirror, the component documentation page and the regenerated visual regression baselines within the same change
+- [ ] Both clients continue to name the same component with the same variant and status vocabulary after the realignment
+
 ### Cross-Feature Integration
 - [ ] A lesson session opened in the classroom (F05) is the session the scenario (F06) attaches to, and the scenario's participants match the session's participant identities
 - [ ] The shared situation generated through the prompt library (F06, F04) contains one role label per participant, those labels are what the role card prompt then receives, and each card's setting and premise match the situation it came from
@@ -1472,3 +1553,6 @@ graph TD
 - [ ] Scenario (F06), transcript (F08), excerpt scores (F10) and analysis (F11) all render in the same lesson detail (F19), and the excerpt badges in the transcript match the scores shown in the pronunciation section
 - [ ] Vocabulary domains recorded on each situation (F06) drive the domain coverage view (F20), and the counts there match the domains shown on the lesson list (F19)
 - [ ] Profile snapshot and ledger records (F12) plus plan completion history (F15) render consistent values in the dashboard (F20) and in the profile screen, with no divergence between the two views
+- [ ] Every screen built by F03, F05, F06, F15, F16, F17, F18, F19 and F20 composes from the tokens and primitives of the design system (F21), carries its loading, empty and error states from the shared page-state conventions, and introduces no raw colour or spacing value
+- [ ] The per-provider validity statuses from the vault (F02) are what drive the realigned settings status chip (F22): deleting either key flips the chip to its attention state, and restoring a valid key for both flips it back to ready
+- [ ] The realigned screens (F22) render entirely from the token layer and primitives of the design system (F21), with no raw colour or spacing value introduced, asserted by the same guard F21 established
