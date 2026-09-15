@@ -1,0 +1,15 @@
+id: missing-required-field
+version: "1"
+model: gemini-3.6-flash
+temperature: 0.5
+max_output_tokens: 200
+user_template: "Say hello to {{name}}."
+variables:
+  - name: name
+    required: true
+response_schema:
+  type: object
+  properties:
+    greeting:
+      type: string
+  required: [greeting]

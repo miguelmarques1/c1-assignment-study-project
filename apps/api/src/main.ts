@@ -8,12 +8,14 @@ import { AppModule } from './app.module';
 import { runMigrations } from './boot/run-migrations';
 import { waitForDependencies } from './boot/wait-for-dependencies';
 import { verifyCredentialDecryptability } from './boot/verify-credential-decryptability';
+import { loadPrompts } from './boot/load-prompts';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { loadEnv } from './config/env';
 import { CredentialCryptoService } from './credentials/credential-crypto.service';
 import { PrismaService } from './prisma/prisma.service';
 import { HealthService } from './health/health.service';
 import { setupOpenApi } from './openapi/setup';
+import { PromptRegistryService } from './prompts/prompt-registry.service';
 import { StorageService } from './storage/storage.service';
 
 /**
@@ -62,6 +64,16 @@ async function bootstrap(): Promise<void> {
       `Credential vault: ${decryptability.checked} stored, ${decryptability.invalidated} unreadable`,
     );
   }
+
+  // Every prompt file is parsed and structurally validated here. Any problem
+  // — malformed YAML, an unknown field, a bad response_schema, a filename
+  // that doesn't match its id — refuses to start the process, per the PRD:
+  // a typo in a prompt file is caught at boot, never mid-pipeline.
+  const prompts = await loadPrompts({
+    registry: app.get(PromptRegistryService),
+    log: (message) => logger.log(message),
+  });
+  logger.log(`Prompt library: ${prompts.count} prompts loaded`);
 
   // Readiness line: one probe per dependency with its latency, so a slow or
   // missing service is visible at startup rather than at first use.

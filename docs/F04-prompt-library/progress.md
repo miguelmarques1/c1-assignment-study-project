@@ -19,7 +19,21 @@
 - Authoring the nine files by hand demonstrated exactly the failure mode the boot-time example-validation decision exists to catch: `grammar-generate.yaml`'s third example question was first written with only 3 options instead of 4 (caught and fixed by manual review before Stage 2 ran). Had it shipped uncaught, `every_mvp_prompt_id_is_reachable_after_boot` (Stage 2) would have failed the boot with the file and the violated field named — the design intent held up against a real, human-made mistake, not just the deliberately-broken fixtures.
 
 **Validation:** lint ✅ · typecheck ✅ (both re-run as part of Stage 2's combined check, see below)
-**Commit:** _(recorded in Stage 2's commit — see below)_
+**Commit:** dca75d1 - F04 stage 1 - prompt format and the nine MVP prompts
+
+## Stage 2: Boot-Time Loading and Validation — ✅ done
+
+- [x] **4. Single-File Loader**
+- [x] **5. Registry and Boot Wiring**
+
+**Observations:**
+- `PromptRegistryService.get()` needs `AppError.promptNotFound` (PROMPT002), which the plan's Stage 4 Step 10 ("Error Registry Additions") wasn't scheduled to exist until later. Deviation: added all four PROMPT00x codes to `packages/shared/src/errors/codes.ts` and their `AppError` factory methods now, in Stage 2, since the registry has a real compile-time dependency on them. Stage 4's Step 10 is therefore already satisfied — its commit will note "already done, see Stage 2" rather than re-touching the file.
+- `PromptRegistryNotLoadedError` (querying the registry before `loadAll()` ran) is deliberately a different error class from `AppError.promptNotFound` (querying an id that doesn't exist after loading) — conflating them would make a boot-ordering bug read as a missing prompt, pointing whoever debugs it at the wrong file.
+- Ran the real nine-file directory (not just fixtures) through the loader via an integration test — `every_mvp_prompt_id_is_reachable_after_boot` — which is what actually caught the grammar-generate.yaml 3-option example bug during authoring (see Stage 1 observations); by the time this stage's tests were written the bug was already fixed, so all nine pass clean.
+- Restarted the real API dev process in the running Docker stack and read the boot log directly: all nine "Loaded prompt … (model gemini-3.6-flash, schema OK)" lines appear, followed by "Prompt library: 9 prompts loaded", with no change to existing routes or the credential-vault boot line. `/health` returns 200 afterward — confirmed with `curl`, not just log-reading.
+
+**Validation:** lint ✅ (new + touched files) · typecheck ✅ · tests 15/15 ✅ (9 `prompt-file-loader.spec.ts` + 6 `prompt-boot.spec.ts`) · boot smoke test ✅ (real Docker stack, real log output, real `/health` 200)
+**Commit:** _(pending)_
 
 ## Stage 2: Boot-Time Loading and Validation — ⬜ pending
 

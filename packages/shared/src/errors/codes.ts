@@ -19,6 +19,14 @@ export const ERROR_CODES = {
   CREDENTIAL_UNREADABLE: 'CRED003',
   /** Request body, query or params failed schema validation. */
   VALIDATION_FAILED: 'VAL001',
+  /** Two schema-validation attempts both failed; the raw response is retained. */
+  PROMPT_EXECUTION_FAILED: 'PROMPT001',
+  /** The requested prompt id has no loaded prompt. */
+  PROMPT_NOT_FOUND: 'PROMPT002',
+  /** Either the original or the retry attempt exceeded the execution time budget. */
+  PROMPT_TIMEOUT: 'PROMPT003',
+  /** The model returned no usable candidate, e.g. blocked by a safety filter. */
+  PROMPT_EMPTY_RESPONSE: 'PROMPT004',
   /** At least one infrastructure dependency is unreachable. */
   HEALTH_DEPENDENCY_DOWN: 'HEALTH001',
   /** Unhandled server-side failure. */
@@ -37,6 +45,10 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   [ERROR_CODES.CREDENTIAL_UNAVAILABLE]: 409,
   [ERROR_CODES.CREDENTIAL_UNREADABLE]: 500,
   [ERROR_CODES.VALIDATION_FAILED]: 400,
+  [ERROR_CODES.PROMPT_EXECUTION_FAILED]: 502,
+  [ERROR_CODES.PROMPT_NOT_FOUND]: 404,
+  [ERROR_CODES.PROMPT_TIMEOUT]: 504,
+  [ERROR_CODES.PROMPT_EMPTY_RESPONSE]: 502,
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 503,
   [ERROR_CODES.INTERNAL_ERROR]: 500,
 };
@@ -55,6 +67,10 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ERROR_CODES.CREDENTIAL_UNREADABLE]:
     'This stored key could not be read. Please enter it again.',
   [ERROR_CODES.VALIDATION_FAILED]: 'Some of the values you entered are not valid.',
+  [ERROR_CODES.PROMPT_EXECUTION_FAILED]: 'The AI could not produce a valid response for this prompt.',
+  [ERROR_CODES.PROMPT_NOT_FOUND]: 'Unknown prompt id.',
+  [ERROR_CODES.PROMPT_TIMEOUT]: 'The AI did not respond in time.',
+  [ERROR_CODES.PROMPT_EMPTY_RESPONSE]: 'The AI returned no usable response.',
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 'One or more dependencies are unavailable.',
   [ERROR_CODES.INTERNAL_ERROR]: 'Something went wrong on our side.',
 };

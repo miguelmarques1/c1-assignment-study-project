@@ -7,6 +7,7 @@ import { SessionGuard } from './auth/session.guard';
 import { CredentialsModule } from './credentials/credentials.module';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { PromptsModule } from './prompts/prompts.module';
 import { RedisModule } from './redis/redis.module';
 import { StorageModule } from './storage/storage.module';
 
@@ -19,6 +20,7 @@ import { StorageModule } from './storage/storage.module';
     AuthModule,
     HealthModule,
     CredentialsModule,
+    PromptsModule,
   ],
   providers: [
     // Authentication is global: a route is protected unless it opts out with

@@ -37,4 +37,20 @@ export class AppError extends Error {
   static validationFailed(details: unknown): AppError {
     return new AppError(ERROR_CODES.VALIDATION_FAILED, details);
   }
+
+  static promptExecutionFailed(rawResponse: string, validationErrors: string[]): AppError {
+    return new AppError(ERROR_CODES.PROMPT_EXECUTION_FAILED, { rawResponse, validationErrors });
+  }
+
+  static promptNotFound(promptId: string): AppError {
+    return new AppError(ERROR_CODES.PROMPT_NOT_FOUND, { promptId });
+  }
+
+  static promptTimeout(promptId: string): AppError {
+    return new AppError(ERROR_CODES.PROMPT_TIMEOUT, { promptId });
+  }
+
+  static promptEmptyResponse(promptId: string): AppError {
+    return new AppError(ERROR_CODES.PROMPT_EMPTY_RESPONSE, { promptId });
+  }
 }
