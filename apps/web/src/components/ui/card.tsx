@@ -10,7 +10,7 @@ const TONE_CLASSES: Record<CardTone, string> = {
   success: 'bg-badge-success-bg text-badge-success-fg',
 };
 
-interface CardProps extends ComponentPropsWithRef<'div'> {
+export interface CardProps extends ComponentPropsWithRef<'div'> {
   tone?: CardTone;
   as?: Extract<ElementType, 'section' | 'article' | 'div'>;
   header?: ReactNode;

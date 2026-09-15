@@ -8,7 +8,7 @@ const STATUS_CLASSES: Record<BadgeStatus, string> = {
   neutral: 'bg-badge-neutral-bg text-badge-neutral-fg',
 };
 
-interface BadgeProps {
+export interface BadgeProps {
   status: BadgeStatus;
   /** The label. A badge with no text would carry its status by colour alone. */
   children: string;

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
 const SESSION_COOKIE = 'eq_session';
-const PUBLIC_PATHS = ['/login'];
+const PUBLIC_PATHS = ['/login', '/design-system'];
 
 /**
  * Cheap first gate: bounce requests with no session cookie before they render.

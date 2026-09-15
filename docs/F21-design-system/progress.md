@@ -46,17 +46,24 @@
 **Validation:** lint ✅ (web + design-tokens, 0 warnings) · typecheck ✅ (`pnpm -r typecheck`) · tests ✅ (web 13/13 unaffected — RTL queries by role/text, not CSS class, so the stylesheet rewrite doesn't touch them) · `next build` ✅ (production build + CSS pipeline smoke check, described above)
 **Commit:** _(pending — recorded after this commit lands)_
 
-## Stage 3: Page States, Theming and Documentation — ⬜ pending
+## Stage 3: Page States, Theming and Documentation — ✅ done
 
-- [ ] **11. Page state components**
-- [ ] **12. Theme resolution and toggle**
-- [ ] **13. Documentation page**
-- [ ] **14. Component and theme test suites**
+- [x] **11. Page state components**
+- [x] **12. Theme resolution and toggle**
+- [x] **13. Documentation page**
+- [x] **14. Component and theme test suites**
 
-**Observations:** _(none yet)_
+**Observations:**
+- The theme init script follows Next's own documented pre-hydration pattern exactly: an inline `<script>` in `<head>` with `type` toggling `text/javascript`/`text/plain` server/client (avoids a dev warning), `suppressHydrationWarning` on `<html>`, and the script's logic is a **duplicated, self-contained string** in `THEME_INIT_SCRIPT` rather than a call into the exported `resolveTheme`/`readStoredPreference` helpers — it runs before any bundle loads, so it cannot import them. The duplication is deliberate and commented; the two must be kept in sync by hand if the resolution logic ever changes.
+- `ThemeToggle` uses a lazy `useState` initializer that reads `localStorage` directly on first client render (matching the blog-starter reference pattern) rather than a `useEffect` correction pass — the server always renders "System theme", the client's first render can legitimately differ, and `suppressHydrationWarning` on the button is what makes that difference sanctioned rather than an error. This avoids the one-frame label flash a `useEffect`-based correction would have shown.
+- **The whole documentation page is a Client Component** (`'use client'` on `page.tsx`), not just the interactive pieces. Several sections (Button, Chip, Empty, Error) need to hand real callbacks to Client Component primitives (`Button`, `Chip`'s remove control) — Next's RSC boundary forbids passing a function prop from a Server Component into a Client Component descendant, and the no-op fixtures used in the sections would have hit exactly that error had `page.tsx` stayed a Server Component. Verified by running a real `next build`, which renders `/design-system` during static generation — a boundary violation would have failed the build, not just a lint pass.
+- Retrofitted a token-drawn focus-visible ring (`outline-offset-2 outline-outline-strong focus-visible:outline-2`) onto `Button`, `Chip`'s remove control and `ThemeToggle` — none of the three had one before Stage 3's test suite needed to assert it, which would otherwise have been an acceptance criterion quietly unmet.
+- Ran the full `pnpm --filter web build` twice (once before, once after the focus-ring retrofit) and inspected the prerendered `.next/server/app/design-system.html` output directly rather than fighting a port already held by the project's running `docker compose` stack (port 3000 was occupied by `english-quest-web-1`) — confirmed all 11 `data-vr` blocks (`button`, `card`, `badge`, `meter`, `chip`, `field`, `stack`, `grid`, `loading`, `empty`, `error`) render with real content ("Warming up", "No lessons yet", "Try again").
+- Verified the `@ts-expect-error` type-level fixtures (icon-only Button, `Stack`/`Grid` with a non-token `gap`, `ErrorState` without `onRetry`) actually have teeth, not just syntax: temporarily made the Button fixture valid (added `aria-label`) and confirmed `tsc` then fails with "Unused '@ts-expect-error' directive" before reverting — the same class of vacuous-pass mistake flagged twice during F01/F02.
+- `Grid`'s `columns` reflow table (from Stage 2) and `Meter`'s warming-up hatch utility (added this stage, in `globals.css`) are exercised directly by the `GridSection`/`MeterSection` showcase blocks, which double as the Stage 5 visual-regression subjects.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** lint ✅ (0 warnings) · typecheck ✅ (including the `@ts-expect-error` fixtures, confirmed non-vacuous) · tests ✅ (web 37/37: 13 ui-primitives + 6 page-states + 5 theme + 8 credential-card + 5 login-form, all passing) · `next build` ✅ twice, with the second run's static HTML output inspected directly for all 11 documentation sections
+**Commit:** _(pending — recorded after this commit lands)_
 
 ## Stage 4: Screen Migration — ⬜ pending
 

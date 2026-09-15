@@ -1,6 +1,6 @@
 import type { MeterState } from '@english-quest/design-tokens';
 
-interface MeterProps {
+export interface MeterProps {
   /** 0-100. Only `null` when `state` is `'warming-up'`. */
   value: number | null;
   state?: MeterState;

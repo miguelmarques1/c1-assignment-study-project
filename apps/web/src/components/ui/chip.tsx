@@ -9,7 +9,7 @@ const TONE_CLASSES: Record<ChipTone, string> = {
   danger: 'bg-badge-danger-bg text-badge-danger-fg',
 };
 
-interface ChipProps {
+export interface ChipProps {
   tone?: ChipTone;
   children: ReactNode;
   /** Recurrence count, rendered appended to the label. */
@@ -29,7 +29,7 @@ export function Chip({ tone = 'neutral', children, count, onRemove }: ChipProps)
           type="button"
           onClick={onRemove}
           aria-label={`Remove ${typeof children === 'string' ? children : 'item'}`}
-          className="ml-xs leading-none"
+          className="ml-xs rounded-sm leading-none outline-offset-2 outline-outline-strong focus-visible:outline-2"
         >
           ×
         </button>

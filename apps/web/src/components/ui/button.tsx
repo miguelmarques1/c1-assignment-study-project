@@ -52,7 +52,7 @@ export function Button({
       disabled={disabled || loading}
       aria-busy={loading || undefined}
       className={cn(
-        'press-button inline-flex items-center justify-center gap-sm rounded-md border-2 border-outline-strong font-semibold disabled:cursor-not-allowed disabled:opacity-60',
+        'press-button inline-flex items-center justify-center gap-sm rounded-md border-2 border-outline-strong font-semibold outline-offset-2 outline-outline-strong focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60',
         VARIANT_CLASSES[variant],
         SIZE_CLASSES[size],
         fullWidth && 'w-full',
