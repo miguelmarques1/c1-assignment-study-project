@@ -19,9 +19,12 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  credentials      UserCredential[]
-  credentialUsage  CredentialUsage[]
-  promptExecutions PromptExecution[]
+  credentials       UserCredential[]
+  credentialUsage   CredentialUsage[]
+  promptExecutions  PromptExecution[]
+  lessonsOpened     Lesson[]            @relation("LessonOpener")
+  lessonsEnded      Lesson[]            @relation("LessonEnder")
+  lessonParticipations LessonParticipant[]
 
   @@map("users")
 }
@@ -88,4 +91,68 @@ model PromptExecution {
 
   @@index([promptId, promptVersion, occurredAt(sort: Desc)], map: "ix_prompt_execution_prompt_version_time")
   @@map("prompt_execution")
+}
+
+/// The live-session lifecycle only — a lesson whose recording failed is a
+/// separate fact on F07's own column, not a value of `status` here.
+///
+/// `ux_lessons_open_room`, the partial unique index that keeps at most one
+/// lesson open per room, is created by raw SQL in this model's migration and
+/// is deliberately NOT declared as a Prisma `@@unique` — the schema language
+/// has no partial-index syntax. A future `prisma migrate dev` run will not
+/// see it as part of the desired state and may propose dropping it; reject
+/// that part of any generated migration by hand.
+model Lesson {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  room                   String    @db.VarChar(64)
+  status                 String    @default("waiting") @db.VarChar(24)
+  openedBy               String    @map("opened_by") @db.Uuid
+  openedAt               DateTime  @default(now()) @map("opened_at") @db.Timestamptz(6)
+  startedAt              DateTime? @map("started_at") @db.Timestamptz(6)
+  endedAt                DateTime? @map("ended_at") @db.Timestamptz(6)
+  durationSeconds        Int?      @map("duration_seconds")
+  /// One of ended_by_participant, all_disconnected, max_duration, abandoned_before_start.
+  endReason              String?   @map("end_reason") @db.VarChar(32)
+  endedBy                String?   @map("ended_by") @db.Uuid
+  /// Stamped when the last connected participant leaves; cleared on any join.
+  /// The sweeper's only input for the 60-second all-disconnected rule.
+  allDisconnectedSince   DateTime? @map("all_disconnected_since") @db.Timestamptz(6)
+  /// The cap in force when this lesson opened, so a later configuration
+  /// change never rewrites history.
+  maxParticipants        Int       @map("max_participants") @db.SmallInt
+  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  opener       User                @relation("LessonOpener", fields: [openedBy], references: [id], onDelete: Restrict)
+  ender        User?               @relation("LessonEnder", fields: [endedBy], references: [id], onDelete: SetNull)
+  participants LessonParticipant[]
+
+  @@index([status, openedAt(sort: Desc)], map: "ix_lessons_status_opened")
+  @@map("lessons")
+}
+
+/// One row per participant per lesson. `identity` is stored explicitly rather
+/// than assumed equal to `userId` so F07 joins egress tracks on a recorded
+/// fact, not a re-derived assumption.
+model LessonParticipant {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId           String    @map("lesson_id") @db.Uuid
+  userId             String    @map("user_id") @db.Uuid
+  identity           String    @db.VarChar(64)
+  /// This participant's own first connection — what a late arrival is
+  /// recorded from, independent of the lesson's own `started_at`.
+  joinedAt           DateTime  @map("joined_at") @db.Timestamptz(6)
+  leftAt             DateTime? @map("left_at") @db.Timestamptz(6)
+  lastConnectedAt    DateTime? @map("last_connected_at") @db.Timestamptz(6)
+  lastDisconnectedAt DateTime? @map("last_disconnected_at") @db.Timestamptz(6)
+  connected          Boolean   @default(false)
+  createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, userId], map: "ux_lesson_participants_lesson_user")
+  @@index([userId, joinedAt(sort: Desc)], map: "ix_lesson_participants_user_joined")
+  @@map("lesson_participants")
 }

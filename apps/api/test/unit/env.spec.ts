@@ -20,6 +20,7 @@ function validEnv(overrides: Record<string, string | undefined> = {}): NodeJS.Pr
     S3_SECRET_KEY: 'minioadmin',
     S3_BUCKET: 'english-quest',
     LIVEKIT_URL: 'http://localhost:7880',
+    LIVEKIT_WS_URL: 'ws://localhost:7880',
     LIVEKIT_API_KEY: 'devkey',
     LIVEKIT_API_SECRET: 'devsecret',
     ...overrides,
@@ -121,6 +122,48 @@ describe('loadEnv', () => {
     expect(config.LOGIN_MAX_ATTEMPTS).toBe(5);
     expect(config.LOGIN_LOCKOUT_SECONDS).toBe(900);
     expect(config.S3_REGION).toBe('us-east-1');
+    expect(config.LESSON_MAX_PARTICIPANTS).toBe(2);
+  });
+
+  it('rejects_missing_livekit_ws_url', () => {
+    try {
+      loadEnv(validEnv({ LIVEKIT_WS_URL: undefined }));
+      expect.unreachable('should have thrown');
+    } catch (error) {
+      expect((error as EnvValidationError).issues.join('\n')).toContain('LIVEKIT_WS_URL');
+    }
+  });
+
+  it('defaults_lesson_max_participants_to_two', () => {
+    const config = loadEnv(validEnv({ LESSON_MAX_PARTICIPANTS: undefined }));
+    expect(config.LESSON_MAX_PARTICIPANTS).toBe(2);
+  });
+
+  it('accepts_lesson_max_participants_up_to_four', () => {
+    const config = loadEnv(validEnv({ LESSON_MAX_PARTICIPANTS: '4' }));
+    expect(config.LESSON_MAX_PARTICIPANTS).toBe(4);
+  });
+
+  it('rejects_lesson_max_participants_below_two', () => {
+    try {
+      loadEnv(validEnv({ LESSON_MAX_PARTICIPANTS: '1' }));
+      expect.unreachable('should have thrown');
+    } catch (error) {
+      expect((error as EnvValidationError).issues.join('\n')).toContain(
+        'LESSON_MAX_PARTICIPANTS must be at least 2.',
+      );
+    }
+  });
+
+  it('rejects_lesson_max_participants_above_four', () => {
+    try {
+      loadEnv(validEnv({ LESSON_MAX_PARTICIPANTS: '5' }));
+      expect.unreachable('should have thrown');
+    } catch (error) {
+      expect((error as EnvValidationError).issues.join('\n')).toContain(
+        'LESSON_MAX_PARTICIPANTS must be at most 4.',
+      );
+    }
   });
 
   it('reports_every_problem_at_once', () => {

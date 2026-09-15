@@ -106,6 +106,23 @@ export const envSchema = z.object({
   LIVEKIT_URL: z.url({ error: 'LIVEKIT_URL must be a URL.' }),
   LIVEKIT_API_KEY: z.string({ error: 'LIVEKIT_API_KEY is required.' }).min(1),
   LIVEKIT_API_SECRET: z.string({ error: 'LIVEKIT_API_SECRET is required.' }).min(1),
+  /**
+   * The container-internal LIVEKIT_URL above is unreachable from a browser.
+   * This is the address handed to the web client alongside a token.
+   */
+  LIVEKIT_WS_URL: z.url({ error: 'LIVEKIT_WS_URL must be a URL.' }),
+
+  /**
+   * Configuration, not a constant: raising this admits another learner with
+   * no schema change and no pipeline change, since every downstream stage
+   * already forks per participant.
+   */
+  LESSON_MAX_PARTICIPANTS: z.coerce
+    .number({ error: 'LESSON_MAX_PARTICIPANTS must be a number.' })
+    .int()
+    .min(2, { error: 'LESSON_MAX_PARTICIPANTS must be at least 2.' })
+    .max(4, { error: 'LESSON_MAX_PARTICIPANTS must be at most 4.' })
+    .default(2),
 
   SEED_USERS: seedUsersField,
 });

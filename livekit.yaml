@@ -4,8 +4,10 @@ port: 7880
 
 rtc:
   tcp_port: 7881
-  port_range_start: 50000
-  port_range_end: 50100
+  # A single muxed UDP port rather than a 100-port range: publishing a wide
+  # UDP range through Docker Desktop on Windows is slow to start and
+  # unreliable, and this stack targets local development first.
+  udp_port: 7882
   use_external_ip: false
 
 keys:
@@ -19,3 +21,12 @@ room:
   auto_create: false
   max_participants: 4
   empty_timeout: 300
+
+# F05 (Live Classroom) is the source of truth for lesson start/end and
+# participant presence, driven by these signed callbacks rather than by
+# client-reported events — the API must see a closed tab or a crashed
+# browser the same way it sees an explicit leave.
+webhook:
+  api_key: devkey
+  urls:
+    - http://api:3001/classroom/livekit-webhook

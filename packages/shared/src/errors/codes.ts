@@ -27,6 +27,14 @@ export const ERROR_CODES = {
   PROMPT_TIMEOUT: 'PROMPT003',
   /** The model returned no usable candidate, e.g. blocked by a safety filter. */
   PROMPT_EMPTY_RESPONSE: 'PROMPT004',
+  /** The room is already at the configured participant cap. */
+  CLASSROOM_FULL: 'CLASS001',
+  /** LiveKit could not be reached to issue a token or check occupancy. */
+  CLASSROOM_UNAVAILABLE: 'CLASS002',
+  /** The lesson is already in a terminal state. */
+  LESSON_NOT_ACTIVE: 'CLASS003',
+  /** The caller is not a participant of the lesson they tried to end. */
+  LESSON_NOT_A_PARTICIPANT: 'CLASS004',
   /** At least one infrastructure dependency is unreachable. */
   HEALTH_DEPENDENCY_DOWN: 'HEALTH001',
   /** Unhandled server-side failure. */
@@ -49,6 +57,10 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   [ERROR_CODES.PROMPT_NOT_FOUND]: 404,
   [ERROR_CODES.PROMPT_TIMEOUT]: 504,
   [ERROR_CODES.PROMPT_EMPTY_RESPONSE]: 502,
+  [ERROR_CODES.CLASSROOM_FULL]: 409,
+  [ERROR_CODES.CLASSROOM_UNAVAILABLE]: 503,
+  [ERROR_CODES.LESSON_NOT_ACTIVE]: 409,
+  [ERROR_CODES.LESSON_NOT_A_PARTICIPANT]: 403,
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 503,
   [ERROR_CODES.INTERNAL_ERROR]: 500,
 };
@@ -71,6 +83,12 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ERROR_CODES.PROMPT_NOT_FOUND]: 'Unknown prompt id.',
   [ERROR_CODES.PROMPT_TIMEOUT]: 'The AI did not respond in time.',
   [ERROR_CODES.PROMPT_EMPTY_RESPONSE]: 'The AI returned no usable response.',
+  // Overridden per call with the configured cap — see AppError.classroomFull —
+  // because the participant limit is configuration, not a fixed number.
+  [ERROR_CODES.CLASSROOM_FULL]: 'This classroom is full.',
+  [ERROR_CODES.CLASSROOM_UNAVAILABLE]: 'The classroom is unavailable right now.',
+  [ERROR_CODES.LESSON_NOT_ACTIVE]: 'This lesson is no longer active.',
+  [ERROR_CODES.LESSON_NOT_A_PARTICIPANT]: 'You are not a participant in this lesson.',
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 'One or more dependencies are unavailable.',
   [ERROR_CODES.INTERNAL_ERROR]: 'Something went wrong on our side.',
 };

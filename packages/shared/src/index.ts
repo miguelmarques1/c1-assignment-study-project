@@ -52,3 +52,20 @@ export {
   type PublicUser,
   type SessionTokenResponse,
 } from './schemas/auth';
+
+export {
+  classroomAwaitingSchema,
+  classroomEndResultSchema,
+  classroomParticipantSchema,
+  classroomSessionSchema,
+  classroomTokenSchema,
+  lessonEndReasonSchema,
+  lessonStatusSchema,
+  type ClassroomAwaiting,
+  type ClassroomEndResult,
+  type ClassroomParticipant,
+  type ClassroomSession,
+  type ClassroomToken,
+  type LessonEndReason,
+  type LessonStatus,
+} from './schemas/classroom';

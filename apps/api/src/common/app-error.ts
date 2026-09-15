@@ -53,4 +53,25 @@ export class AppError extends Error {
   static promptEmptyResponse(promptId: string): AppError {
     return new AppError(ERROR_CODES.PROMPT_EMPTY_RESPONSE, { promptId });
   }
+
+  /** The cap is configuration, so the pinned message is overridden with its live value. */
+  static classroomFull(maxParticipants: number): AppError {
+    return new AppError(
+      ERROR_CODES.CLASSROOM_FULL,
+      { maxParticipants },
+      `This classroom is full (${maxParticipants} participants).`,
+    );
+  }
+
+  static classroomUnavailable(reason: string): AppError {
+    return new AppError(ERROR_CODES.CLASSROOM_UNAVAILABLE, { reason });
+  }
+
+  static lessonNotActive(): AppError {
+    return new AppError(ERROR_CODES.LESSON_NOT_ACTIVE);
+  }
+
+  static notAParticipant(): AppError {
+    return new AppError(ERROR_CODES.LESSON_NOT_A_PARTICIPANT);
+  }
 }
