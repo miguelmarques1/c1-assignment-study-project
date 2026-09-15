@@ -65,12 +65,13 @@ describe('OpenAPI document', () => {
     ).toEqual([]);
   }, 60_000);
 
-  it('protected_routes_declare_the_session_cookie', async () => {
+  it('protected_routes_declare_a_session_transport', async () => {
     const document = await generate();
 
-    // /auth/login and /health are the only public routes; everything else must
-    // advertise that it needs a session, or the generated client omits it.
-    const publicOperations = new Set(['post /auth/login', 'get /health']);
+    // /auth/login, /auth/token and /health are the only public routes;
+    // everything else must advertise that it needs a session — either
+    // transport — or the generated client omits it.
+    const publicOperations = new Set(['post /auth/login', 'post /auth/token', 'get /health']);
 
     const missingSecurity = Object.entries(document.paths).flatMap(([path, item]) =>
       Object.entries(item as Record<string, { security?: unknown[] }>)
@@ -78,6 +79,9 @@ describe('OpenAPI document', () => {
         .map(([method]) => `${method.toUpperCase()} ${path}`),
     );
 
-    expect(missingSecurity, 'every protected route needs @ApiCookieAuth()').toEqual([]);
+    expect(
+      missingSecurity,
+      'every protected route needs @ApiCookieAuth() and @ApiBearerAuth()',
+    ).toEqual([]);
   }, 60_000);
 });

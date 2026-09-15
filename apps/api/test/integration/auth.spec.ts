@@ -27,6 +27,10 @@ async function login(email = EMAIL, password = PASSWORD) {
   return request(ctx.app.getHttpServer()).post('/auth/login').send({ email, password });
 }
 
+async function tokenLogin(email = EMAIL, password = PASSWORD) {
+  return request(ctx.app.getHttpServer()).post('/auth/token').send({ email, password });
+}
+
 beforeAll(async () => {
   ctx = await createTestContext();
 }, 180_000);
@@ -287,5 +291,84 @@ describe('authentication', () => {
         VALUES (${'UPPER@example.com'}, ${'Upper'}, ${await passwords.hash(PASSWORD)})
       `,
     ).rejects.toThrow();
+  });
+});
+
+describe('mobile token transport', () => {
+  it('token_route_returns_the_token_without_setting_a_cookie', async () => {
+    await seedUser();
+
+    const response = await tokenLogin();
+
+    expect(response.status).toBe(200);
+    expect(typeof response.body.data.token).toBe('string');
+    expect(response.body.data.token.length).toBeGreaterThan(0);
+    expect(new Date(response.body.data.expiresAt).getTime()).toBeGreaterThan(Date.now());
+    expect(response.body.data.user.email).toBe(EMAIL);
+    expect(response.headers['set-cookie']).toBeUndefined();
+  });
+
+  it('bearer_token_authenticates_a_guarded_route', async () => {
+    await seedUser();
+    const issued = await tokenLogin();
+    const token = issued.body.data.token as string;
+
+    const response = await request(ctx.app.getHttpServer())
+      .get('/auth/me')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.email).toBe(EMAIL);
+  });
+
+  it('bearer_and_cookie_resolve_to_the_same_session', async () => {
+    await seedUser();
+    const issued = await tokenLogin();
+    const token = issued.body.data.token as string;
+    const server = ctx.app.getHttpServer();
+
+    await request(server).post('/auth/logout').set('Authorization', `Bearer ${token}`).expect(204);
+
+    const after = await request(server).get('/auth/me').set('Authorization', `Bearer ${token}`);
+    expect(after.status).toBe(401);
+    expect(after.body.error.code).toBe(ERROR_CODES.AUTH_SESSION_INVALID);
+  });
+
+  it('an_invalid_bearer_token_returns_auth003', async () => {
+    const response = await request(ctx.app.getHttpServer())
+      .get('/auth/me')
+      .set('Authorization', 'Bearer not-a-real-token');
+
+    expect(response.status).toBe(401);
+    expect(response.body.error.code).toBe(ERROR_CODES.AUTH_SESSION_INVALID);
+  });
+
+  it('token_route_enforces_the_same_lockout', async () => {
+    await seedUser();
+
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const failed = await tokenLogin(EMAIL, 'the wrong password');
+      expect(failed.status).toBe(401);
+    }
+
+    const lockedViaToken = await tokenLogin(EMAIL, PASSWORD);
+    expect(lockedViaToken.status).toBe(429);
+    expect(lockedViaToken.body.error.code).toBe(ERROR_CODES.AUTH_LOCKED_OUT);
+
+    // The lockout is keyed by account, not by route — the cookie path is
+    // locked out too, by the same five failures spent above.
+    const lockedViaCookie = await login(EMAIL, PASSWORD);
+    expect(lockedViaCookie.status).toBe(429);
+    expect(lockedViaCookie.body.error.code).toBe(ERROR_CODES.AUTH_LOCKED_OUT);
+  });
+
+  it('login_route_still_sets_the_cookie_and_omits_the_token', async () => {
+    await seedUser();
+
+    const response = await login();
+
+    expect(response.status).toBe(200);
+    expect(response.headers['set-cookie']).toBeDefined();
+    expect(response.body.data.token).toBeUndefined();
   });
 });

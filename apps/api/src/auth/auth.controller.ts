@@ -1,5 +1,6 @@
 import { Body, Controller, Get, HttpCode, Post, Res } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiBody,
   ApiCookieAuth,
   ApiOperation,
@@ -14,13 +15,14 @@ import {
   type CurrentUser as CurrentUserDto,
   type LoginInput,
   type PublicUser,
+  type SessionTokenResponse,
 } from '@english-quest/shared';
 import type { CookieOptions, Response } from 'express';
 
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { env } from '../config/env';
 import { dataEnvelope, ERROR_RESPONSE } from '../openapi/components';
-import { SESSION_SECURITY_SCHEME } from '../openapi/setup';
+import { BEARER_SECURITY_SCHEME, SESSION_SECURITY_SCHEME } from '../openapi/setup';
 import { AuthService } from './auth.service';
 import {
   CurrentSession,
@@ -79,9 +81,44 @@ export class AuthController {
     return { data: result.user };
   }
 
+  @Public()
+  @Post('token')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Sign in (token transport)',
+    description:
+      'Issues the same session as `/auth/login` — same credential check, same lockout — ' +
+      'but returns the opaque token in the response body instead of a cookie, and sets no ' +
+      'cookie at all. For clients with no cookie jar (the native mobile app). The web ' +
+      'client never calls this route.',
+  })
+  @ApiBody({ schema: { $ref: '#/components/schemas/LoginRequest' } })
+  @ApiResponse({
+    status: 200,
+    description: 'Signed in. Token, its expiry and the user are returned in the body.',
+    schema: dataEnvelope('SessionToken'),
+  })
+  @ApiResponse({ status: 400, description: 'AUTH: payload failed validation.', ...ERROR_RESPONSE })
+  @ApiResponse({ status: 401, description: 'AUTH001: wrong credentials.', ...ERROR_RESPONSE })
+  @ApiResponse({ status: 429, description: 'AUTH002: locked out.', ...ERROR_RESPONSE })
+  async issueToken(
+    @Body(new ZodValidationPipe(loginSchema)) body: LoginInput,
+  ): Promise<ApiSuccess<SessionTokenResponse>> {
+    const result = await this.auth.login(body.email, body.password);
+
+    return {
+      data: {
+        token: result.token,
+        expiresAt: result.expiresAt.toISOString(),
+        user: result.user,
+      },
+    };
+  }
+
   @Post('logout')
   @HttpCode(204)
   @ApiCookieAuth(SESSION_SECURITY_SCHEME)
+  @ApiBearerAuth(BEARER_SECURITY_SCHEME)
   @ApiOperation({
     summary: 'Sign out',
     description: 'Destroys the session server-side and clears the cookie. The token stops working immediately.',
@@ -98,6 +135,7 @@ export class AuthController {
 
   @Get('me')
   @ApiCookieAuth(SESSION_SECURITY_SCHEME)
+  @ApiBearerAuth(BEARER_SECURITY_SCHEME)
   @ApiOperation({
     summary: 'Current user',
     description: 'Returns the signed-in user and the session expiry, which slides on every authenticated request.',
@@ -121,6 +159,7 @@ export class AuthController {
   @Post('password')
   @HttpCode(204)
   @ApiCookieAuth(SESSION_SECURITY_SCHEME)
+  @ApiBearerAuth(BEARER_SECURITY_SCHEME)
   @ApiOperation({
     summary: 'Change password',
     description:

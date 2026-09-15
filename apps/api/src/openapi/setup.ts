@@ -4,6 +4,7 @@ import { DocumentBuilder, SwaggerModule, type OpenAPIObject } from '@nestjs/swag
 import { OPENAPI_COMPONENTS } from './components';
 
 export const SESSION_SECURITY_SCHEME = 'sessionCookie';
+export const BEARER_SECURITY_SCHEME = 'sessionBearer';
 
 /**
  * Builds the OpenAPI document. Kept separate from main.ts so the same document
@@ -25,10 +26,13 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
         'under `error` with a stable `code`. Clients should switch on the code, never',
         'on the message.',
         '',
-        'Authentication is a session cookie named `eq_session`, issued by `POST /auth/login`.',
-        'It is HttpOnly and signed, so it cannot be read or forged from JavaScript — in',
-        'Postman or Insomnia, enable the cookie jar and the session is kept automatically',
-        'after a login request.',
+        'Authentication has two transports carrying the same opaque token. Browsers use a',
+        '`eq_session` cookie, issued by `POST /auth/login` — HttpOnly and signed, so it',
+        'cannot be read or forged from JavaScript. Clients with no cookie jar (the native',
+        'mobile app) use `POST /auth/token` instead, which returns the token in the body',
+        'and sets no cookie, and carry it as `Authorization: Bearer <token>` on every',
+        'later request. In Postman or Insomnia, enable the cookie jar and log in through',
+        '`/auth/login`, or call `/auth/token` and set the bearer token on the collection.',
       ].join('\n'),
     )
     .setVersion('0.1.0')
@@ -36,6 +40,10 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
       'eq_session',
       { type: 'apiKey', in: 'cookie', name: 'eq_session' },
       SESSION_SECURITY_SCHEME,
+    )
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'opaque token from POST /auth/token' },
+      BEARER_SECURITY_SCHEME,
     )
     .addServer('http://localhost:3001', 'Local development')
     .addTag('auth', 'Session lifecycle and credentials')

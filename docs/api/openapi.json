@@ -72,6 +72,77 @@
         ]
       }
     },
+    "/auth/token": {
+      "post": {
+        "description": "Issues the same session as `/auth/login` — same credential check, same lockout — but returns the opaque token in the response body instead of a cookie, and sets no cookie at all. For clients with no cookie jar (the native mobile app). The web client never calls this route.",
+        "operationId": "AuthController_issueToken",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signed in. Token, its expiry and the user are returned in the body.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/SessionToken"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "AUTH: payload failed validation.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH001: wrong credentials.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "AUTH002: locked out.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Sign in (token transport)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/auth/logout": {
       "post": {
         "description": "Destroys the session server-side and clears the cookie. The token stops working immediately.",
@@ -93,6 +164,9 @@
           }
         },
         "security": [
+          {
+            "sessionBearer": []
+          },
           {
             "sessionCookie": []
           }
@@ -139,6 +213,9 @@
           }
         },
         "security": [
+          {
+            "sessionBearer": []
+          },
           {
             "sessionCookie": []
           }
@@ -190,6 +267,9 @@
           }
         },
         "security": [
+          {
+            "sessionBearer": []
+          },
           {
             "sessionCookie": []
           }
@@ -276,6 +356,9 @@
         },
         "security": [
           {
+            "sessionBearer": []
+          },
+          {
             "sessionCookie": []
           }
         ],
@@ -345,6 +428,9 @@
         },
         "security": [
           {
+            "sessionBearer": []
+          },
+          {
             "sessionCookie": []
           }
         ],
@@ -376,6 +462,9 @@
           }
         },
         "security": [
+          {
+            "sessionBearer": []
+          },
           {
             "sessionCookie": []
           }
@@ -446,6 +535,9 @@
         },
         "security": [
           {
+            "sessionBearer": []
+          },
+          {
             "sessionCookie": []
           }
         ],
@@ -458,7 +550,7 @@
   },
   "info": {
     "title": "English Quest API",
-    "description": "API for the English Quest study platform.\n\nEvery successful response nests its payload under `data`; every failure nests\nunder `error` with a stable `code`. Clients should switch on the code, never\non the message.\n\nAuthentication is a session cookie named `eq_session`, issued by `POST /auth/login`.\nIt is HttpOnly and signed, so it cannot be read or forged from JavaScript — in\nPostman or Insomnia, enable the cookie jar and the session is kept automatically\nafter a login request.",
+    "description": "API for the English Quest study platform.\n\nEvery successful response nests its payload under `data`; every failure nests\nunder `error` with a stable `code`. Clients should switch on the code, never\non the message.\n\nAuthentication has two transports carrying the same opaque token. Browsers use a\n`eq_session` cookie, issued by `POST /auth/login` — HttpOnly and signed, so it\ncannot be read or forged from JavaScript. Clients with no cookie jar (the native\nmobile app) use `POST /auth/token` instead, which returns the token in the body\nand sets no cookie, and carry it as `Authorization: Bearer <token>` on every\nlater request. In Postman or Insomnia, enable the cookie jar and log in through\n`/auth/login`, or call `/auth/token` and set the bearer token on the collection.",
     "version": "0.1.0",
     "contact": {}
   },
@@ -484,6 +576,11 @@
         "type": "apiKey",
         "in": "cookie",
         "name": "eq_session"
+      },
+      "sessionBearer": {
+        "scheme": "bearer",
+        "bearerFormat": "opaque token from POST /auth/token",
+        "type": "http"
       }
     },
     "schemas": {
@@ -570,6 +667,47 @@
           "email",
           "displayName",
           "sessionExpiresAt"
+        ],
+        "additionalProperties": false
+      },
+      "SessionToken": {
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "user": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "email": {
+                "type": "string"
+              },
+              "displayName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "displayName"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "token",
+          "expiresAt",
+          "user"
         ],
         "additionalProperties": false
       },

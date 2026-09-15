@@ -31,7 +31,7 @@ export class SessionGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
-    const token = request.signedCookies?.[SESSION_COOKIE] as string | undefined;
+    const token = this.extractToken(request);
 
     if (!token) {
       throw AppError.sessionInvalid();
@@ -59,5 +59,26 @@ export class SessionGuard implements CanActivate {
     request.sessionExpiresAt = session.expiresAt;
 
     return true;
+  }
+
+  /**
+   * The web client carries the session in a signed cookie; the mobile client
+   * has no cookie jar and carries the same opaque token as a bearer header
+   * instead (issued by `POST /auth/token`, which sets no cookie). The cookie
+   * wins when both are present — nothing sends both on purpose today, but a
+   * fixed precedence is one less thing to reason about if something ever does.
+   */
+  private extractToken(request: AuthenticatedRequest): string | undefined {
+    const cookieToken = request.signedCookies?.[SESSION_COOKIE] as string | undefined;
+    if (cookieToken) {
+      return cookieToken;
+    }
+
+    const header = request.headers.authorization;
+    if (header?.startsWith('Bearer ')) {
+      return header.slice('Bearer '.length).trim() || undefined;
+    }
+
+    return undefined;
   }
 }

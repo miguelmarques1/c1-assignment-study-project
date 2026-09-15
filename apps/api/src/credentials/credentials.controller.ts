@@ -1,5 +1,13 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Put } from '@nestjs/common';
-import { ApiBody, ApiCookieAuth, ApiOperation, ApiParam, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiCookieAuth,
+  ApiOperation,
+  ApiParam,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import {
   credentialProviderSchema,
   saveCredentialSchema,
@@ -12,13 +20,14 @@ import {
 import { ZodValidationPipe } from '../common/zod-validation.pipe';
 import { CurrentUser, type AuthenticatedUser } from '../auth/current-user.decorator';
 import { dataEnvelope, ERROR_RESPONSE } from '../openapi/components';
-import { SESSION_SECURITY_SCHEME } from '../openapi/setup';
+import { BEARER_SECURITY_SCHEME, SESSION_SECURITY_SCHEME } from '../openapi/setup';
 import { CredentialsService } from './credentials.service';
 
 const providerParamPipe = new ZodValidationPipe(credentialProviderSchema);
 
 @ApiTags('credentials')
 @ApiCookieAuth(SESSION_SECURITY_SCHEME)
+@ApiBearerAuth(BEARER_SECURITY_SCHEME)
 @Controller('credentials')
 export class CredentialsController {
   constructor(private readonly credentials: CredentialsService) {}

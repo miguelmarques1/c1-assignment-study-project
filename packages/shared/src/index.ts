@@ -45,8 +45,10 @@ export {
   newPasswordField,
   passwordField,
   publicUserSchema,
+  sessionTokenSchema,
   type ChangePasswordInput,
   type CurrentUser,
   type LoginInput,
   type PublicUser,
+  type SessionTokenResponse,
 } from './schemas/auth';

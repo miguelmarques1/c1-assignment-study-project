@@ -59,3 +59,17 @@ export const currentUserSchema = publicUserSchema.extend({
 });
 
 export type CurrentUser = z.infer<typeof currentUserSchema>;
+
+/**
+ * The body of `POST /auth/token` — the same session `/auth/login` issues as a
+ * cookie, returned instead as a value the caller carries itself. Used by
+ * clients with no cookie jar (the mobile app); the web client never calls
+ * this route and this shape never reaches a browser.
+ */
+export const sessionTokenSchema = z.object({
+  token: z.string(),
+  expiresAt: z.iso.datetime(),
+  user: publicUserSchema,
+});
+
+export type SessionTokenResponse = z.infer<typeof sessionTokenSchema>;
