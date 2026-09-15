@@ -1,0 +1,106 @@
+id: reading-generate
+version: "1"
+model: gemini-3.6-flash
+temperature: 0.8
+max_output_tokens: 3000
+system: |
+  You write short reading passages for C1-level English learners, each
+  followed by exactly five comprehension questions. Passages should read
+  like real writing — an article, an email, a review — not a language
+  exercise pretending to be one.
+user_template: |
+  Write a reading passage for a C1-level learner at difficulty {{difficulty_level}}.
+  Target vocabulary tags: {{target_tags}}.
+  Aim for roughly 450 to 700 words with a natural mix of sentence lengths.
+
+  Follow the passage with exactly 5 multiple-choice comprehension questions.
+  Each question has exactly 4 options with exactly one correct option.
+variables:
+  - name: difficulty_level
+    required: true
+  - name: target_tags
+    required: true
+response_schema:
+  type: object
+  properties:
+    title:
+      type: string
+    body:
+      type: string
+    questions:
+      type: array
+      minItems: 5
+      maxItems: 5
+      items:
+        type: object
+        properties:
+          question:
+            type: string
+          options:
+            type: array
+            minItems: 4
+            maxItems: 4
+            items:
+              type: string
+          correct_option_index:
+            type: integer
+            minimum: 0
+            maximum: 3
+        required: [question, options, correct_option_index]
+    target_tags:
+      type: array
+      items:
+        type: string
+  required: [title, body, questions, target_tags]
+examples:
+  - user: |
+      Write a reading passage for a C1-level learner at difficulty medium.
+      Target vocabulary tags: remote-work, idioms-work
+    output:
+      title: "The Four-Day Experiment"
+      body: >
+        When the marketing agency Halden & Cole switched to a four-day week
+        last spring, most of the staff expected chaos. Instead, the change
+        forced everyone to rethink how meetings were run... (full passage
+        continues for several paragraphs)
+      questions:
+        - question: "Why did the switch to a four-day week not cause chaos?"
+          options:
+            - "The agency hired extra staff to cover the missing day."
+            - "It forced the team to reconsider how meetings were run."
+            - "Clients agreed to reduce their expectations."
+            - "The agency reduced its client list."
+          correct_option_index: 1
+        - question: "What best describes the staff's initial expectation?"
+          options:
+            - "Enthusiasm"
+            - "Indifference"
+            - "Apprehension"
+            - "Confusion"
+          correct_option_index: 2
+        - question: "Which idiom captures the team's early attitude, based on the passage?"
+          options:
+            - "Bracing for impact"
+            - "Riding high"
+            - "Playing it by ear"
+            - "Back to square one"
+          correct_option_index: 0
+        - question: "What change did the agency make to its meeting structure?"
+          options:
+            - "Meetings became longer but less frequent."
+            - "Meetings were replaced entirely by written updates."
+            - "Meetings became shorter and more focused."
+            - "Meetings moved to the start of the missing day."
+          correct_option_index: 2
+        - question: "What is the passage's overall tone toward the experiment?"
+          options:
+            - "Skeptical"
+            - "Cautiously positive"
+            - "Dismissive"
+            - "Strongly critical"
+          correct_option_index: 1
+      target_tags: [remote-work, idioms-work]
+constraints:
+  - Never write a listening-style passage (no dialogue-only scripts, no audio cues).
+  - Every question must have exactly one clearly correct option among the four.
+banned_phrases: []

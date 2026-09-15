@@ -1,0 +1,154 @@
+id: lesson-analysis
+version: "1"
+model: gemini-3.6-flash
+temperature: 0.4
+max_output_tokens: 3000
+system: |
+  You are a CEFR-C1 speaking assessor reviewing one participant's side of a
+  lesson transcript. You score only the named participant, never the other
+  side of the conversation, and every claim you make must be traceable to a
+  verbatim quote from the transcript.
+user_template: |
+  Transcript (this participant's turns are marked with their role label):
+  ---
+  {{transcript}}
+  ---
+
+  Has a scenario for this lesson: {{has_scenario}}
+  Scenario setting: {{setting}}
+  Scenario premise: {{premise}}
+  This participant's role: {{own_role_label}}
+  This participant's target expressions: {{target_expressions}}
+
+  Score five competencies (fluency, grammar_accuracy, vocabulary_range,
+  pronunciation, interaction), each 1 to 5 with a one-sentence justification
+  quoting the transcript. List 3 to 5 strengths. List every notable error
+  with a verbatim quote, a taxonomy tag (grammar, vocabulary, pronunciation,
+  register, or discourse), a correction, a plain-language explanation and a
+  severity (minor, moderate, major).
+
+  If a scenario exists (has_scenario is true), also report whether the
+  register matched the role, which target expressions were attempted, and
+  which were missed. If has_scenario is false, set scenario_fit to null —
+  do not invent a scenario.
+
+  Finish with 3 to 6 topics to practice next.
+variables:
+  - name: transcript
+    required: true
+  - name: has_scenario
+    required: true
+  - name: setting
+    required: false
+  - name: premise
+    required: false
+  - name: own_role_label
+    required: false
+  - name: target_expressions
+    required: false
+response_schema:
+  type: object
+  properties:
+    competencies:
+      type: array
+      minItems: 5
+      maxItems: 5
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            enum: [fluency, grammar_accuracy, vocabulary_range, pronunciation, interaction]
+          score:
+            type: integer
+            minimum: 1
+            maximum: 5
+          justification:
+            type: string
+        required: [name, score, justification]
+    strengths:
+      type: array
+      minItems: 3
+      maxItems: 5
+      items:
+        type: string
+    errors:
+      type: array
+      items:
+        type: object
+        properties:
+          quote:
+            type: string
+          tag:
+            type: string
+            enum: [grammar, vocabulary, pronunciation, register, discourse]
+          correction:
+            type: string
+          explanation:
+            type: string
+          severity:
+            type: string
+            enum: [minor, moderate, major]
+        required: [quote, tag, correction, explanation, severity]
+    scenario_fit:
+      type: [object, "null"]
+      properties:
+        register_appropriate:
+          type: boolean
+        expressions_attempted:
+          type: array
+          items:
+            type: string
+        expressions_missed:
+          type: array
+          items:
+            type: string
+      required: [register_appropriate, expressions_attempted, expressions_missed]
+    topics_to_practice:
+      type: array
+      minItems: 3
+      maxItems: 6
+      items:
+        type: string
+  required: [competencies, strengths, errors, scenario_fit, topics_to_practice]
+examples:
+  - user: |
+      Transcript: "She have been to Paris last year and it was, um, really good experience."
+      Has a scenario for this lesson: false
+    output:
+      competencies:
+        - name: fluency
+          score: 3
+          justification: "Uses filler ('um') but keeps the turn going without long pauses."
+        - name: grammar_accuracy
+          score: 2
+          justification: "Subject-verb agreement error in 'She have been'."
+        - name: vocabulary_range
+          score: 3
+          justification: "Relies on generic adjectives like 'good' rather than more precise alternatives."
+        - name: pronunciation
+          score: 3
+          justification: "No transcript evidence of pronunciation issues beyond what is inferable from spelling."
+        - name: interaction
+          score: 3
+          justification: "Single turn available; no evidence of turn-taking either way."
+      strengths:
+        - "Communicates a complete idea despite the grammar slip."
+        - "Uses natural hesitation rather than switching to the native language."
+        - "Past experience is clearly time-anchored with 'last year'."
+      errors:
+        - quote: "She have been to Paris last year"
+          tag: grammar
+          correction: "She went to Paris last year"
+          explanation: "Use simple past, not present perfect, with a specific past time expression like 'last year'."
+          severity: moderate
+      scenario_fit: null
+      topics_to_practice:
+        - "Simple past vs. present perfect with time expressions"
+        - "Varying adjectives beyond 'good' / 'nice'"
+        - "Reducing filler words in longer turns"
+constraints:
+  - Only assess the named participant's own turns, never the other participant's.
+  - Every error and justification must quote the transcript verbatim.
+  - Do not invent a scenario_fit block when has_scenario is false.
+banned_phrases: []

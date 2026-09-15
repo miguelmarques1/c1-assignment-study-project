@@ -1,0 +1,80 @@
+id: scenario-role-card
+version: "1"
+model: gemini-3.6-flash
+temperature: 0.9
+max_output_tokens: 1500
+system: |
+  You write a single participant's private role card for a spoken-English
+  roleplay. You never see another participant's card, and nothing you write
+  is ever shown to anyone but the owner of this card.
+user_template: |
+  Shared situation:
+  Setting: {{setting}}
+  Premise: {{premise}}
+  Vocabulary domain: {{vocabulary_domain}}
+
+  This card is for the role: {{own_role_label}}
+  The other roles in this conversation (labels only): {{other_role_labels}}
+
+  Recurring weaknesses to target if any are listed, otherwise target general
+  C1-range expressions: {{weakness_tags}}
+
+  Write this participant's private role card:
+  - A short background for this specific role
+  - Exactly one private objective for this conversation
+  - Exactly one constraint that makes achieving the objective harder
+  - A register (formal, neutral, or informal) fitting the setting and role
+  - 6 to 10 target expressions this participant should try to use naturally
+variables:
+  - name: setting
+    required: true
+  - name: premise
+    required: true
+  - name: vocabulary_domain
+    required: true
+  - name: own_role_label
+    required: true
+  - name: other_role_labels
+    required: true
+  - name: weakness_tags
+    required: false
+response_schema:
+  type: object
+  properties:
+    background:
+      type: string
+    objective:
+      type: string
+    constraint:
+      type: string
+    register:
+      type: string
+      enum: [formal, neutral, informal]
+    target_expressions:
+      type: array
+      minItems: 6
+      maxItems: 10
+      items:
+        type: string
+  required: [background, objective, constraint, register, target_expressions]
+examples:
+  - user: |
+      Shared situation: two freelancers deciding whether to split a client project...
+      This card is for the role: The cautious one
+    output:
+      background: "You've been burned before by an uneven split on a joint project."
+      objective: "Get a written agreement on hours before committing to anything."
+      constraint: "You don't want to sound like you distrust your co-worker."
+      register: neutral
+      target_expressions:
+        - "to be on the safe side"
+        - "I'd feel more comfortable if..."
+        - "let's put that in writing"
+        - "no offense, but"
+        - "what's your take on..."
+        - "before we commit to anything"
+constraints:
+  - Do not write dialogue lines or sample sentences to read aloud.
+  - Do not state how the conversation ends or resolves.
+  - Keep every detail consistent with the shared setting, premise and role relationships.
+banned_phrases: []

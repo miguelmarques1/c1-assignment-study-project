@@ -1,0 +1,74 @@
+id: scenario-situation
+version: "1"
+model: gemini-3.6-flash
+temperature: 0.9
+max_output_tokens: 1500
+system: |
+  You are a scenario designer for a spoken-English practice classroom aimed at
+  C1-level learners. You generate the shared premise of a spontaneous
+  roleplay conversation — never dialogue, never a resolution — so two or more
+  people can improvise a natural conversation from it.
+user_template: |
+  Generate a shared roleplay situation for {{participant_count}} participants
+  who are about to have a spontaneous English conversation practice session.
+  The vocabulary domain should be rich enough for C1-level learners to stretch
+  their range without feeling forced.
+
+  Produce:
+  - A setting (where and when this is happening)
+  - A premise (why these people are talking, in one or two sentences)
+  - Exactly {{participant_count}} role labels, with the relationship between
+    each pair of roles stated explicitly
+  - A vocabulary domain the conversation naturally draws from
+  - 3 to 5 discussion hooks: open questions or tensions a participant could
+    raise to keep the conversation moving
+variables:
+  - name: participant_count
+    required: true
+response_schema:
+  type: object
+  properties:
+    setting:
+      type: string
+    premise:
+      type: string
+    roles:
+      type: array
+      items:
+        type: object
+        properties:
+          label:
+            type: string
+          relationship:
+            type: string
+        required: [label, relationship]
+    vocabulary_domain:
+      type: string
+    discussion_hooks:
+      type: array
+      minItems: 3
+      maxItems: 5
+      items:
+        type: string
+  required: [setting, premise, roles, vocabulary_domain, discussion_hooks]
+examples:
+  - user: |
+      Generate a shared roleplay situation for 2 participants...
+    output:
+      setting: "A co-working space in Lisbon, late afternoon."
+      premise: "Two freelancers who share a desk are deciding whether to split a client project."
+      roles:
+        - label: "The cautious one"
+          relationship: "Peer freelancer weighing the same offer"
+        - label: "The eager one"
+          relationship: "Peer freelancer weighing the same offer"
+      vocabulary_domain: "freelance work, risk and negotiation"
+      discussion_hooks:
+        - "Is splitting the fee fair if the workload isn't equal?"
+        - "What happens if the client wants changes after the deadline?"
+        - "Should either of them involve a third freelancer?"
+constraints:
+  - Do not write any dialogue lines or sample sentences to read aloud.
+  - Do not state how the conversation ends or resolves.
+  - Do not include any participant's name, history or profile information.
+banned_phrases: []

@@ -1,0 +1,93 @@
+id: writing-correct
+version: "1"
+model: gemini-3.6-flash
+temperature: 0.3
+max_output_tokens: 2500
+system: |
+  You are a CEFR-C1 writing assessor. You correct one learner's submission
+  against the task they were given, scoring it on four dimensions and
+  producing a fully revised version. Every error you list must quote the
+  submission verbatim.
+user_template: |
+  Task given to the learner:
+  ---
+  {{task_prompt}}
+  ---
+
+  Learner's submission:
+  ---
+  {{submission}}
+  ---
+
+  Score task_achievement, coherence_cohesion, vocabulary_range and
+  grammar_accuracy, each 1 to 5. Write one overall comment. List every
+  notable error with a verbatim quote, a correction and a plain-language
+  explanation. Finish with a fully revised version of the submission that
+  preserves the learner's ideas and voice while fixing the errors.
+variables:
+  - name: task_prompt
+    required: true
+  - name: submission
+    required: true
+response_schema:
+  type: object
+  properties:
+    overall_comment:
+      type: string
+    scores:
+      type: array
+      minItems: 4
+      maxItems: 4
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            enum: [task_achievement, coherence_cohesion, vocabulary_range, grammar_accuracy]
+          score:
+            type: integer
+            minimum: 1
+            maximum: 5
+        required: [name, score]
+    errors:
+      type: array
+      items:
+        type: object
+        properties:
+          quote:
+            type: string
+          correction:
+            type: string
+          explanation:
+            type: string
+        required: [quote, correction, explanation]
+    revised_version:
+      type: string
+  required: [overall_comment, scores, errors, revised_version]
+examples:
+  - user: |
+      Task: Describe a change you would make to your city.
+      Submission: "I think my city need more green spaces because it help people to relax and reduces the pollution."
+    output:
+      overall_comment: "Clear, well-motivated idea, undermined by a couple of recurring subject-verb agreement slips."
+      scores:
+        - name: task_achievement
+          score: 4
+        - name: coherence_cohesion
+          score: 3
+        - name: vocabulary_range
+          score: 3
+        - name: grammar_accuracy
+          score: 2
+      errors:
+        - quote: "my city need more green spaces"
+          correction: "my city needs more green spaces"
+          explanation: "Third-person singular subjects take '-s' on the present simple verb."
+        - quote: "it help people to relax"
+          correction: "it helps people to relax"
+          explanation: "Same subject-verb agreement pattern as above."
+      revised_version: "I think my city needs more green spaces because it helps people to relax and reduces pollution."
+constraints:
+  - Every error must quote the submission verbatim.
+  - The revised version must preserve the learner's own ideas, not replace them.
+banned_phrases: []

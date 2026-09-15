@@ -1,0 +1,111 @@
+id: error-review-generate
+version: "1"
+model: gemini-3.6-flash
+temperature: 0.7
+max_output_tokens: 3000
+system: |
+  You write short review passages for C1-level English learners that are
+  built around correcting a specific pattern of mistakes the learner has
+  made before, followed by exactly five comprehension questions.
+user_template: |
+  This learner has repeatedly made mistakes with: {{recurring_errors}}.
+  Write a short passage (roughly 300 to 500 words) for a C1-level learner at
+  difficulty {{difficulty_level}} that models the CORRECT use of these
+  patterns clearly and repeatedly, so the learner sees the right form in
+  natural context. Target tags: {{target_tags}}.
+
+  Follow the passage with exactly 5 multiple-choice comprehension questions.
+  Each question has exactly 4 options with exactly one correct option, and at
+  least 2 of the 5 questions should test the previously-mistaken pattern
+  directly.
+variables:
+  - name: difficulty_level
+    required: true
+  - name: target_tags
+    required: true
+  - name: recurring_errors
+    required: true
+response_schema:
+  type: object
+  properties:
+    title:
+      type: string
+    body:
+      type: string
+    questions:
+      type: array
+      minItems: 5
+      maxItems: 5
+      items:
+        type: object
+        properties:
+          question:
+            type: string
+          options:
+            type: array
+            minItems: 4
+            maxItems: 4
+            items:
+              type: string
+          correct_option_index:
+            type: integer
+            minimum: 0
+            maximum: 3
+        required: [question, options, correct_option_index]
+    target_tags:
+      type: array
+      items:
+        type: string
+  required: [title, body, questions, target_tags]
+examples:
+  - user: |
+      This learner has repeatedly made mistakes with: subject-verb agreement, present perfect vs simple past.
+    output:
+      title: "A Week That Has Changed Everything"
+      body: >
+        Maria has lived in three different cities this year, and each one
+        has taught her something new... (passage continues, modeling correct
+        subject-verb agreement and correct present perfect / simple past use
+        repeatedly)
+      questions:
+        - question: "Which sentence is grammatically correct?"
+          options:
+            - "She have lived here for two years."
+            - "She has lived here for two years."
+            - "She living here for two years."
+            - "She lives here since two years."
+          correct_option_index: 1
+        - question: "'Maria has lived in three cities this year' implies that..."
+          options:
+            - "She no longer lives in any of them."
+            - "The year is not over and this is still relevant now."
+            - "She lived there many years ago."
+            - "She will live there next year."
+          correct_option_index: 1
+        - question: "Which verb form correctly completes: 'They ___ the report yesterday.'?"
+          options:
+            - "have finished"
+            - "finishes"
+            - "finished"
+            - "finishing"
+          correct_option_index: 2
+        - question: "What is the passage mainly about?"
+          options:
+            - "A woman adapting to life in several cities"
+            - "A comparison of three different countries"
+            - "An argument about grammar rules"
+            - "A story about a failed move"
+          correct_option_index: 0
+        - question: "Which subject-verb pair is correctly matched?"
+          options:
+            - "The team have arrived and is ready."
+            - "The team has arrived and is ready."
+            - "The team have arrived and are was ready."
+            - "The team has arrive and is ready."
+          correct_option_index: 1
+      target_tags: [subject-verb-agreement, present-perfect]
+constraints:
+  - Never write a listening-style passage (no dialogue-only scripts, no audio cues).
+  - The passage must model the correct form, not the learner's mistaken form.
+  - Every question must have exactly one clearly correct option among the four.
+banned_phrases: []

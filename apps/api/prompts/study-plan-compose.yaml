@@ -1,0 +1,124 @@
+id: study-plan-compose
+version: "1"
+model: gemini-3.6-flash
+temperature: 0.5
+max_output_tokens: 1800
+system: |
+  You compose a 7-day study plan for a C1-level English learner by selecting
+  from an existing item bank. You never invent item content — you only
+  reference item ids from the bank you are given, and you never see full
+  item bodies, only their metadata.
+user_template: |
+  Item bank metadata (id, type, target tags, difficulty — JSON):
+  {{item_bank_metadata}}
+
+  This learner's unmastered tags: {{unmastered_tags}}
+
+  Compose exactly 7 daily sessions, each with 2 to 4 activities. Reference
+  items only by their id from the bank above — never invent an id. Each
+  session should include a mix of activity types where the bank allows it.
+  At most 30% of all activities across the week may be marked as review
+  (is_review: true); the rest should target the learner's unmastered tags.
+variables:
+  - name: item_bank_metadata
+    required: true
+  - name: unmastered_tags
+    required: true
+response_schema:
+  type: object
+  properties:
+    sessions:
+      type: array
+      minItems: 7
+      maxItems: 7
+      items:
+        type: object
+        properties:
+          day:
+            type: integer
+            minimum: 1
+            maximum: 7
+          activities:
+            type: array
+            minItems: 2
+            maxItems: 4
+            items:
+              type: object
+              properties:
+                item_id:
+                  type: string
+                type:
+                  type: string
+                  enum: [listening, reading, speaking, pronunciation, writing, review]
+                is_review:
+                  type: boolean
+              required: [item_id, type, is_review]
+        required: [day, activities]
+  required: [sessions]
+examples:
+  - user: |
+      Item bank metadata: [{"id":"read-101","type":"reading","tags":["idioms-work"]}, ...]
+      Unmastered tags: idioms-work, present-perfect
+    output:
+      sessions:
+        - day: 1
+          activities:
+            - item_id: "read-101"
+              type: reading
+              is_review: false
+            - item_id: "gram-204"
+              type: writing
+              is_review: false
+        - day: 2
+          activities:
+            - item_id: "listen-050"
+              type: listening
+              is_review: false
+            - item_id: "vocab-018"
+              type: reading
+              is_review: false
+        - day: 3
+          activities:
+            - item_id: "speak-009"
+              type: speaking
+              is_review: false
+            - item_id: "read-076"
+              type: reading
+              is_review: true
+        - day: 4
+          activities:
+            - item_id: "pron-014"
+              type: pronunciation
+              is_review: false
+            - item_id: "gram-205"
+              type: writing
+              is_review: false
+        - day: 5
+          activities:
+            - item_id: "read-102"
+              type: reading
+              is_review: false
+            - item_id: "vocab-019"
+              type: reading
+              is_review: false
+        - day: 6
+          activities:
+            - item_id: "listen-051"
+              type: listening
+              is_review: false
+            - item_id: "speak-010"
+              type: speaking
+              is_review: false
+        - day: 7
+          activities:
+            - item_id: "write-033"
+              type: writing
+              is_review: false
+            - item_id: "read-077"
+              type: reading
+              is_review: false
+constraints:
+  - Reference only item ids present in the item bank metadata — never invent one.
+  - At most 30% of the week's activities may be marked is_review true.
+  - Every session must include at least one activity targeting an unmastered tag.
+banned_phrases: []

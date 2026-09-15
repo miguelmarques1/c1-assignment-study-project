@@ -1,0 +1,106 @@
+id: vocabulary-generate
+version: "1"
+model: gemini-3.6-flash
+temperature: 0.8
+max_output_tokens: 3000
+system: |
+  You write short vocabulary-in-context passages for C1-level English
+  learners, each followed by exactly five comprehension questions that test
+  whether the target words were understood from context, not memorized.
+user_template: |
+  Write a short passage (roughly 300 to 500 words) that naturally uses every
+  one of these target vocabulary items in context, for a C1-level learner at
+  difficulty {{difficulty_level}}: {{target_tags}}.
+
+  Follow the passage with exactly 5 multiple-choice comprehension questions.
+  Each question has exactly 4 options with exactly one correct option, and at
+  least 3 of the 5 questions should test understanding of a target word from
+  its context rather than plain recall.
+variables:
+  - name: difficulty_level
+    required: true
+  - name: target_tags
+    required: true
+response_schema:
+  type: object
+  properties:
+    title:
+      type: string
+    body:
+      type: string
+    questions:
+      type: array
+      minItems: 5
+      maxItems: 5
+      items:
+        type: object
+        properties:
+          question:
+            type: string
+          options:
+            type: array
+            minItems: 4
+            maxItems: 4
+            items:
+              type: string
+          correct_option_index:
+            type: integer
+            minimum: 0
+            maximum: 3
+        required: [question, options, correct_option_index]
+    target_tags:
+      type: array
+      items:
+        type: string
+  required: [title, body, questions, target_tags]
+examples:
+  - user: |
+      Write a short passage using: procrastinate, meticulous, ambiguous
+    output:
+      title: "The Meticulous Procrastinator"
+      body: >
+        Dani had a reputation for being meticulous about everything except
+        deadlines... (passage continues, using each target word naturally
+        at least once)
+      questions:
+        - question: "Based on the passage, someone who is 'meticulous' is most likely to..."
+          options:
+            - "Rush through tasks without checking them"
+            - "Pay very close attention to detail"
+            - "Avoid difficult tasks entirely"
+            - "Delegate work to others"
+          correct_option_index: 1
+        - question: "The word 'ambiguous' in the passage most likely describes something that is..."
+          options:
+            - "Clearly stated"
+            - "Open to more than one interpretation"
+            - "Completed on time"
+            - "Extremely detailed"
+          correct_option_index: 1
+        - question: "What does Dani do that shows she 'procrastinates'?"
+          options:
+            - "She finishes tasks early"
+            - "She delays starting tasks until the last moment"
+            - "She refuses every new project"
+            - "She works meticulously under pressure"
+          correct_option_index: 1
+        - question: "What is the passage mainly about?"
+          options:
+            - "A manager evaluating a team"
+            - "A contrast between Dani's care for detail and her delay in starting"
+            - "A story about missed deadlines with no explanation"
+            - "Advice on time management techniques"
+          correct_option_index: 1
+        - question: "Which word could replace 'meticulous' with the closest meaning?"
+          options:
+            - "Careless"
+            - "Thorough"
+            - "Fast"
+            - "Uncertain"
+          correct_option_index: 1
+      target_tags: [procrastinate, meticulous, ambiguous]
+constraints:
+  - Never write a listening-style passage (no dialogue-only scripts, no audio cues).
+  - Every target word must appear at least once in the passage.
+  - Every question must have exactly one clearly correct option among the four.
+banned_phrases: []

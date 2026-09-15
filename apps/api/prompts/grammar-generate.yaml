@@ -1,0 +1,108 @@
+id: grammar-generate
+version: "1"
+model: gemini-3.6-flash
+temperature: 0.7
+max_output_tokens: 3000
+system: |
+  You write short passages for C1-level English learners that exercise one
+  specific grammar structure naturally and repeatedly, followed by exactly
+  five comprehension questions.
+user_template: |
+  Write a short passage (roughly 300 to 500 words) for a C1-level learner at
+  difficulty {{difficulty_level}} that naturally uses the grammar structure
+  "{{target_structure}}" at least 3 separate times. Target tags: {{target_tags}}.
+
+  Follow the passage with exactly 5 multiple-choice comprehension questions.
+  Each question has exactly 4 options with exactly one correct option, and at
+  least 2 of the 5 questions should test the target grammar structure
+  directly (e.g. choosing the correctly formed sentence).
+variables:
+  - name: difficulty_level
+    required: true
+  - name: target_tags
+    required: true
+  - name: target_structure
+    required: true
+response_schema:
+  type: object
+  properties:
+    title:
+      type: string
+    body:
+      type: string
+    questions:
+      type: array
+      minItems: 5
+      maxItems: 5
+      items:
+        type: object
+        properties:
+          question:
+            type: string
+          options:
+            type: array
+            minItems: 4
+            maxItems: 4
+            items:
+              type: string
+          correct_option_index:
+            type: integer
+            minimum: 0
+            maximum: 3
+        required: [question, options, correct_option_index]
+    target_tags:
+      type: array
+      items:
+        type: string
+  required: [title, body, questions, target_tags]
+examples:
+  - user: |
+      Write a passage using the grammar structure "third conditional" at least 3 times.
+    output:
+      title: "If Only We Had Left Earlier"
+      body: >
+        If we had checked the traffic before leaving, we would have taken the
+        other route... (passage continues, using the third conditional
+        repeatedly and naturally)
+      questions:
+        - question: "Which sentence correctly uses the third conditional?"
+          options:
+            - "If we leave earlier, we arrive on time."
+            - "If we had left earlier, we would have arrived on time."
+            - "If we left earlier, we would arrive on time."
+            - "If we will leave earlier, we will arrive on time."
+          correct_option_index: 1
+        - question: "According to the passage, what actually happened?"
+          options:
+            - "They left early and arrived on time."
+            - "They left late and missed part of the event."
+            - "They never left at all."
+            - "They took a different route successfully."
+          correct_option_index: 1
+        - question: "What does the third conditional express in this context?"
+          options:
+            - "A general truth"
+            - "A real possibility in the future"
+            - "An imagined past outcome that did not happen"
+            - "A polite request"
+          correct_option_index: 2
+        - question: "Which clause type introduces a third conditional?"
+          options:
+            - "If + present simple"
+            - "If + past perfect"
+            - "If + past simple"
+            - "If + will"
+          correct_option_index: 1
+        - question: "What is the passage's overall message?"
+          options:
+            - "Planning ahead helps avoid regret."
+            - "Traffic is unpredictable no matter what."
+            - "Leaving early guarantees success."
+            - "The event was cancelled."
+          correct_option_index: 0
+      target_tags: [conditionals, regret]
+constraints:
+  - Never write a listening-style passage (no dialogue-only scripts, no audio cues).
+  - The target grammar structure must appear at least 3 times in the passage.
+  - Every question must have exactly one clearly correct option among the four.
+banned_phrases: []
