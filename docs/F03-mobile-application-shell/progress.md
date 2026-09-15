@@ -3,7 +3,7 @@
 **Status:** in progress
 **Branch:** main
 **Started:** 2026-09-15
-**Last updated:** 2026-09-15 (Stage 4 done)
+**Last updated:** 2026-09-15 (Stage 5 done)
 
 ## Stage 1: API and Contract Groundwork — ✅ done
 
@@ -88,17 +88,27 @@
 - No Android emulator or physical device is available in this environment (only Windows-desktop and web targets show up under `flutter devices`, and this project isn't scaffolded for either), so the guard/redirect/shell behavior is verified through the widget tests above plus a real `flutter build apk --debug`, not an interactive on-device run — logging this honestly rather than claiming a live smoke test that didn't happen.
 
 **Validation:** `flutter analyze` ✅ (0 issues, whole project) · `flutter test` ✅ (27/27 — 19 from Stage 3 + `page_state_test.dart` 3/3 + `navigation_test.dart` 5/5) · runtime ✅ `flutter build apk --debug` succeeded · repo-wide `pnpm typecheck` ✅ · repo-wide `pnpm lint` ✅ (0 warnings) · soft-fail: no live emulator/device run (none available in this environment)
+**Commit:** `60e4d6b` — F03 stage 4 - navigation and the design system mirror
+
+## Stage 5: Screens, Recorder and Verification — ✅ done
+
+- [x] **18. Login screen**
+- [x] **19. Settings screen**
+- [x] **20. Credentials screen**
+- [x] **21. Audio recorder service**
+- [x] **22. Device verification**
+
+**Observations:**
+- Before writing any screen, read the real `apps/web` implementations (`login-form.tsx`, `credential-card.tsx`, `credential-form.tsx`, `credentials-panel.tsx`) rather than only the aspirational Google Stitch mockups in `./design` — the mockups (`english_quest_sign_in`, `english_quest_settings`) show features this closed, two-person platform doesn't have (Google sign-in, account creation) and a desktop two-column credentials layout; the shipped web components are the true behavioral contract for parity (error copy, status-to-badge mapping, lockout countdown shape, field validation rules), and the mockups' visual language (icon-in-field pattern, colours, spacing, card treatment) is already what `EqButton`/`EqCard`/`EqBadge` carry over from Stage 4. Per the user's standing feedback to follow `./design` closely, the parts that *do* transfer (structure: logo → title → subtitle → fields → primary action) were kept close to the sign-in mockup; the parts that don't apply to this app were deliberately not copied.
+- `login_controller.dart` (new) mirrors `login-form.tsx`'s exact behaviour: trims **and lowercases** the email before the request (matching the API's own `loginSchema` normalization — caught by `submits_valid_credentials` expecting the normalized value in the POST body, not just trim), clears the password field on failure, and turns `AUTH002`'s `details.retryAfterSeconds` into a live `Timer.periodic` countdown rendered as `(mm:ss)` next to the error text — same shape as web's. The timer is cancelled both on natural expiry and in `_LoginPageState.dispose()` (via `_controller.onClose()`), since `LoginController` is constructed directly rather than through `Get.put`/Modular DI and nothing else would cancel it.
+- `login_page.dart`: email/password/submit exactly per spec; the base-URL affordance is a collapsed "Server settings" disclosure (not a permanent field) so it doesn't compete visually with the two fields everyone needs — reachable before authenticating, which is what the AC requires, without cluttering the primary flow the mockup shows. No register/reset affordance exists, matching `has_no_register_or_reset_affordance` — neither corresponding endpoint exists on the API.
+- `credential_models.dart` (new, not in spec.md's Component Overview): Dart has no access to the TS/Zod `MaskedCredential`/`CredentialProvider`/`CredentialStatus` types from `packages/shared`, so this is a small hand-written mirror — `CredentialProvider.wireValue`/`fromWire` round-trip the exact wire strings (`gemini`, `azure_speech`) the API and web both use, and `CredentialStatus`/badge mapping match `credential-card.tsx`'s `STATUS_BADGE` table exactly (valid→success, invalid→danger, unverified→warning, missing→neutral).
+- `credentials_controller.dart`: `save`/`delete`/`revalidate` deliberately let `DioException` propagate uncaught (only `load()` catches, into a friendly `loadError`) — mirrors web's split where the controller/panel handles list-load failure but the **form** is what turns `CREDENTIAL_REJECTED` into `details.providerMessage` copy. `delete()` performs the same optimistic client-side reset to a "missing" shape web's `credentials-panel.tsx` does after a 204, rather than reloading the whole list.
+- `credential_card.dart` / `credential_form.dart`: field-for-field mirror of `credential-card.tsx`/`credential-form.tsx` — status badge, masked key/region/last-checked rows (omitted entirely when missing, replaced by the per-provider "what's lost" copy from `MISSING_COPY`), Add/Replace/Re-check/Delete actions, region field shown only for Azure Speech. **No affordance anywhere reveals the stored key** — the key field is `obscureText: true` with no visibility toggle, and the card only ever prints `credential.maskedKey`, never anything wider — verified by `never_renders_more_than_the_masked_key` asserting no visibility icon exists.
+- **Found via testing, fixed in production code:** `settings_page.dart`'s credential list had no `key:` per card. Two `CredentialCard`s with the same structural shape but different `credential` props can have their `State` (specifically `_editing`) silently reused across identity swaps without an explicit key — this is exactly what Flutter's element-reconciliation-by-type-and-position does, and `credentials_test.dart` caught it directly (swapping the card's `credential` via `pumpWidget` left a stale "editing" state behind). Added `key: ValueKey(credential.provider)` to both the real settings screen's loop and the test helper. This wouldn't have surfaced in the running app today (Gemini and Azure Speech always render at fixed positions together, never swapped one-for-the-other in place) but is real latent fragility worth having fixed now rather than only in the test.
+- `audio_recorder_service.dart`: `record` package (v7.1.1, installed in Stage 2) confirmed via Context7 — `AudioRecorder().hasPermission()` (requests if not granted, no `permission_handler` needed), `RecordConfig(encoder: AudioEncoder.pcm16bits, sampleRate: 16000, numChannels: 1)`, `start(config, path:)`/`stop()`/`cancel()`/`dispose()`. Output path is `<temp dir>/eq-recording-<microsecond timestamp>.wav` via `path_provider`'s `getTemporaryDirectory()` — `path_provider` was promoted from a transitive to a direct dependency (`flutter pub add`) since it's now directly imported and the `depend_on_referenced_packages` lint added in Stage 2 would otherwise flag it. Registered as a root singleton in `app_module.dart` alongside the other core services. No recording screen ships with F03 — this is the capability only, exactly as spec.md specifies ("consumed by F18").
+- **Testing technique, reused from Stage 3:** every screen test drives a real `Dio` through a small hand-rolled `HttpClientAdapter` per file (no HTTP-mocking package), and `SessionStore`/credential fixtures use `mocktail` or hand-built JSON. `login_page_test.dart` and `credentials_test.dart` both call `bootstrapModule(testModule)` purely for its side effect of populating Modular's global injector (so the pages' internal `inject<AppConfig>()`/`inject<SessionController>()` calls resolve) — neither test needs `ModularApp` or real routing, since neither `LoginPage` nor `CredentialCard` reads route state directly.
+- **Device verification (step 22):** `flutter analyze` and the full `flutter test` suite were run fresh (not just per-file) — see Validation below. A final `flutter build apk --debug` succeeded. The interactive half of this step — log in against the running stack, confirm session-survives-restart, confirm a live 401 returns to login, confirm the offline state with the stack stopped — could not be exercised: this session has no Android emulator or physical device (confirmed again via `flutter devices`), and Docker Desktop is not running in this environment (`docker compose ps` failed to reach the daemon), so there is no live API to point a device at even if one existed. This is an honest soft-fail, not a skipped check — the equivalent behavior (login flow, 401→unauthenticated, offline→`No connection`, session persistence contract) is covered by `login_page_test.dart`, `auth_interceptor_test.dart`, `session_controller_test.dart` and `api_exception_test.dart` instead. iOS remains configured-but-unverified per the PRD's split acceptance criterion, unchanged since Stage 2 — no Mac is available.
+
+**Validation:** `flutter analyze` ✅ (0 issues, whole project) · `flutter test` ✅ (39/39 — 27 from Stages 3-4 + `login_page_test.dart` 5/5 + `credentials_test.dart` 7/7) · runtime ✅ `flutter build apk --debug` succeeded · repo-wide `pnpm typecheck` ✅ · repo-wide `pnpm lint` ✅ (0 warnings) · soft-fail: no live emulator/device and no running Docker stack in this environment, so the interactive half of device verification was not exercised
 **Commit:** _(pending — recorded after this commit lands)_
-
-## Stage 5: Screens, Recorder and Verification — ⬜ pending
-
-- [ ] **18. Login screen**
-- [ ] **19. Settings screen**
-- [ ] **20. Credentials screen**
-- [ ] **21. Audio recorder service**
-- [ ] **22. Device verification**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_

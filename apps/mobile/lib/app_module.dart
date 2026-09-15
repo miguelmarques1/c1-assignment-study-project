@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 
 import 'boot_gate.dart';
+import 'core/audio/audio_recorder_service.dart';
 import 'core/config/app_config.dart';
 import 'core/connectivity/connectivity_service.dart';
 import 'core/network/api_client.dart';
@@ -37,6 +38,7 @@ Future<Module> buildAppModule() async {
           return controller;
         })
         ..addSingleton<ConnectivityService>(ConnectivityService.new)
+        ..addSingleton<AudioRecorderService>(AudioRecorderService.new)
         ..route('/', child: (ctx, state) => const BootGate())
         ..module(authModule)
         ..module(shellModule);
