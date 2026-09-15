@@ -37,6 +37,22 @@ async function gotoDocs(page: import('@playwright/test').Page, theme: 'light' | 
   await expect(page.getByRole('heading', { name: 'Design System' })).toBeVisible();
 }
 
+/**
+ * `/login` needs no session, unlike `/settings` — which is why only the
+ * login screen has a baseline here. Settings sits behind the session guard,
+ * and this repo has no e2e auth-seeding pattern yet (no storageState fixture,
+ * no test-login helper); inventing one without a live API to verify it
+ * against would ship untested scaffolding, not a real check. See
+ * docs/F22-design-reference-and-visual-realignment/progress.md, Stage 4.
+ */
+async function gotoLogin(page: import('@playwright/test').Page, theme: 'light' | 'dark') {
+  if (theme === 'dark') {
+    await page.addInitScript(() => window.localStorage.setItem('eq-theme', 'dark'));
+  }
+  await page.goto('/login');
+  await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
+}
+
 test.describe('light theme', () => {
   test('every_showcase_block_matches_its_light_baseline', async ({ page }) => {
     await gotoDocs(page, 'light');
@@ -58,6 +74,18 @@ test.describe('dark theme', () => {
       await expect(section).toBeVisible();
       await expect(section).toHaveScreenshot(`${block}-dark.png`);
     }
+  });
+});
+
+test.describe('login screen', () => {
+  test('the_login_screen_matches_its_light_baseline', async ({ page }) => {
+    await gotoLogin(page, 'light');
+    await expect(page).toHaveScreenshot('login-screen-light.png');
+  });
+
+  test('the_login_screen_matches_its_dark_baseline', async ({ page }) => {
+    await gotoLogin(page, 'dark');
+    await expect(page).toHaveScreenshot('login-screen-dark.png');
   });
 });
 

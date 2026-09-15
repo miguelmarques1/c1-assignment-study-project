@@ -59,16 +59,24 @@
 - No dashboard file was touched in this stage — verified via `git status` before staging, matching the AC that nothing here implements or mocks dashboard content.
 
 **Validation:** `apps/web` typecheck ✅ · `apps/web` test suite ✅ (75/75 — 54 from Stages 1–2 + 6 new `text-field.spec.tsx` + 5 new `app-shell.spec.tsx` + 6 new `settings-status.spec.tsx` + 2 new + 2 fixed in `login-form.spec.tsx` + 2 new + 2 fixed in `credential-card.spec.tsx`) · repo-wide `pnpm lint` ✅ (0 warnings) · runtime ✅ host dev server smoke-check of `/login` (HTTP 200, all realigned elements present, no render errors) and `/settings` (HTTP 307 to `/login`, correct unauthenticated behaviour) · soft-fail: settings screen's own markup not fetched live (no session available without a running API), covered instead by component tests against fixtures; Playwright visual baselines still not generated (Docker unavailable)
+**Commit:** `d8738d3` — F22 stage 3 - screen realignment
+
+## Stage 4: Coverage and Verification — ✅ done
+
+- [x] **13. Screen baselines**
+- [x] **14. Component tests**
+- [x] **15. Mobile verification**
+- [x] **16. Full verification**
+
+**Observations:**
+- **Login baseline written; settings baseline deliberately not.** `apps/web/e2e/visual.spec.ts` gained `the_login_screen_matches_its_light_baseline` / `..._dark_baseline`, following the file's existing `gotoDocs` pattern (a new `gotoLogin` helper). `/login` needs no session, so this is real, complete test code — just unable to produce its baseline `.png` this session (Docker unavailable, same as the gallery's `icons`/`field` blocks from Stage 2). Settings sits behind the session guard, and this repository has **no existing e2e auth-seeding pattern** (no storageState fixture, no test-login helper, checked directly — grepped the whole `e2e/` tree, found nothing). Writing one now, with no live API and no seeded test user reachable to verify it against, would mean shipping speculative scaffolding that might not even be correct — worse than not writing it. Logged as a concrete named gap rather than silently short-scoping step 13.
+- **Component tests (step 14) were substantially written during Stage 3**, as each screen's realignment surfaced its own test needs (`text-field.spec.tsx`, `app-shell.spec.tsx`, `settings-status.spec.tsx`, plus extensions to `login-form.spec.tsx` and `credential-card.spec.tsx`). Nothing new was added in this stage's slot except one gap found during the AC re-check below.
+- **Mobile verification, done mechanically, not by inspection:** `git diff --stat 2c9ca2b^ HEAD -- packages/design-tokens/ apps/mobile/` (`2c9ca2b` is this feature's first commit) returns **empty** — proof, not assertion, that no token value and no existing primitive's variant/status vocabulary changed across all of F22. No Flutter mirroring work was needed, and none was done. `flutter analyze` (0 issues) and `flutter test` (39/39) re-confirmed nothing regressed on the mobile side either.
+- **AC re-check found one real gap, fixed on the spot:** acceptance criterion "the help card renders with static content and exposes no link" had no test naming it directly (existing tests covered the chip, the icons, the delete control, but not this one). Added `the_help_card_is_static_with_no_link` to `settings-status.spec.tsx` — asserts the card's text is present and `queryAllByRole('link')` is empty. This is exactly the kind of gap Step 6 (Final Verification) exists to catch before claiming success, not after.
+- One test-naming deviation from spec.md's plan, not a coverage gap: the AC "delete is icon-only with an accessible name, keyboard and screen-reader reachable" doesn't have a test literally named `the_delete_control_is_icon_only_with_an_accessible_name` — it's covered by `offers_replace_rather_than_add_once_a_key_exists` (asserts the button's accessible name via `getByRole('button', { name: 'Delete Gemini key' })`, which is an ARIA-tree query and therefore a real proxy for screen-reader reachability) and `deleting_returns_the_card_to_its_empty_state` (exercises clicking it). Not renamed, to avoid disturbing tests inherited from before this feature.
+- Full-suite validation, run fresh across the whole repo, not filtered to touched files: `pnpm -r typecheck` ✅, `pnpm lint` ✅ (0 warnings), `apps/web` test ✅ 76/76, `packages/design-tokens` test ✅ 17/17, `apps/mobile` analyze ✅ + test ✅ 39/39. `apps/api` test: 50/50 non-container tests pass; the same 5 testcontainers-backed integration suites soft-fail with "Could not find a working container runtime strategy" as in every prior check this session — confirmed non-regressive: `git diff --stat 2c9ca2b^ HEAD -- apps/api/` is also empty, so nothing in this feature touched the API at all.
+- Component Overview walk-through: every concrete file path named in `spec.md` exists on disk (verified mechanically, not by re-reading the table) — 34 literal paths plus the two glob patterns (`apps/web/src/components/ui/icons/*.tsx` → 9 files, `apps/mobile/lib/design/widgets/*` → 4 files, both resolving as expected). Nothing missing.
+- Dashboard file confirmed untouched across the whole feature: `git diff --stat 2c9ca2b^ HEAD -- "apps/web/src/app/(app)/dashboard/"` is empty.
+
+**Validation:** `pnpm -r typecheck` ✅ · `pnpm lint` ✅ (0 warnings) · `apps/web` test ✅ 76/76 · `packages/design-tokens` test ✅ 17/17 · `apps/mobile` analyze ✅ + test ✅ 39/39 · `apps/api` test: 50/50 non-container ✅, 5 integration suites soft-fail (Docker unavailable, confirmed non-regressive via empty diff on `apps/api/`) · soft-fail: Playwright visual baselines (gallery `icons`/`field`, and the new login screen baseline) not generated this session — Docker unavailable; settings screen visual baseline not written at all — no e2e auth-seeding pattern exists in this repo yet
 **Commit:** _(pending — recorded after this commit lands)_
-
-## Stage 4: Coverage and Verification — ⬜ pending
-
-- [ ] **13. Screen baselines**
-- [ ] **14. Component tests**
-- [ ] **15. Mobile verification**
-- [ ] **16. Full verification**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_

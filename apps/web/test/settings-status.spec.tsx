@@ -82,4 +82,18 @@ describe('SettingsScreen status chip', () => {
 
     expect(screen.getByText('Environment ready')).toBeInTheDocument();
   });
+
+  it('the_help_card_is_static_with_no_link', () => {
+    render(
+      <SettingsScreen
+        initialCredentials={[
+          credential({ provider: 'gemini', status: 'valid' }),
+          credential({ provider: 'azure_speech', status: 'valid' }),
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('Need help getting your keys?')).toBeInTheDocument();
+    expect(screen.queryAllByRole('link')).toHaveLength(0);
+  });
 });
