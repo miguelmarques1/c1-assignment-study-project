@@ -45,17 +45,27 @@
 **Validation:** _(not run)_
 **Commit:** _(none)_
 
-## Stage 3: Rendering and Execution — ⬜ pending
+## Stage 3: Rendering and Execution — ✅ done
 
-- [ ] **6. Template Rendering**
-- [ ] **7. Response Validation**
-- [ ] **8. Execution Service**
-- [ ] **9. Execution Telemetry**
+- [x] **6. Template Rendering**
+- [x] **7. Response Validation**
+- [x] **8. Execution Service**
+- [x] **9. Execution Telemetry**
 
-**Observations:** _(none yet)_
+**Observations:**
+- Real bug caught by `response-validator.spec.ts::invalid_response_reports_every_violated_field`: Ajv's default `allErrors` is `false` — it stops at the first violation. Without `{ allErrors: true }`, a response failing on 3 fields would only ever report 1 in the retry's correction instruction, so the model corrects one field, fails again on the next, and only converges after several retries the library doesn't grant. Fixed in both `response-validator.ts` and `prompt-file-loader.ts` (the latter for complete example-validation error messages too).
+- The one schema retry is a fresh single-turn call (same rendered message + appended errors), never a replay of the invalid response as conversation history — matches the spec's decision and keeps `callModel`'s shape identical for both attempts.
+- A response whose `text` parses to JSON but fails Ajv validation, and a response whose `text` is present but is not valid JSON at all, are both routed through the exact same one-retry path (a synthetic `['response was not valid JSON']` error list stands in for Ajv's `errors` in the latter case) — treating "didn't produce parseable JSON" as a case of "didn't follow the schema contract" avoided inventing a seventh outcome category for what is functionally the same failure.
+- Timeout detection deliberately avoids two fragile alternatives (string-matching an arbitrary message from a shared helper not designed for this call site, and an elapsed-time heuristic that would misfire on a slow-but-real retried pair of responses summing past 90s). Instead `callModel` catches `withTimeout`'s rejection immediately, at the one call site that knows a 90000ms race is in flight, and translates it to a distinguishable internal signal there.
+- `withKey` blocking before the callback runs (missing/invalid credential) writes **no** `prompt_execution` row — nothing prompt-related was attempted, and `withKey` already wrote its own `credential_usage` audit row for the block. An `attempted` flag distinguishes this from every other failure path, which does record telemetry. Covered by `propagates_credential_errors_without_recording_telemetry`.
+- Output-token accounting includes `thoughtsTokenCount` (see Stage 1's spike finding) — `sums_token_counts_across_both_attempts` pins `outputTokens = candidates1+thoughts1+candidates2+thoughts2`, not just the candidates half, since thinking tokens are billed the same as visible output.
+- `PromptExecution` migration (`0003_prompt_execution`) was **not** taken as-generated from `prisma migrate dev --create-only`: the shadow-DB diff also proposed dropping and recreating the `user_credentials`/`credential_usage` foreign keys with an added `ON UPDATE CASCADE` and two unrelated `ALTER TABLE ... ALTER COLUMN updated_at DROP DEFAULT` statements — pre-existing drift between the schema and migration history that predates F04. Discarded the generated file and hand-wrote the migration to touch only `prompt_execution`, matching this repo's inline-CONSTRAINT style from `0002_credentials`. Worth a note for whoever eventually investigates the `updated_at` drift, but out of scope here.
+- Verified against the **live** stack end-to-end via a throwaway script (deleted after the run, not part of the shipped feature): boot-loaded the real `apps/api/prompts`, resolved `you@example.com`'s real stored Gemini key through the real `CredentialExecutorService`, called the real Gemini API for `scenario-situation`, got a schema-valid response on the first attempt (`retried: false`), and confirmed a real `prompt_execution` row (`inputTokens: 382, outputTokens: 226, latencyMs: 2795, outcome: "ok"`). This is the first real proof the whole pipeline — not just the mocked unit tests — produces a usable result.
+- Regenerated `docs/api/openapi.json` per the project's standing OpenAPI directive: F04 adds no HTTP routes, but it does add four values to the shared `ErrorCode` enum, which the committed snapshot embeds. Diff confirmed to touch only that enum (10 operations unchanged).
+- Discovered mid-stage: the API container has its own `node_modules` volume separate from the host, so `prisma generate` has to be run **both** on host (for host-side typecheck/tests) **and** inside the container (for the live smoke test) — the container's stale client was missing the `promptExecution` model on the first smoke-test attempt.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** lint ✅ (0 warnings) · typecheck ✅ · tests 27/27 new (7 renderer + 4 validator + 10 execution service + 6 telemetry) · full `apps/api` suite 156/156 ✅ (the OpenAPI drift guard failed once for the expected reason — new error codes not yet in the committed snapshot — resolved by regenerating it, not a real bug) · live smoke test ✅ against the real Gemini API and real Postgres
+**Commit:** _(pending)_
 
 ## Stage 4: Integration and Verification — ⬜ pending
 

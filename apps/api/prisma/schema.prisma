@@ -19,8 +19,9 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  credentials     UserCredential[]
-  credentialUsage CredentialUsage[]
+  credentials      UserCredential[]
+  credentialUsage  CredentialUsage[]
+  promptExecutions PromptExecution[]
 
   @@map("users")
 }
@@ -63,4 +64,28 @@ model CredentialUsage {
 
   @@index([userId, provider, occurredAt(sort: Desc)], map: "ix_credential_usage_user_provider_time")
   @@map("credential_usage")
+}
+
+/// Append-only telemetry, one row per PromptExecutionService.execute() call
+/// (not per Gemini request — a retried-and-recovered call is one row).
+/// rawResponse is populated only on validation_failed_hard_error, per the
+/// PRD's "raw response retained for inspection".
+model PromptExecution {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  promptId       String   @map("prompt_id") @db.VarChar(64)
+  promptVersion  String   @map("prompt_version") @db.VarChar(16)
+  model          String   @db.VarChar(64)
+  temperature    Float    @db.Real
+  inputTokens    Int?     @map("input_tokens")
+  outputTokens   Int?     @map("output_tokens")
+  latencyMs      Int      @map("latency_ms")
+  outcome        String   @db.VarChar(32)
+  rawResponse    String?  @map("raw_response")
+  occurredAt     DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([promptId, promptVersion, occurredAt(sort: Desc)], map: "ix_prompt_execution_prompt_version_time")
+  @@map("prompt_execution")
 }

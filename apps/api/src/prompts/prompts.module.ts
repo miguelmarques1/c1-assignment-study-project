@@ -1,5 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 
+import { PromptExecutionTelemetryService } from './prompt-execution-telemetry.service';
+import { PromptExecutionService } from './prompt-execution.service';
 import { PromptRegistryService } from './prompt-registry.service';
 
 /**
@@ -9,7 +11,7 @@ import { PromptRegistryService } from './prompt-registry.service';
  */
 @Global()
 @Module({
-  providers: [PromptRegistryService],
-  exports: [PromptRegistryService],
+  providers: [PromptRegistryService, PromptExecutionService, PromptExecutionTelemetryService],
+  exports: [PromptRegistryService, PromptExecutionService],
 })
 export class PromptsModule {}

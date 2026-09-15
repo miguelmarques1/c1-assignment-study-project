@@ -945,6 +945,10 @@
                   "CRED002",
                   "CRED003",
                   "VAL001",
+                  "PROMPT001",
+                  "PROMPT002",
+                  "PROMPT003",
+                  "PROMPT004",
                   "HEALTH001",
                   "ERR500"
                 ]

@@ -66,7 +66,7 @@ export function loadPromptFile(filePath: string): LoadFileResult {
     );
   }
 
-  const ajv = new Ajv();
+  const ajv = new Ajv({ allErrors: true });
   let responseValidate: ReturnType<Ajv['compile']> | undefined;
   try {
     responseValidate = ajv.compile(def.response_schema);
