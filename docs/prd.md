@@ -276,6 +276,7 @@ Both profiles belong to a pair of motivated adults running an experiment on them
 - The data model imposes no cap on the number of users. An account added by extending the seed configuration, or inserted directly into the database, can log in immediately and use every per-user capability — credentials, profile, study plan, activities and history — without any code change, because nothing outside the classroom is aware of how many users exist.
 - Passwords are hashed with bcrypt at cost factor 12. No registration endpoint and no password-reset flow exist; a signed-in user can change their own password in settings.
 - Login by email and password issues a session as an HTTP-only, SameSite=Lax cookie carrying an opaque token with a 7-day expiry, sliding on each authenticated request. The session record lives server-side, so logout invalidates it immediately and the session of a deleted user stops working on the very next request.
+- **The same token has a second transport, for clients that have no cookie jar.** A dedicated token route returns the opaque token in the response body and sets no cookie, and guarded routes accept it as `Authorization: Bearer`. The session model does not change — one opaque token, one server-side record, immediate revocation — only how a client carries it. The web client keeps using the cookie exclusively, so no response a browser receives ever contains the token and the HTTP-only guarantee holds for the surface it was chosen to protect. This is what makes the mobile client's secure-storage requirement (F03) implementable.
 - Failed login attempts are rate-limited to 5 per email per 15 minutes, after which that email is locked for 15 minutes regardless of password correctness.
 - A `GET /health` endpoint reports reachability and latency for PostgreSQL, Redis, MinIO and LiveKit individually, returning HTTP 503 if any dependency is down.
 - All user-facing text in both clients is in English.
@@ -1199,7 +1200,8 @@ graph TD
 - [ ] The API refuses to boot when the master key cannot decrypt existing stored credentials
 
 ### F03. Mobile Application Shell
-- [ ] The app builds and runs on Android 8.0 and iOS 14
+- [ ] The app builds and runs on Android 8.0
+- [ ] The app builds and runs on iOS 14 — configured from the start (deployment target, microphone usage description), but verifiable only on Mac hardware, which the project does not currently have
 - [ ] Login persists across app restarts, with the session stored in Keystore or Keychain and absent from shared preferences
 - [ ] A 401 from any request clears the session and returns to the login screen
 - [ ] With the device offline, every screen shows an explicit `No connection` state with a retry action and never stale content presented as current
