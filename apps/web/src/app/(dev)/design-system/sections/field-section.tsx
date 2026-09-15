@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { Field, fieldControlClassName } from '@/components/ui';
+import { Field, fieldControlClassName, MailIcon, TextField } from '@/components/ui';
 
 import { SectionShell } from './section-shell';
 
@@ -29,6 +29,17 @@ export function FieldSection() {
         <Field label="With an error" error="This field is required.">
           {(props) => <input {...props} type="text" className={fieldControlClassName} />}
         </Field>
+      </div>
+
+      <div className="grid grid-cols-1 gap-md md:grid-cols-3">
+        <TextField label="With a leading icon" leadingIcon={<MailIcon />} placeholder="you@example.com" />
+        <TextField
+          label="Password"
+          labelAside={<span className="text-body-sm text-on-surface-variant">e.g. learner@quest.io</span>}
+          type="password"
+          revealable
+        />
+        <TextField label="Read-only presentation" defaultValue="••••tPnQ" readOnlyPresentation />
       </div>
     </SectionShell>
   );

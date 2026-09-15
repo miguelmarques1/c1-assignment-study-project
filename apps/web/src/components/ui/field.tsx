@@ -18,13 +18,15 @@ export const fieldControlClassName =
 
 interface FieldProps {
   label: string;
+  /** Rendered at the end of the label row — an example value, a "forgot X" link. */
+  labelAside?: ReactNode;
   hint?: string;
   error?: string | null;
   /** Render prop so the id/aria wiring can never be forgotten at the call site. */
   children: (props: FieldControlProps) => ReactNode;
 }
 
-export function Field({ label, hint, error, children }: FieldProps) {
+export function Field({ label, labelAside, hint, error, children }: FieldProps) {
   const id = useId();
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
@@ -32,9 +34,12 @@ export function Field({ label, hint, error, children }: FieldProps) {
 
   return (
     <div className="flex flex-col gap-xs">
-      <label htmlFor={id} className="text-label-md text-on-surface-variant">
-        {label}
-      </label>
+      <div className="flex items-center justify-between gap-sm">
+        <label htmlFor={id} className="text-label-md text-on-surface-variant">
+          {label}
+        </label>
+        {labelAside}
+      </div>
       {children({ id, 'aria-describedby': describedBy, 'aria-invalid': error ? true : undefined })}
       {hint ? (
         <p id={hintId} className="text-body-sm text-on-surface-variant">

@@ -21,19 +21,26 @@
 - `apps/web/test/design-reference.spec.ts` parses the document's markdown tables directly (no new dependency) and cross-checks deferred owners against the real feature ids in `docs/prd.md` Section 8 — so a typo'd feature id or a region pointing at a feature that doesn't exist fails the build, not just a human review.
 
 **Validation:** `apps/web` typecheck ✅ · `apps/web` test suite ✅ (54/54 — 48 pre-existing + 6 new in `design-reference.spec.ts`) · repo-wide `pnpm lint` ✅ (0 warnings)
+**Commit:** `6c028cb` — F22 stage 1 - the design reference
+
+## Stage 2: Library Extensions — ✅ done
+
+- [x] **4. Icon set**
+- [x] **5. Text field composition**
+- [x] **6. Header pieces**
+- [x] **7. Gallery registration**
+
+**Observations:**
+- Nine icons under `components/ui/icons/`: `MailIcon`, `LockIcon`, `EyeIcon`, `EyeOffIcon`, `TrashIcon`, `SettingsIcon` (the mockup's "tune" sliders glyph, not a gear), `GeminiIcon` (a generic four-point sparkle — deliberately not Google's Gemini logomark, since hand-copying a trademarked asset isn't something to do casually), `AzureSpeechIcon` (a microphone), `HelpIcon`. All inline SVG, `aria-hidden` by default, sized via a unitless numeric prop (matching `Logo`'s existing pattern, which also keeps `no_inline_style_attribute_carries_a_dimension_or_colour` from flagging the `Avatar`'s dynamic `style={{ width: size, height: size }}` — no literal `px`/`rem` string ever appears in the source, only a JS variable).
+- **Real gotcha found by the token-resolution guard, not by review:** `NavPill` first used `bg-surface-container-high`, copied straight from the mockup's own ad-hoc Tailwind config. This project's real token set only has three surface-container tiers (`lowest`, plain, `highest`) — no `-high`. Fixed to `bg-surface-container`. This is exactly the class of error the guard exists to catch before it ships, and it did.
+- **`TextField` does not build on `fieldControlClassName` plus extra classes.** Tailwind's generated stylesheet order — not the order utility classes appear in a className string — decides which wins when two target the same property, so appending `pl-xl` after the shared constant's `px-md` would not reliably override the left side. `TextField` owns a parallel base class string using directional `pl-*`/`pr-*` instead of `px-md`, so the leading-icon and reveal-button paddings can vary independently without depending on cascade order. This is a real, if narrow, Tailwind trap — logged here so nobody "simplifies" it back to `cn(fieldControlClassName, 'pl-xl')` later.
+- `Field` gained exactly the planned `labelAside` slot (an optional node at the end of the label row); its render-prop contract and the three existing callers are unaffected — verified by the full existing test suite staying green.
+- `NavPill` is a Client Component using `usePathname()` internally rather than taking the current path as a prop, so the (app) layout — a Server Component — doesn't need to become one just to know where it is. The destination list is data, not hardcoded markup, so `Scenarios & Practice` (or any future destination) is a config change in Stage 3, not a NavPill change.
+- **Runtime verification without Docker:** Playwright's visual suite needs the containerized web service for platform-stable screenshots (`playwright.config.ts`'s own comment: Chromium rasterises fonts differently per OS, so a host-generated baseline would fail for anyone else), and Docker Desktop is still not running in this environment. As a substitute, started the Next.js dev server directly on the host and fetched `/design-system` for real: HTTP 200, no error overlay, all 12 expected `data-vr` blocks present including the new `icons` block, 11 real `<svg>` elements rendered, and the password reveal control's `Show password` accessible name present in the markup. This confirms the new components compile and render correctly; it does not and cannot confirm pixel-level fidelity.
+- `icons` was added to `apps/web/e2e/visual.spec.ts`'s `BLOCKS` list because it's now a real, permanent gallery section and `the_documentation_page_lists_every_component` needs to know about it — but no baseline image exists for it yet (nor could one be generated this session). This is a deliberate, temporary gap: the visual suite's screenshot tests for `icons` (and the pre-existing `field` block, now showing three new `TextField` variants) will fail on first run until someone with Docker available runs the suite with `--update-snapshots` once. Logged again under Stage 4.
+
+**Validation:** `apps/web` typecheck ✅ · `apps/web` test suite ✅ (54/54, one real token-guard failure found and fixed mid-stage) · repo-wide `pnpm lint` ✅ (0 warnings) · runtime ✅ host dev server smoke-check of `/design-system` (HTTP 200, all sections present, no render errors) · soft-fail: Playwright visual baselines for `icons` and the updated `field` block not generated (Docker unavailable this session)
 **Commit:** _(pending — recorded after this commit lands)_
-
-## Stage 2: Library Extensions — ⬜ pending
-
-- [ ] **4. Icon set**
-- [ ] **5. Text field composition**
-- [ ] **6. Header pieces**
-- [ ] **7. Gallery registration**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 3: Screen Realignment — ⬜ pending
 

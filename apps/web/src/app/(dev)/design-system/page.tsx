@@ -10,6 +10,7 @@ import { EmptySection } from './sections/empty-section';
 import { ErrorSection } from './sections/error-section';
 import { FieldSection } from './sections/field-section';
 import { GridSection } from './sections/grid-section';
+import { IconSection } from './sections/icon-section';
 import { LoadingSection } from './sections/loading-section';
 import { MeterSection } from './sections/meter-section';
 import { StackSection } from './sections/stack-section';
@@ -33,6 +34,7 @@ export default function DesignSystemPage() {
       <MeterSection />
       <ChipSection />
       <FieldSection />
+      <IconSection />
       <StackSection />
       <GridSection />
       <LoadingSection />

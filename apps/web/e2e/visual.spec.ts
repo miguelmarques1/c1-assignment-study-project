@@ -13,6 +13,7 @@ const BLOCKS = [
   'meter',
   'chip',
   'field',
+  'icons',
   'stack',
   'grid',
   'loading',

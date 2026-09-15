@@ -4,6 +4,7 @@ export { Badge, type BadgeProps } from './badge';
 export { Meter, type MeterProps } from './meter';
 export { Chip, type ChipProps } from './chip';
 export { Field, fieldControlClassName, type FieldControlProps } from './field';
+export { TextField, type TextFieldProps } from './text-field';
 export { Stack } from './stack';
 export { Grid } from './grid';
 export { Skeleton } from './skeleton';
@@ -12,4 +13,18 @@ export { EmptyState } from './empty-state';
 export { ErrorState } from './error-state';
 export { ThemeToggle } from './theme-toggle';
 export { Logo } from './logo';
+export { Avatar, type AvatarProps } from './avatar';
+export { NavPill, type NavDestination, type NavPillProps } from './nav-pill';
+export {
+  MailIcon,
+  LockIcon,
+  EyeIcon,
+  EyeOffIcon,
+  TrashIcon,
+  SettingsIcon,
+  GeminiIcon,
+  AzureSpeechIcon,
+  HelpIcon,
+  type IconProps,
+} from './icons';
 export { cn } from './cn';
