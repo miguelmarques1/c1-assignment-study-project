@@ -3,7 +3,7 @@
 **Status:** in progress
 **Branch:** main
 **Started:** 2026-09-15
-**Last updated:** 2026-09-15 (Stage 3 done)
+**Last updated:** 2026-09-15 (Stage 4 done)
 
 ## Stage 1: API and Contract Groundwork — ✅ done
 
@@ -65,19 +65,30 @@
 - **Testing technique note:** Dio's `HttpClientAdapter` interface (`fetch(RequestOptions, Stream<Uint8List>?, Future<void>?)`, confirmed via Context7) is used directly with a small hand-rolled scripted adapter per test file, per Dio's own documented pattern (`ResponseBody.fromString` is explicitly suggested for test adapters) — no extra HTTP-mocking package needed. One gotcha: `ErrorInterceptorHandler`'s internal completer future isn't publicly accessible outside Dio's own library (`'future' can only be used within instance members of subclasses of '_BaseHandler'`), so `auth_interceptor_test.dart`'s two `onError` tests drive the interceptor through a real `Dio` + scripted-401 adapter and assert on the awaited `dio.get()` call's own exception, rather than touching the handler in isolation.
 
 **Validation:** `flutter analyze` ✅ (0 issues, whole project) · `flutter test` ✅ (19/19 — api_exception 4, auth_interceptor 4, retry_interceptor 5, session_controller 4, session_store 2)
+**Commit:** `e681bbd` — F03 stage 3 - core session, network and configuration
+
+## Stage 4: Navigation and the Design System Mirror — ✅ done
+
+- [x] **14. Theme binding**
+- [x] **15. Component mirror**
+- [x] **16. Page states**
+- [x] **17. Module graph and shell**
+
+**Observations:**
+- `eq_theme.dart`: thin binding over `eqLightTheme()`/`eqDarkTheme()`; `EqTheme.mode` is pinned to `ThemeMode.light` (not `ThemeMode.system`) — same "light regardless of OS preference" policy F21 set for web. `darkTheme` is still wired into `MaterialApp.router` for whenever a toggle exists; F03 doesn't spec one.
+- `eq_button.dart` / `eq_badge.dart` / `eq_card.dart`: read `apps/web/src/components/ui/{button,badge,card}.tsx` directly to keep the variant/status/tone vocabulary and colour-role mapping identical (primary/secondary/neutral/destructive; success/warning/info/danger/neutral; neutral/primary/info/success) rather than inventing a parallel naming scheme. All three read colours, spacing, radius and elevation exclusively from `EqLightColors`/`EqDarkColors`/`EqSpacing`/`EqRadius`/`EqElevation` in the generated tokens package — no literal hex/dp values written, matching step 14's "no colour, spacing or type value is written in the mobile app."
+- `eq_page_state.dart`: `EqLoading` renders a column of `Container` skeleton blocks (keyed `eq-loading-skeleton`) — never a `CircularProgressIndicator`, per the spec'd test. `EqEmpty` takes exactly one `actionLabel`/`onAction` pair (structurally impossible to render two actions). `EqError.onRetry` is a required (non-nullable) constructor param, not optional.
+- **Module graph:** `app_module.dart`'s `createModule` call became `Future<Module> buildAppModule()` — `AppConfig.create()` needs `SharedPreferences.getInstance()` (async), and Modular's own docs (confirmed via Context7) show resolving async bootstrap dependencies once before `createModule` and registering the ready instance via `addInstance`, keeping every other registration a synchronous factory. `main.dart` now does `final appModule = await buildAppModule();` before `runApp`. Registration order matters for eager `addSingleton` factories that call the global `inject<T>()` internally (confirmed this is the correct calling convention, not an injector-parameterized factory, by checking that `addSingleton<Counter>(Counter.new)` — a bare zero-arg tear-off — type-checks in Modular's own examples): `SessionStore` → `AuthInterceptor` → `Dio` → `SessionController` (which also wires `authInterceptor.onUnauthorized = controller.markUnauthenticated` here, closing the loop Stage 3 deliberately left open) → `ConnectivityService`.
+- **Boot gate (new file, not in spec.md's Component Overview):** `lib/boot_gate.dart`'s `BootGate` widget is mounted at the root `/` route. It exists because the Data Model's session state machine names `Restoring` → "Splash" as a real, distinct start route — without it, the app would have to guess between `/login` and `/app/today` before the boot-time `GET /auth/me` resolves. `BootGate` registers a GetX `ever()` listener on `SessionController.state` *before* calling `restore()`, so the transition can never be missed, and navigates via `context.navigate(...)` (the current Modular API — confirmed via Context7; the older `Modular.to.navigate` facade is deprecated) to `/app/today` or `/login` once resolved.
+- **Guards:** one guard on `shellModule`'s parent `/app` route (not repeated per child) redirects to `/login` unless `SessionController.state.value is Authenticated` — since Modular only evaluates a route's own children after that route resolves, this single guard protects all five destinations. `authModule`'s `/login` route carries the reverse guard (`Authenticated` → `/app/today`). Neither guard nor the boot gate re-checks on a *background* session change while already sitting on a page (e.g., a 401 firing while parked on `/app/today`) — that's outside what spec.md's Testing Strategy and acceptance criteria ask for (the three tests mapped to "a 401 returns to login" stop at the interceptor clearing state and a *fresh navigation attempt* being redirected); flagging this as a real but out-of-scope UX gap rather than silently deciding it either way.
+- **Shell:** `shell_page.dart` follows Modular's own documented `RouterOutlet` + `GlobalKey<RouterOutletState>` shell pattern (confirmed via Context7) — the bottom `NavigationBar`'s selected index is derived from `context.routeState().uri.path`, never stored locally. This is also what satisfies "switching tabs preserves scroll position" for free: the outlet is a nested `Navigator` that keeps each tab's widget subtree mounted across switches rather than rebuilding it, so `navigation_test.dart`'s scroll-preservation test needed no bespoke state-caching code to pass.
+- **Placeholders that Stage 5 will replace, not finish here:** `features/auth/login_page.dart` and `features/settings/settings_page.dart` are minimal stand-ins (a scaffold with a title) so `/login` and `/app/settings` exist and are guard-testable now — plan.md's steps 18/19 explicitly own building their real content (form, validation, lockout copy, base URL, credentials section). Logged here so Stage 5 isn't mistaken as "redundant" when it rewrites these files' bodies.
+- **New shared helper (not in spec.md's Component Overview):** `features/shell/placeholder_destination_page.dart` factors the identical shape behind `today_page.dart`/`plan_page.dart`/`profile_page.dart`/`lessons_page.dart` (all four are thin wrappers passing only a title) — spec.md lists all four as separate files and they still exist exactly as named; this is purely an internal implementation detail behind them. Renders `EqEmpty` immediately on mount (nothing to fetch yet) and only shows `EqLoading` during an explicit pull-to-refresh — an earlier version faked a 300ms load-on-mount delay and it left a dangling `Timer` across widget-test teardowns (caught by `navigation_test.dart`, not silently ignored).
+- **Testing technique:** `navigation_test.dart` uses Modular's documented test helpers (`bootstrapModule`, `modularRouterConfig`, confirmed via Context7) rather than the full `ModularApp` + real `buildAppModule()` — a per-test module registers a hand-built `SessionController(Dio(), SessionStore())` with `.state.value` set directly, so guard behavior is exercised with zero real network calls. `page_state_test.dart` widget-tests `eq_page_state.dart` directly with no Modular involved.
+- No Android emulator or physical device is available in this environment (only Windows-desktop and web targets show up under `flutter devices`, and this project isn't scaffolded for either), so the guard/redirect/shell behavior is verified through the widget tests above plus a real `flutter build apk --debug`, not an interactive on-device run — logging this honestly rather than claiming a live smoke test that didn't happen.
+
+**Validation:** `flutter analyze` ✅ (0 issues, whole project) · `flutter test` ✅ (27/27 — 19 from Stage 3 + `page_state_test.dart` 3/3 + `navigation_test.dart` 5/5) · runtime ✅ `flutter build apk --debug` succeeded · repo-wide `pnpm typecheck` ✅ · repo-wide `pnpm lint` ✅ (0 warnings) · soft-fail: no live emulator/device run (none available in this environment)
 **Commit:** _(pending — recorded after this commit lands)_
-
-## Stage 4: Navigation and the Design System Mirror — ⬜ pending
-
-- [ ] **14. Theme binding**
-- [ ] **15. Component mirror**
-- [ ] **16. Page states**
-- [ ] **17. Module graph and shell**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 5: Screens, Recorder and Verification — ⬜ pending
 

@@ -1,9 +1,8 @@
-import 'package:english_quest_tokens/english_quest_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 
-/// Light is the default theme, matching F21's policy — the dark variant is
-/// wired in once eq_theme.dart lands in Stage 4.
+import 'design/eq_theme.dart';
+
 class AppWidget extends StatelessWidget {
   const AppWidget({super.key});
 
@@ -11,7 +10,9 @@ class AppWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'English Quest',
-      theme: eqLightTheme(),
+      theme: EqTheme.light(),
+      darkTheme: EqTheme.dark(),
+      themeMode: EqTheme.mode,
       routerConfig: ModularApp.routerConfigOf(context),
     );
   }

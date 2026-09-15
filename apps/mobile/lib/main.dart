@@ -11,5 +11,6 @@ Future<void> main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+  final appModule = await buildAppModule();
   runApp(ModularApp(module: appModule, child: const AppWidget()));
 }

@@ -1,23 +1,45 @@
-import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_modular/flutter_modular.dart';
+
+import 'boot_gate.dart';
+import 'core/config/app_config.dart';
+import 'core/connectivity/connectivity_service.dart';
+import 'core/network/api_client.dart';
+import 'core/network/auth_interceptor.dart';
+import 'core/session/session_controller.dart';
+import 'core/session/session_store.dart';
+import 'features/auth/auth_module.dart';
+import 'features/shell/shell_module.dart';
 
 /// The app's coupling map: which modules exist and how they connect.
 ///
-/// Route-less core registrations (config, storage, Dio, session,
-/// connectivity, audio) and the auth/shell/settings child modules arrive in
-/// later stages of F03. The placeholder route below is replaced once the
-/// shell module (Stage 4) owns real navigation.
-final appModule = createModule(
-  register: (c) {
-    c.route('/', child: (context, state) => const _BootPlaceholder());
-  },
-);
+/// `AppConfig` needs `SharedPreferences`, which is async — resolved once
+/// here, before the module is built, so every registration below stays a
+/// synchronous factory. `main()` awaits this exactly once.
+Future<Module> buildAppModule() async {
+  final config = await AppConfig.create();
 
-class _BootPlaceholder extends StatelessWidget {
-  const _BootPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
-  }
+  return createModule(
+    register: (c) {
+      c
+        ..addInstance<AppConfig>(config)
+        ..addSingleton<SessionStore>(SessionStore.new)
+        ..addSingleton<AuthInterceptor>(() => AuthInterceptor(inject<SessionStore>()))
+        ..addSingleton<Dio>(
+          () => ApiClientFactory.create(
+            config: inject<AppConfig>(),
+            authInterceptor: inject<AuthInterceptor>(),
+          ),
+        )
+        ..addSingleton<SessionController>(() {
+          final controller = SessionController(inject<Dio>(), inject<SessionStore>());
+          inject<AuthInterceptor>().onUnauthorized = controller.markUnauthenticated;
+          return controller;
+        })
+        ..addSingleton<ConnectivityService>(ConnectivityService.new)
+        ..route('/', child: (ctx, state) => const BootGate())
+        ..module(authModule)
+        ..module(shellModule);
+    },
+  );
 }
