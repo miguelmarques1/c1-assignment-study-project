@@ -36,6 +36,10 @@ next-env.d.ts
 # its own Flutter-generated .gitignore for everything else Dart/Flutter.
 .dart_tool/
 
+# design-tokens is a pub *library*, not an app — Dart convention is libraries
+# don't commit their lockfile (apps/mobile's pubspec.lock is committed).
+packages/design-tokens/pubspec.lock
+
 # Playwright's per-run failure artifacts and HTML report — the committed
 # baselines live in apps/web/e2e/__screenshots__, which this does not touch.
 apps/web/test-results/

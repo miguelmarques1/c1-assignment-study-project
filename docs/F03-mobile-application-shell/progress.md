@@ -3,7 +3,7 @@
 **Status:** in progress
 **Branch:** main
 **Started:** 2026-09-15
-**Last updated:** 2026-09-15 (Stage 2)
+**Last updated:** 2026-09-15 (Stage 3 done)
 
 ## Stage 1: API and Contract Groundwork — ✅ done
 
@@ -42,20 +42,30 @@
 - Real runtime gate: `flutter build apk --debug` succeeded end-to-end (`app-debug.apk` produced), not just `flutter analyze`. No Dart test files exist yet — expected, since spec.md's Testing Strategy only lists mobile test files starting from Stage 3's core session/network work.
 
 **Validation:** `flutter analyze` ✅ (0 issues) · `flutter test` — soft-fail, no test files exist yet (expected at this stage) · design-tokens `pnpm test` ✅ (17/17, including the relocated drift guard) · design-tokens `typecheck` ✅ · repo-wide `pnpm typecheck` ✅ (api/web/shared/design-tokens all clean) · repo-wide `pnpm lint` ✅ (0 warnings) · runtime ✅ `flutter build apk --debug` produced a real APK
+**Commit:** `fab2ce3` — F03 stage 2 - token packaging and Flutter scaffold
+
+## Stage 3: Core — Session, Network and Configuration — ✅ done
+
+- [x] **9. Application configuration**
+- [x] **10. Secure session store**
+- [x] **11. HTTP client and interceptors**
+- [x] **12. Error vocabulary**
+- [x] **13. Session lifecycle**
+
+**Observations:**
+- `app_config.dart`: `AppConfig` wraps `SharedPreferences`, exposes `Rx<String> baseUrl` seeded from `kApiBaseUrlKey` (default `kDefaultApiBaseUrl = 'http://10.0.2.2:3001'`). `setBaseUrl` validates via `isValidBaseUrl` (scheme must be http/https, host non-empty) and throws `InvalidBaseUrlException` on a bad value rather than silently persisting it — spec.md doesn't specify the validation rule itself, so this is a reasonable interpretation of "validates," logged here as a Deviation.
+- `session_store.dart`: `SessionStore` wraps `FlutterSecureStorage`, constructor takes an optional instance (`SessionStore([FlutterSecureStorage? storage])`) specifically so tests can substitute a mocktail double instead of touching the real Keystore/Keychain platform channel, which doesn't exist under `flutter test`. Keys: `kSessionTokenKey = 'eq.session.token'`, `kSessionExpiresAtKey = 'eq.session.expiresAt'` — match spec.md's Data Model table exactly.
+- `api_exception.dart`: `ApiException.fromDioException` implements the exact mapping table from spec.md §5 — connection failures (`connectionError`, `connectionTimeout`, or `DioExceptionType.unknown` wrapping a `dart:io` `SocketException`, which is how Dio surfaces a raw socket failure) → `noConnection`; `AUTH003`/401 → `sessionExpired`; any other 5xx → `serverUnavailable`; anything else with an `{error}` envelope → the API's own `message`/`details` verbatim.
+- `retry_interceptor.dart`: accepts an injectable `delay` function (`DelayFn`, defaulting to `Future.delayed`) so the test suite can assert on the three recorded backoff durations (1s/3s/9s) without waiting 13 real seconds. Mechanism confirmed against Context7 (`/cfug/dio`): on a retryable `onError`, await the delay, call `dio.fetch(retriedOptions)`, `handler.resolve()` whatever it returns; a further failure there re-enters the same `onError` (same `Dio` instance's interceptor chain) with an attempt counter carried in `options.extra`, capped at 3 retries (4 attempts total). Exactly one exception reaches the original caller by construction.
+- `auth_interceptor.dart`: depends on `SessionStore` plus a **settable** callback field (`Future<void> Function() onUnauthorized`, default no-op) rather than a constructor-injected `SessionController` — avoids a construction cycle (`SessionController` needs a `Dio` built with this very interceptor). The module graph wires `authInterceptor.onUnauthorized = sessionController.markUnauthenticated` once both exist — that wiring is explicitly Stage 4's job, not done yet.
+- `api_client.dart`: `ApiClientFactory.create` builds `Dio`, wires `AuthInterceptor` + `RetryInterceptor`, and binds `dio.options.baseUrl` to `AppConfig.baseUrl` via GetX's `ever()` listener — reactivity only, no `Get.put`/DI/routing use of GetX, matching the spec's boundary.
+- `session_controller.dart` / `session_state.dart` / `session_user.dart`: `SessionState` is a Dart 3 `sealed class` (`Restoring`, `Authenticated(SessionUser)`, `Unauthenticated`) exposed as `Rx<SessionState>`, matching spec.md's Data Model table. `restore()` reads the store, calls `GET /auth/me`, and on any `DioException` clears the store and moves to `unauthenticated` — the boot-time confirmation the navigation guard will read in Stage 4. `login()` posts to `/auth/token` and persists via `SessionStore.save`. `logout()` always clears local state even when the server call throws (local truth wins, per spec).
+- `connectivity_service.dart`: added to this stage as a reasonable adaptation — spec.md's Component Overview lists it under "core" (line 146) without pinning it to a specific plan step, and it has no navigation/theming dependency, so there's no reason to defer it to Stage 4/5. Wraps `connectivity_plus` (confirmed via Context7 that `checkConnectivity()`/`onConnectivityChanged` return `List<ConnectivityResult>` in the installed v7 line), exposes `RxBool hasLink` — advisory only, never gates a request.
+- **Testing setup:** added `mocktail` as a dev dependency (plan.md's Prerequisites already named it). All five spec'd test files written and green: `retry_interceptor_test.dart` (5/5), `auth_interceptor_test.dart` (4/4), `session_controller_test.dart` (4/4), `session_store_test.dart` (2/2), `api_exception_test.dart` (4/4) — 19/19 total, matching every test function named in spec.md §7 for this stage.
+- **Testing technique note:** Dio's `HttpClientAdapter` interface (`fetch(RequestOptions, Stream<Uint8List>?, Future<void>?)`, confirmed via Context7) is used directly with a small hand-rolled scripted adapter per test file, per Dio's own documented pattern (`ResponseBody.fromString` is explicitly suggested for test adapters) — no extra HTTP-mocking package needed. One gotcha: `ErrorInterceptorHandler`'s internal completer future isn't publicly accessible outside Dio's own library (`'future' can only be used within instance members of subclasses of '_BaseHandler'`), so `auth_interceptor_test.dart`'s two `onError` tests drive the interceptor through a real `Dio` + scripted-401 adapter and assert on the awaited `dio.get()` call's own exception, rather than touching the handler in isolation.
+
+**Validation:** `flutter analyze` ✅ (0 issues, whole project) · `flutter test` ✅ (19/19 — api_exception 4, auth_interceptor 4, retry_interceptor 5, session_controller 4, session_store 2)
 **Commit:** _(pending — recorded after this commit lands)_
-
-## Stage 3: Core — Session, Network and Configuration — ⬜ pending
-
-- [ ] **9. Application configuration**
-- [ ] **10. Secure session store**
-- [ ] **11. HTTP client and interceptors**
-- [ ] **12. Error vocabulary**
-- [ ] **13. Session lifecycle**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 4: Navigation and the Design System Mirror — ⬜ pending
 
