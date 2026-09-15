@@ -40,20 +40,26 @@
 - `icons` was added to `apps/web/e2e/visual.spec.ts`'s `BLOCKS` list because it's now a real, permanent gallery section and `the_documentation_page_lists_every_component` needs to know about it — but no baseline image exists for it yet (nor could one be generated this session). This is a deliberate, temporary gap: the visual suite's screenshot tests for `icons` (and the pre-existing `field` block, now showing three new `TextField` variants) will fail on first run until someone with Docker available runs the suite with `--update-snapshots` once. Logged again under Stage 4.
 
 **Validation:** `apps/web` typecheck ✅ · `apps/web` test suite ✅ (54/54, one real token-guard failure found and fixed mid-stage) · repo-wide `pnpm lint` ✅ (0 warnings) · runtime ✅ host dev server smoke-check of `/design-system` (HTTP 200, all sections present, no render errors) · soft-fail: Playwright visual baselines for `icons` and the updated `field` block not generated (Docker unavailable this session)
+**Commit:** `96561db` — F22 stage 2 - library extensions
+
+## Stage 3: Screen Realignment — ✅ done
+
+- [x] **8. Login**
+- [x] **9. Shell header**
+- [x] **10. Settings frame**
+- [x] **11. Credential cards**
+- [x] **12. Credential form**
+
+**Observations:**
+- **`TextField` needed a `forwardRef`, not planned in Stage 2:** `login-form.tsx`'s existing focus-restoration behaviour (`passwordRef.current?.focus()` after a failed attempt, so retyping doesn't require a manual click) depends on a DOM ref to the input. `TextField` didn't forward one. Added `forwardRef<HTMLInputElement, TextFieldProps>` — the only Stage 2 change made during Stage 3, and a legitimate one: the need only became visible once a real caller with this exact requirement showed up. All 5 pre-existing `login-form.spec.tsx` tests (including the focus-restoration one) passed unmodified against the change, confirming nothing broke.
+- **Deviation — architecture, not visual:** the status chip's cross-feature AC ("deleting flips it to attention, restoring flips it back") needs the chip and the credential grid reading the *same* live state, not two independently-fetched copies. `settings/page.tsx` (a Server Component) can't own React state, and two sibling Client Components can't share state without a common parent owning it. Resolved by lifting all interactive state up into one new component, `SettingsScreen` — it owns `credentials`/`error`, renders the heading + chip + BYOK card + help card directly, and delegates only the grid to a now-*controlled* `CredentialsPanel` (previously self-contained; now takes `credentials`/`error`/`onRetry`/`onChanged`/`onRemoved` as props). `settings/page.tsx` shrank to just the server fetch. No existing test depended on `CredentialsPanel`'s old self-contained shape, so this was a clean refactor, not a breaking one. The pure derivation (`aggregateCredentialStatus`) is exported separately so it's unit-testable without rendering anything.
+- **Real gotcha caught by the existing test suite, not by review:** `credential-card.spec.tsx` had two tests querying the delete button by its old visible text, `'Delete'`. The icon-only replacement has no visible text — its accessible name is now `'Delete Gemini key'` (via `aria-label`, naming the provider so two adjacent cards' delete buttons are still distinguishable by screen reader, which a bare `'Delete'` wouldn't have been). Both queries updated. A third test asserted the masked key via `container.textContent` — but `TextField`'s `readOnlyPresentation` renders the value as an `<input value>` attribute, which never appears in `textContent` (only real DOM text nodes do). Fixed to read `.value` off the input directly. Neither of these was a design mistake — the component's contract changed and the tests that encoded the old contract needed to change with it, exactly the class of thing this project's `implement-feature` skill exists to catch before considering a phase done.
+- **Runtime verification without Docker, again:** the containerized web service still isn't available, so a real Playwright run remains impossible this session. As in Stage 2, started the Next.js dev server directly and fetched the real routes: `/login` → 200, with `e.g. learner@quest.io`, `Show password` and the login form's four `<svg>` elements (logo + 2 leading icons + reveal icon) all present in the markup, no error overlay. `/settings` → 307 redirect to `/login` (no live API this session, so `getCurrentUser()` correctly finds no session) — this confirms the auth gate still works correctly post-refactor, though it means the settings screen's own markup (chip, provider icons, read-only key field) could not be fetched and inspected the same way. That gap is covered instead by the 11 new/extended component tests exercising `SettingsScreen`/`CredentialCard`/`CredentialsPanel` directly against fixtures, which don't need a live API.
+- The header's logo+wordmark link and the `ThemeToggle` were left untouched, exactly as `design/README.md` records (`implemented — unchanged`).
+- No dashboard file was touched in this stage — verified via `git status` before staging, matching the AC that nothing here implements or mocks dashboard content.
+
+**Validation:** `apps/web` typecheck ✅ · `apps/web` test suite ✅ (75/75 — 54 from Stages 1–2 + 6 new `text-field.spec.tsx` + 5 new `app-shell.spec.tsx` + 6 new `settings-status.spec.tsx` + 2 new + 2 fixed in `login-form.spec.tsx` + 2 new + 2 fixed in `credential-card.spec.tsx`) · repo-wide `pnpm lint` ✅ (0 warnings) · runtime ✅ host dev server smoke-check of `/login` (HTTP 200, all realigned elements present, no render errors) and `/settings` (HTTP 307 to `/login`, correct unauthenticated behaviour) · soft-fail: settings screen's own markup not fetched live (no session available without a running API), covered instead by component tests against fixtures; Playwright visual baselines still not generated (Docker unavailable)
 **Commit:** _(pending — recorded after this commit lands)_
-
-## Stage 3: Screen Realignment — ⬜ pending
-
-- [ ] **8. Login**
-- [ ] **9. Shell header**
-- [ ] **10. Settings frame**
-- [ ] **11. Credential cards**
-- [ ] **12. Credential form**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 4: Coverage and Verification — ⬜ pending
 

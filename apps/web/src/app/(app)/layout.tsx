@@ -1,8 +1,18 @@
 import { redirect } from 'next/navigation';
 import type { ReactNode } from 'react';
 
-import { Logo, ThemeToggle } from '@/components/ui';
+import { Avatar, Logo, NavPill, ThemeToggle } from '@/components/ui';
 import { getCurrentUser } from '@/lib/server-session';
+
+/**
+ * The destinations that exist today. A later feature adds its own entry
+ * here rather than changing NavPill itself — see design/README.md for
+ * "Scenarios & Practice", deferred to F06.
+ */
+const DESTINATIONS = [
+  { href: '/dashboard', label: 'Dashboard' },
+  { href: '/settings', label: 'Settings' },
+];
 
 /**
  * The API is the authority on whether a session is still alive, so every
@@ -24,11 +34,9 @@ export default async function AuthenticatedLayout({ children }: { children: Reac
           <Logo size={32} />
           <strong className="text-title-lg text-on-surface">English Quest</strong>
         </a>
-        <div className="flex items-center gap-sm text-body-sm text-on-surface-variant">
-          <a href="/settings" className="text-secondary underline">
-            Settings
-          </a>
-          <span>· {user.displayName}</span>
+        <NavPill destinations={DESTINATIONS} />
+        <div className="flex items-center gap-sm">
+          <Avatar displayName={user.displayName} email={user.email} />
           <ThemeToggle />
         </div>
       </header>

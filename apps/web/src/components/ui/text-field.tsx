@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type InputHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, useState, type InputHTMLAttributes, type ReactNode } from 'react';
 
 import { cn } from './cn';
 import { Field } from './field';
@@ -35,17 +35,20 @@ export interface TextFieldProps extends BaseInputProps {
   readOnlyPresentation?: boolean;
 }
 
-export function TextField({
-  label,
-  labelAside,
-  hint,
-  error,
-  leadingIcon,
-  revealable = false,
-  readOnlyPresentation = false,
-  type = 'text',
-  ...inputProps
-}: TextFieldProps) {
+export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function TextField(
+  {
+    label,
+    labelAside,
+    hint,
+    error,
+    leadingIcon,
+    revealable = false,
+    readOnlyPresentation = false,
+    type = 'text',
+    ...inputProps
+  },
+  ref,
+) {
   const [revealed, setRevealed] = useState(false);
   const showReveal = revealable && !readOnlyPresentation;
   const resolvedType = showReveal ? (revealed ? 'text' : 'password') : type;
@@ -60,6 +63,7 @@ export function TextField({
           <input
             {...fieldProps}
             {...inputProps}
+            ref={ref}
             type={resolvedType}
             readOnly={readOnlyPresentation || inputProps.readOnly}
             className={cn(
@@ -83,4 +87,4 @@ export function TextField({
       )}
     </Field>
   );
-}
+});

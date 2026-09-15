@@ -3,7 +3,7 @@
 import { azureRegionField, type CredentialProvider } from '@english-quest/shared';
 import { useState, type FormEvent } from 'react';
 
-import { Button, Field, Stack, fieldControlClassName } from '@/components/ui';
+import { Button, LockIcon, Stack, TextField } from '@/components/ui';
 
 interface Props {
   provider: CredentialProvider;
@@ -54,41 +54,31 @@ export function CredentialForm({
   return (
     <form onSubmit={handleSubmit} noValidate>
       <Stack gap="md">
-        <Field label="API key">
-          {(props) => (
-            <input
-              {...props}
-              type="password"
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-              value={key}
-              onChange={(event) => setKey(event.target.value)}
-              disabled={submitting}
-              required
-              className={fieldControlClassName}
-            />
-          )}
-        </Field>
+        <TextField
+          label="API key"
+          leadingIcon={<LockIcon />}
+          type="password"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          value={key}
+          onChange={(event) => setKey(event.target.value)}
+          disabled={submitting}
+          required
+        />
 
         {needsRegion ? (
-          <Field label="Region">
-            {(props) => (
-              <input
-                {...props}
-                type="text"
-                placeholder="brazilsouth"
-                autoCapitalize="none"
-                autoCorrect="off"
-                spellCheck={false}
-                value={region}
-                onChange={(event) => setRegion(event.target.value)}
-                disabled={submitting}
-                required
-                className={fieldControlClassName}
-              />
-            )}
-          </Field>
+          <TextField
+            label="Region"
+            placeholder="brazilsouth"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            value={region}
+            onChange={(event) => setRegion(event.target.value)}
+            disabled={submitting}
+            required
+          />
         ) : null}
 
         <Stack direction="row" gap="sm">
@@ -104,7 +94,9 @@ export function CredentialForm({
           <p className="text-body-sm text-error" role="alert">
             {shownError}
             {/* The provider's own wording, verbatim, beneath the plain-language line. */}
-            {providerMessage ? <span className="block font-mono text-body-sm text-on-surface-variant">{providerMessage}</span> : null}
+            {providerMessage ? (
+              <span className="block font-mono text-body-sm text-on-surface-variant">{providerMessage}</span>
+            ) : null}
           </p>
         ) : null}
       </Stack>

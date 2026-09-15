@@ -145,7 +145,8 @@ describe('CredentialCard', () => {
     );
 
     expect(container.textContent).not.toContain(GEMINI_KEY);
-    expect(container.textContent).toContain('••••f4Qa');
+    // The masked key renders as a read-only field's value, not text content.
+    expect((screen.getByLabelText('Key') as HTMLInputElement).value).toBe('••••f4Qa');
     // There is no affordance to reveal a stored key anywhere.
     expect(screen.queryByRole('button', { name: /reveal|show/i })).toBeNull();
   });
@@ -160,8 +161,28 @@ describe('CredentialCard', () => {
     );
 
     expect(screen.getByRole('button', { name: 'Replace key' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Delete Gemini key' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Re-check' })).toBeInTheDocument();
+  });
+
+  it('the_card_leads_with_its_provider_icon', () => {
+    const { container } = render(
+      <CredentialCard credential={credential()} onChanged={vi.fn()} onRemoved={vi.fn()} />,
+    );
+
+    expect(container.querySelector('svg')).not.toBeNull();
+  });
+
+  it('no_copy_control_exists', () => {
+    render(
+      <CredentialCard
+        credential={credential({ status: 'valid', maskedKey: '••••f4Qa' })}
+        onChanged={vi.fn()}
+        onRemoved={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: /copy/i })).toBeNull();
   });
 
   it('deleting_returns_the_card_to_its_empty_state', async () => {
@@ -176,7 +197,7 @@ describe('CredentialCard', () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Delete Gemini key' }));
     await waitFor(() => expect(onRemoved).toHaveBeenCalledWith('gemini'));
   });
 });

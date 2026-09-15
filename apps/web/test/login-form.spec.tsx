@@ -132,4 +132,26 @@ describe('LoginForm', () => {
     expect(screen.queryByText(/forgot password/i)).toBeNull();
     expect(screen.queryAllByRole('link')).toHaveLength(0);
   });
+
+  it('both_fields_render_their_leading_icon', () => {
+    const { container } = render(<LoginForm />);
+
+    // The brand Logo, the two leading icons (mail, lock) and the password
+    // field's reveal icon — all decorative, so counting is the only
+    // externally-observable check.
+    expect(container.querySelectorAll('svg').length).toBe(4);
+  });
+
+  it('the_password_can_be_revealed_and_hidden_again', async () => {
+    render(<LoginForm />);
+
+    const passwordInput = screen.getByLabelText('Password') as HTMLInputElement;
+    expect(passwordInput.type).toBe('password');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Show password' }));
+    expect(passwordInput.type).toBe('text');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Hide password' }));
+    expect(passwordInput.type).toBe('password');
+  });
 });

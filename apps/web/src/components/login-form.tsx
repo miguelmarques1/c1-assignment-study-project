@@ -4,7 +4,7 @@ import { ERROR_CODES, loginSchema } from '@english-quest/shared';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 
-import { Button, Card, Field, Logo, Stack, fieldControlClassName } from '@/components/ui';
+import { Button, Card, LockIcon, Logo, MailIcon, Stack, TextField } from '@/components/ui';
 import { ApiRequestError, apiFetch } from '@/lib/api-client';
 
 interface LockoutState {
@@ -106,40 +106,33 @@ export function LoginForm() {
             </div>
           </div>
 
-          <Field label="Email">
-            {(props) => (
-              <input
-                {...props}
-                name="email"
-                type="email"
-                autoComplete="username"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                disabled={submitting || locked}
-                required
-                className={fieldControlClassName}
-              />
-            )}
-          </Field>
+          <TextField
+            label="Email"
+            labelAside={<span className="text-body-sm text-on-surface-variant">e.g. learner@quest.io</span>}
+            leadingIcon={<MailIcon />}
+            name="email"
+            type="email"
+            autoComplete="username"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            disabled={submitting || locked}
+            required
+          />
 
-          <Field label="Password">
-            {(props) => (
-              <input
-                {...props}
-                ref={passwordRef}
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                disabled={submitting || locked}
-                required
-                className={fieldControlClassName}
-              />
-            )}
-          </Field>
+          <TextField
+            ref={passwordRef}
+            label="Password"
+            leadingIcon={<LockIcon />}
+            revealable
+            name="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            disabled={submitting || locked}
+            required
+          />
 
-          <Button type="submit" fullWidth loading={submitting} loadingLabel="Signing in…" disabled={locked}>
+          <Button type="submit" size="lg" fullWidth loading={submitting} loadingLabel="Signing in…" disabled={locked}>
             Sign in
           </Button>
 

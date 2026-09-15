@@ -9,7 +9,17 @@ import {
 } from '@english-quest/shared';
 import { useState } from 'react';
 
-import { Badge, Button, Card, Stack, type BadgeProps } from '@/components/ui';
+import {
+  AzureSpeechIcon,
+  Badge,
+  Button,
+  Card,
+  GeminiIcon,
+  Stack,
+  TextField,
+  TrashIcon,
+  type BadgeProps,
+} from '@/components/ui';
 import { ApiRequestError } from '@/lib/api-client';
 import {
   deleteCredential,
@@ -41,6 +51,11 @@ const STATUS_BADGE: Record<CredentialStatus, BadgeProps['status']> = {
   missing: 'neutral',
 };
 
+const PROVIDER_ICON: Record<CredentialProvider, typeof GeminiIcon> = {
+  gemini: GeminiIcon,
+  azure_speech: AzureSpeechIcon,
+};
+
 interface Props {
   credential: MaskedCredential;
   onChanged: (next: MaskedCredential) => void;
@@ -56,6 +71,7 @@ export function CredentialCard({ credential, onChanged, onRemoved }: Props) {
   const label = providerLabels[credential.provider];
   const isMissing = credential.status === 'missing';
   const titleId = `${credential.provider}-title`;
+  const ProviderIcon = PROVIDER_ICON[credential.provider];
 
   async function handleSave(key: string, region: string | null) {
     setBusy(true);
@@ -113,9 +129,12 @@ export function CredentialCard({ credential, onChanged, onRemoved }: Props) {
       aria-labelledby={titleId}
       header={
         <div className="flex items-center justify-between gap-md">
-          <h3 id={titleId} className="text-title-md text-on-surface">
-            {label}
-          </h3>
+          <div className="flex items-center gap-sm">
+            <ProviderIcon size={24} />
+            <h3 id={titleId} className="text-title-md text-on-surface">
+              {label}
+            </h3>
+          </div>
           <Badge status={STATUS_BADGE[credential.status]}>{STATUS_LABEL[credential.status]}</Badge>
         </div>
       }
@@ -124,22 +143,21 @@ export function CredentialCard({ credential, onChanged, onRemoved }: Props) {
         {isMissing ? (
           <p className="text-body-md text-on-surface-variant">{MISSING_COPY[credential.provider]}</p>
         ) : (
-          <dl className="flex flex-col gap-xs">
-            <div className="flex justify-between gap-md text-body-sm">
-              <dt className="text-on-surface-variant">Key</dt>
-              <dd className="font-mono text-on-surface">{credential.maskedKey}</dd>
-            </div>
-            {credential.region ? (
+          <>
+            <TextField label="Key" value={credential.maskedKey ?? ''} readOnlyPresentation />
+            <dl className="flex flex-col gap-xs">
+              {credential.region ? (
+                <div className="flex justify-between gap-md text-body-sm">
+                  <dt className="text-on-surface-variant">Region</dt>
+                  <dd className="font-mono text-on-surface">{credential.region}</dd>
+                </div>
+              ) : null}
               <div className="flex justify-between gap-md text-body-sm">
-                <dt className="text-on-surface-variant">Region</dt>
-                <dd className="font-mono text-on-surface">{credential.region}</dd>
+                <dt className="text-on-surface-variant">Last checked</dt>
+                <dd className="text-on-surface">{relativeTime(credential.lastValidatedAt)}</dd>
               </div>
-            ) : null}
-            <div className="flex justify-between gap-md text-body-sm">
-              <dt className="text-on-surface-variant">Last checked</dt>
-              <dd className="text-on-surface">{relativeTime(credential.lastValidatedAt)}</dd>
-            </div>
-          </dl>
+            </dl>
+          </>
         )}
 
         {editing ? (
@@ -165,8 +183,14 @@ export function CredentialCard({ credential, onChanged, onRemoved }: Props) {
                 <Button variant="neutral" type="button" onClick={handleRevalidate} disabled={busy}>
                   {busy ? 'Checking…' : 'Re-check'}
                 </Button>
-                <Button variant="destructive" type="button" onClick={handleDelete} disabled={busy}>
-                  Delete
+                <Button
+                  variant="destructive"
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={busy}
+                  aria-label={`Delete ${label} key`}
+                >
+                  <TrashIcon />
                 </Button>
               </>
             ) : null}
