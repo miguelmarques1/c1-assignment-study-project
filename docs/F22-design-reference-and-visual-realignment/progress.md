@@ -1,9 +1,9 @@
 # Implementation Progress: Design Reference and Visual Realignment
 
-**Status:** in progress
+**Status:** success
 **Branch:** main
 **Started:** 2026-09-15
-**Last updated:** 2026-09-15
+**Last updated:** 2026-09-15 (Final Verification)
 
 ## Stage 1: The Design Reference — ✅ done
 
@@ -79,4 +79,56 @@
 - Dashboard file confirmed untouched across the whole feature: `git diff --stat 2c9ca2b^ HEAD -- "apps/web/src/app/(app)/dashboard/"` is empty.
 
 **Validation:** `pnpm -r typecheck` ✅ · `pnpm lint` ✅ (0 warnings) · `apps/web` test ✅ 76/76 · `packages/design-tokens` test ✅ 17/17 · `apps/mobile` analyze ✅ + test ✅ 39/39 · `apps/api` test: 50/50 non-container ✅, 5 integration suites soft-fail (Docker unavailable, confirmed non-regressive via empty diff on `apps/api/`) · soft-fail: Playwright visual baselines (gallery `icons`/`field`, and the new login screen baseline) not generated this session — Docker unavailable; settings screen visual baseline not written at all — no e2e auth-seeding pattern exists in this repo yet
-**Commit:** _(pending — recorded after this commit lands)_
+**Commit:** `d02c8ba` — F22 stage 4 - coverage and verification
+
+## Final verification
+
+**Full-suite validation (6.1), re-run fresh across the whole repo, not filtered to files this run changed:**
+- `pnpm -r typecheck` ✅ (design-tokens, shared, web, api)
+- `pnpm lint` ✅ 0 warnings (whole repo)
+- `apps/web` test ✅ 76/76
+- `packages/design-tokens` test ✅ 17/17
+- `apps/mobile` `flutter analyze` ✅ 0 issues, `flutter test` ✅ 39/39
+- `apps/api` test: 50/50 non-container tests ✅; **5 integration suites soft-failed** (`auth.spec.ts`, `credentials.spec.ts`, `health.spec.ts`, `seed.spec.ts`, `credential-boot-probe.spec.ts`) with "Could not find a working container runtime strategy" — Docker Desktop is not running in this session, the same environment constraint recorded across F03's final verification and every stage of this feature. Confirmed **non-regressive**, not just assumed: `git diff --stat 2c9ca2b^ HEAD -- apps/api/` is empty — this feature made zero changes to the API.
+
+**Component Overview walk-through (6.2):** every concrete file path in spec.md's Component Overview was checked against the real file tree programmatically. 34 literal paths all exist; the two glob-pattern rows resolve to real files (`apps/web/src/components/ui/icons/*.tsx` → 9 icons, `apps/mobile/lib/design/widgets/*` → 4 files, unchanged as expected). **Missing from spec: none.**
+
+**AC re-check (6.3), tests re-run fresh in this pass:**
+- ✓ Login fields render leading icons, example address, working reveal — `renders_the_leading_icon_without_announcing_it`, `label_aside_renders_in_the_label_row`, `the_password_can_be_revealed_and_hidden_again`
+- ✓ Login contains no excluded affordance — `has_no_register_or_reset_links`
+- ✓ Header renders the pill with exactly Dashboard and Settings, active selected, avatar, theme toggle — `the_pill_renders_exactly_the_existing_destinations`, `the_active_destination_is_marked_for_assistive_tech`, `the_avatar_shows_initials_and_announces_the_full_name`
+- ✓ Header contains no streak or XP — `the_header_carries_no_streak_or_points`
+- ✓ Settings renders the BYOK card, provider icons, masked key as field, region, last-checked — `the_card_leads_with_its_provider_icon`, masked-key assertion in `never_renders_more_than_the_last_four_characters`
+- ✓ Status chip reads ready/attention per provider validity — `both_valid_reads_as_ready`, `a_missing_provider_reads_as_attention`, `an_invalid_or_unverified_provider_reads_as_attention`
+- ✓ Delete is icon-only with an accessible name, keyboard/screen-reader reachable — `offers_replace_rather_than_add_once_a_key_exists`, `deleting_returns_the_card_to_its_empty_state`
+- ✓ Settings contains no copy control, pattern guide, or footer — `no_copy_control_exists`
+- ✓ Help card static with no link — `the_help_card_is_static_with_no_link` (added during this final pass)
+- ✓ Design document exists, covers four mockups, one status per region — `every_mockup_directory_has_a_table`, `every_region_carries_exactly_one_status`
+- ✓ Dropped regions name a Section 6/7 clause — `dropped_regions_cite_an_exclusion`
+- ✓ Deferred regions name their owning feature, five dashboard regions present — `deferred_regions_name_an_existing_feature`, `the_deferred_dashboard_regions_are_all_present`
+- ✓ No dashboard content implemented or mocked — confirmed via empty `git diff` on the dashboard directory
+- ✓ Primitive/token changes reflected in the mirror, gallery and baselines — confirmed via empty `git diff` on `packages/design-tokens/` and `apps/mobile/` (nothing changed, so nothing needed reflecting) plus the `icons` gallery registration from Stage 2
+- ✓ Both clients keep the same vocabulary — same empty-diff evidence
+
+**Cross-feature integration:** ✓ per-provider validity from F02 drives the chip, both directions (`a_missing_provider_reads_as_attention`, `both_valid_reads_as_ready`) · ✓ realigned screens compose from F21 tokens/primitives with no raw value (`no-raw-values.spec.ts`, `token-resolution.spec.ts` run clean against every new file, including the one real violation the guard caught and this run fixed — `NavPill`'s `bg-surface-container-high`).
+
+**Environment smoke check (6.4):** `/design-system` and `/login` fetched from a real host `next dev` server — HTTP 200, no error overlay, all expected elements present (Stage 2 and Stage 3 observations have the specifics). `/settings` correctly redirected (HTTP 307) given no live session, confirming the auth gate survived the `SettingsScreen` refactor even though the settings screen's own markup couldn't be inspected live. Two smoke checks could not be exercised and are logged rather than assumed: Playwright visual baselines for the gallery's `icons`/`field` blocks and the new login screen (Docker unavailable all session), and a settings screen visual baseline (no e2e auth-seeding pattern exists in this repo to build one on).
+
+**Soft-fails (consolidated):**
+- API's 5 testcontainers-backed integration suites (Docker unavailable) — confirmed non-regressive via empty diff
+- Playwright visual baselines: gallery `icons` block, gallery `field` block (now showing `TextField`), and the new login screen — code exists, pixels don't, pending a session with Docker available
+- Settings screen visual baseline — not written at all; no e2e auth-seeding pattern exists in this repository yet, and inventing one without a live API to verify it against was judged worse than not writing it
+- Settings screen's live HTTP fetch — soft-failed for the same reason (no session available); covered instead by 18 component tests against fixtures (`settings-status.spec.tsx`, extended `credential-card.spec.tsx`)
+
+**Pre-existing failures:** none found attributable to code outside this run's changes.
+
+**Regressions:** none. Every stage's validation passed at commit time; this final pass re-confirms all of it fresh, plus found and fixed one AC-coverage gap (the help card's no-link test) before closing rather than after.
+
+**Status:** `success` — full suite green wherever the environment allows it to run, every Component Overview item present, every testable AC passes fresh, and every unexercised check is an honestly-logged environment or repository-precedent soft-fail rather than a silent gap.
+
+**Follow-up work left open for later sessions:**
+- Once Docker Desktop is available: run `pnpm --filter @english-quest/web test:visual -- --update-snapshots` to generate baselines for the gallery's `icons` and `field` blocks and the new login screen, then re-run without the flag to confirm they hold.
+- Build an e2e auth-seeding pattern (a storageState fixture seeded from a real login, or a direct signed-cookie helper) so a settings-screen visual baseline — and any future test needing an authenticated page — can be written with something to verify it against.
+- Re-run the 5 API integration suites once Docker is available (expected to pass — confirmed nothing in `apps/api` changed since before this feature started).
+- The Full Scope addition this feature deliberately deferred: making the settings help card's guide link real (Google AI Studio and Azure Portal console links), replacing the static Core Scope card.
+- The five dashboard regions this feature explicitly did not build, each deferred to its owning feature per `design/README.md`: the hero banner and its CTA (F05), the module cards (F05/F06/F15/F18), the recommended-scenario card (F06), the two statistic cards (F20), and the `Scenarios & Practice` nav-pill destination (F06).
