@@ -1,9 +1,9 @@
 # Implementation Progress: Mobile Application Shell
 
-**Status:** in progress
+**Status:** success
 **Branch:** main
 **Started:** 2026-09-15
-**Last updated:** 2026-09-15 (Stage 5 done)
+**Last updated:** 2026-09-15 (Final Verification)
 
 ## Stage 1: API and Contract Groundwork — ✅ done
 
@@ -111,4 +111,51 @@
 - **Device verification (step 22):** `flutter analyze` and the full `flutter test` suite were run fresh (not just per-file) — see Validation below. A final `flutter build apk --debug` succeeded. The interactive half of this step — log in against the running stack, confirm session-survives-restart, confirm a live 401 returns to login, confirm the offline state with the stack stopped — could not be exercised: this session has no Android emulator or physical device (confirmed again via `flutter devices`), and Docker Desktop is not running in this environment (`docker compose ps` failed to reach the daemon), so there is no live API to point a device at even if one existed. This is an honest soft-fail, not a skipped check — the equivalent behavior (login flow, 401→unauthenticated, offline→`No connection`, session persistence contract) is covered by `login_page_test.dart`, `auth_interceptor_test.dart`, `session_controller_test.dart` and `api_exception_test.dart` instead. iOS remains configured-but-unverified per the PRD's split acceptance criterion, unchanged since Stage 2 — no Mac is available.
 
 **Validation:** `flutter analyze` ✅ (0 issues, whole project) · `flutter test` ✅ (39/39 — 27 from Stages 3-4 + `login_page_test.dart` 5/5 + `credentials_test.dart` 7/7) · runtime ✅ `flutter build apk --debug` succeeded · repo-wide `pnpm typecheck` ✅ · repo-wide `pnpm lint` ✅ (0 warnings) · soft-fail: no live emulator/device and no running Docker stack in this environment, so the interactive half of device verification was not exercised
-**Commit:** _(pending — recorded after this commit lands)_
+**Commit:** `382e885` — F03 stage 5 - screens, recorder and device verification
+
+## Final verification
+
+**Full-suite validation (6.1), run fresh across the whole repo, not filtered to files this run touched:**
+- `flutter analyze` (apps/mobile) ✅ 0 issues
+- `flutter test` (apps/mobile) ✅ 39/39
+- `pnpm typecheck` (whole repo) ✅
+- `pnpm lint` (whole repo) ✅ 0 warnings
+- `pnpm --filter @english-quest/design-tokens test` ✅ 17/17
+- `pnpm --filter @english-quest/web test` ✅ 48/48 (unit suite; the Playwright visual suite needs a running container and was not re-run here — unrelated to F03, unchanged this run)
+- `pnpm --filter @english-quest/api test` — 50/50 non-container tests passed; **5 integration suites soft-failed** (`auth.spec.ts`, `credentials.spec.ts`, `health.spec.ts`, `seed.spec.ts`, `credential-boot-probe.spec.ts`) with `Could not find a working container runtime strategy` — Docker Desktop is not running in this session (`docker compose ps` confirmed it can't reach the daemon). This is an **environment soft-fail, not a regression**: `git diff --stat 4fd774b..HEAD -- apps/api/ docs/api/` shows zero changes to the API since Stage 1's commit, and Stage 1's own progress log already recorded these exact suites passing (108 pre-existing + 6 new, 114/114) against a live `docker compose` container earlier in this session, before Docker stopped being available.
+
+**Component Overview walk-through (6.2):** every file in spec.md's Component Overview tables (API changes, shared contracts, design-tokens packaging, Flutter application root/core/design-mirror/features/platform-configuration) was checked against the real file tree (`Glob` over `apps/mobile/lib` and `apps/mobile/test`) — all present with the described role. **Missing from spec: none.**
+
+**AC re-check (6.3), tests re-run fresh in this pass, not trusted from earlier stage runs:**
+- ✓ Login persists across restarts; session in Keystore/Keychain, absent from SharedPreferences — `restores_a_valid_session_on_boot`, `the_token_is_absent_from_shared_preferences`
+- ✓ A 401 clears the session and returns to login — `a_401_clears_the_stored_session`, `a_401_moves_the_session_state_to_unauthenticated`, `an_unauthenticated_user_is_redirected_to_login`
+- ✓ Offline shows `No connection` with retry, never stale content — `maps_connection_failure_to_no_connection`, `shows_no_connection_with_retry_when_offline`, `shows_the_named_cause_on_failure`
+- ✓ API base URL editable in settings, effective without reinstall — `the_base_url_is_editable_before_authenticating` (the field is the same `ApiBaseUrlField` widget mounted on both login and settings; only the login-screen path has a dedicated widget test — logged as a Soft-fail below)
+- ✓ The live classroom is absent from navigation — `the_live_classroom_is_absent_from_navigation`
+- ✓ Idempotent requests retry 3× at 1s/3s/9s before one consolidated failure — `retries_idempotent_requests_three_times_with_expected_backoff`, `surfaces_a_single_consolidated_failure`
+- ✓ The app builds and runs on Android 8.0 — `flutter build apk --debug` (minSdk 26) succeeded; "runs" is build-verified only, not interactively confirmed on a device (see Soft-fails)
+- — The app builds and runs on iOS 14 — configured (deployment target 14.0, `NSMicrophoneUsageDescription`) but the PRD's own wording says this is "verifiable only on Mac hardware, which the project does not currently have"; no test can cover the unverifiable half by design
+
+**Cross-feature integration:** ✓ The masked credential list from F02 renders on the mobile credentials screen with the same statuses as web, no key material reaching the device — `renders_both_providers_with_their_status`, `renders_each_status_with_its_badge`, `never_renders_more_than_the_masked_key`.
+
+**Environment smoke check (6.4):** `flutter build apk --debug` (Android, real) succeeded as the final runtime exercise. Two smoke checks could not be exercised and are logged honestly rather than assumed: (1) an interactive on-device/emulator run (login → restart → 401 → offline) — no Android emulator or physical device exists in this Windows-only environment; (2) a live API smoke test — Docker Desktop is not running in this session. Both are pre-existing environment constraints, not something this run broke.
+
+**Soft-fails (consolidated):**
+- API's 5 testcontainers-backed integration suites (Docker unavailable this session — see Full-suite validation above)
+- Interactive on-device verification (login, restart-survival, live 401, offline-with-stack-stopped) — no emulator/device available
+- Live API smoke test against a running stack — Docker Desktop not running
+- iOS build/run verification — no Mac available (PRD-acknowledged, not a gap this run introduced)
+- The settings-screen path for the base-URL field has no dedicated widget test (only login's does) — same underlying `ApiBaseUrlField` widget, so behavior is exercised, but the settings-screen mount site specifically is untested
+
+**Pre-existing failures:** none found attributable to code outside this run's changes (the API integration soft-fails are environmental, covered above, not a pre-existing code defect).
+
+**Regressions:** none. Every stage's own validation passed at commit time, and this final pass re-confirms all of it fresh with nothing newly broken.
+
+**Status:** `success` — full suite green wherever the environment allows it to run, every Component Overview item present, every testable AC passes fresh, and every unexercised check is an honestly-logged environment soft-fail rather than a silent gap.
+
+**Follow-up work left open for later sessions:**
+- Re-run the 5 API integration suites once Docker Desktop is available again, to get the container-backed confirmation back (expected to pass — nothing in `apps/api` changed since Stage 1's live-verified run).
+- Run F03 on a real Android device/emulator once one is available in this environment, to close the interactive half of device verification.
+- Build and run on iOS once Mac hardware is available (tracked by the PRD's own split acceptance criterion).
+- Stage 4's known, deliberately out-of-scope UX gap: a background session invalidation (e.g., a 401 firing while already parked on an authenticated page) doesn't auto-redirect until the next navigation attempt re-evaluates the guard — acceptable per spec's own AC/test scope, but worth a conscious product decision later if it proves confusing in practice.
+- The web-vs-`./design` alignment follow-up the user raised mid-session (tracked separately, not specific to F03).
