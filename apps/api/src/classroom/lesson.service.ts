@@ -33,6 +33,16 @@ export class LessonService {
   }
 
   /**
+   * Every non-terminal lesson, for the sweeper to evaluate. The partial
+   * unique index caps this at one row per room, and the MVP has one room, so
+   * this is never more than a handful of rows regardless of how often the
+   * sweeper runs.
+   */
+  findSweepable(): Promise<Lesson[]> {
+    return this.prisma.lesson.findMany({ where: { status: { in: [...OPEN_STATUSES] } } });
+  }
+
+  /**
    * Inserts a new lesson row. A unique-violation on `ux_lessons_open_room`
    * means two callers raced to open the room at once — the loser re-reads
    * the winner's row instead of failing, so "two people click at once" never

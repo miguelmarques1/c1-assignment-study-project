@@ -1,6 +1,6 @@
 # Implementation Progress: Live Classroom
 
-**Status:** in progress — Stage 2 of 5 complete
+**Status:** in progress — Stage 3 of 5 complete
 **Branch:** main
 **Started:** 2026-09-15
 **Last updated:** 2026-09-16
@@ -46,7 +46,27 @@
 - Runtime check (routes actually called over HTTP) deferred: no testcontainers integration suite exists yet for classroom (`apps/api/test/integration/classroom.spec.ts` is Stage 5, step 21 per the plan) and a full two-party manual join needs the LiveKit media stack up, which is Stage 5 step 22. Logged under Soft-fails below rather than claimed.
 
 **Validation:** `pnpm --filter @english-quest/api typecheck` ✅ · `pnpm lint` ✅ · `pnpm --filter @english-quest/api test:unit` ✅ 85/85 (includes the OpenAPI committed-snapshot check) · **Soft-fail:** no classroom integration/runtime exercise yet — the routes have not been called over HTTP in this stage; deferred to Stage 5's test suites and manual verification, per the plan's own stage boundaries.
-**Commit:** _(recorded in the next stage's commit, per the skill's convention of not amending)_
+**Commit:** `ac90fbc` — F05 stage 2 - LiveKit access and the join path
+
+## Stage 3: Lifecycle events and automatic closure — ✅ done
+
+- [x] **9. Webhook transport**
+- [x] **10. Lifecycle application**
+- [x] **11. Auto-end sweeper**
+
+**Observations:**
+- `app.use('/classroom/livekit-webhook', raw({ type: 'application/webhook+json' }))` mounted in `main.ts` right after `cookieParser`, per the spec's Technical Decisions table (explicit `express.raw` middleware, not Nest's `rawBody: true`, since Nest's built-in parsers never match LiveKit's content type either way).
+- **Deviation:** `express` added as a direct dependency of `apps/api` (`^5`, matching the version `@nestjs/platform-express` already resolves) — it was only a transitive dependency before, and this project's pnpm setup has no hoisting/shamefully-hoist config, so `import { raw } from 'express'` needs it declared explicitly, the same reason `cookie-parser` is already a direct dependency rather than relying on Nest's own use of it.
+- **Deviation:** `apps/api/test/integration/helpers/test-app.ts` needed the identical `raw()` middleware mounted (mirroring `main.ts`) — otherwise every integration test that exercises the webhook route (Stage 5) would receive an already-consumed or JSON-parsed body instead of the raw bytes the signature is computed over.
+- **Deviation:** `apps/api/test/unit/openapi.spec.ts`'s `protected_routes_declare_a_session_transport` guard hardcodes an allowlist of public operations; added `'post /classroom/livekit-webhook'` to it, since that route is genuinely public (authenticated by LiveKit's signature, never by session) and the guard doesn't consult the `@Public()` decorator itself.
+- `LessonLifecycleService` treats `event.createdAt` (LiveKit's own event timestamp, seconds since epoch) as "the event time" uniformly for `started_at`, `lesson_participants.joined_at` on first connection, and every disconnect timestamp — matches the spec's explicit requirement that `started_at` come from the webhook event's own `createdAt`, not the API's receipt time.
+- `markConnected`'s first-connection detection (joined at token-issuance time vs. overwritten by the first real `participant_joined`) is exercised here for the first time — see Stage 2's observations for the full reasoning; Stage 3 is where it actually gets called.
+- Sweeper (`LessonLifecycleJob`) queries every non-terminal lesson once per tick (`findSweepable`) rather than three targeted queries — the partial unique index caps this at one row per room, and the MVP has one room, so there is never more than one candidate row to evaluate regardless of query shape.
+- `deleteRoom` is called from the sweeper for the `all_disconnected` and `max_duration` endings (wrapped in try/catch — the room may already be gone via LiveKit's own empty-room timeout, which must not abort the sweep), but not for `abandoned_before_start`: a lesson that never started has the least urgency to force-close a room that likely has nobody in it. The spec's own test table only asserts `deleteRoom` explicitly for the 120-minute cap case; this doesn't conflict with it either way for the other two.
+- Runtime check still deferred to Stage 5 for the same reason as Stage 2 — no webhook has actually been signed and POSTed against a running process in this stage. Logged under Soft-fails.
+
+**Validation:** `pnpm --filter @english-quest/api typecheck` ✅ · `pnpm lint` ✅ · `pnpm --filter @english-quest/api test:unit` ✅ 85/85 (includes the updated OpenAPI committed-snapshot and security-transport guards; 14 operations now documented) · **Soft-fail:** no live webhook POST or sweeper tick exercised against a running process yet — deferred to Stage 5.
+**Commit:** _(recorded in the next stage's commit)_
 
 ## Stage 3: Lifecycle events and automatic closure — ⬜ pending
 

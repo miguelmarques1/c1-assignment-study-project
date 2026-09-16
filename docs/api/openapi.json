@@ -753,6 +753,32 @@
           "classroom"
         ]
       }
+    },
+    "/classroom/livekit-webhook": {
+      "post": {
+        "description": "Receives participant_joined, participant_left and room_finished. Every other event type is acknowledged and ignored. Authenticated by the Authorization header signature over a SHA-256 checksum of the raw body, verified with WebhookReceiver — never by session.",
+        "operationId": "ClassroomWebhookController_handle",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Acknowledged."
+          },
+          "401": {
+            "description": "AUTH003: missing, malformed or invalid signature; no state is changed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "summary": "LiveKit lifecycle webhook",
+        "tags": [
+          "classroom"
+        ]
+      }
     }
   },
   "info": {

@@ -3,6 +3,7 @@ import 'reflect-metadata';
 import { Logger } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import cookieParser from 'cookie-parser';
+import { raw } from 'express';
 
 import { AppModule } from './app.module';
 import { runMigrations } from './boot/run-migrations';
@@ -43,6 +44,10 @@ async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, { bufferLogs: false });
 
   app.use(cookieParser(config.SESSION_SECRET));
+  // LiveKit sends `Content-Type: application/webhook+json`, which none of
+  // Nest's default body parsers match — they skip the request untouched, so
+  // this is free to capture the exact bytes the signature was computed over.
+  app.use('/classroom/livekit-webhook', raw({ type: 'application/webhook+json' }));
   app.useGlobalFilters(new HttpExceptionFilter());
   app.enableCors({ origin: config.WEB_ORIGIN, credentials: true });
   app.enableShutdownHooks();

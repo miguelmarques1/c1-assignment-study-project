@@ -8,6 +8,7 @@ import { Test } from '@nestjs/testing';
 import type { INestApplication } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import cookieParser from 'cookie-parser';
+import { raw } from 'express';
 
 import { AppModule } from '../../../src/app.module';
 import { HttpExceptionFilter } from '../../../src/common/http-exception.filter';
@@ -87,6 +88,9 @@ export async function createTestContext(
 
   const app = moduleRef.createNestApplication();
   app.use(cookieParser(TEST_SESSION_SECRET));
+  // Mirrors main.ts: the webhook signature is verified over the raw body,
+  // which Nest's default parsers never populate for LiveKit's content type.
+  app.use('/classroom/livekit-webhook', raw({ type: 'application/webhook+json' }));
   app.useGlobalFilters(new HttpExceptionFilter());
   await app.init();
 

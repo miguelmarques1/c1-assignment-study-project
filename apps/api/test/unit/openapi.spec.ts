@@ -68,10 +68,16 @@ describe('OpenAPI document', () => {
   it('protected_routes_declare_a_session_transport', async () => {
     const document = await generate();
 
-    // /auth/login, /auth/token and /health are the only public routes;
-    // everything else must advertise that it needs a session — either
-    // transport — or the generated client omits it.
-    const publicOperations = new Set(['post /auth/login', 'post /auth/token', 'get /health']);
+    // /auth/login, /auth/token, /health and the LiveKit webhook (authenticated
+    // by LiveKit's own signature, never by session) are the only public
+    // routes; everything else must advertise that it needs a session —
+    // either transport — or the generated client omits it.
+    const publicOperations = new Set([
+      'post /auth/login',
+      'post /auth/token',
+      'get /health',
+      'post /classroom/livekit-webhook',
+    ]);
 
     const missingSecurity = Object.entries(document.paths).flatMap(([path, item]) =>
       Object.entries(item as Record<string, { security?: unknown[] }>)
