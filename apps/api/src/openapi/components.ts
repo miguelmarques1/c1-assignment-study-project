@@ -1,6 +1,9 @@
 import {
   apiErrorSchema,
   changePasswordSchema,
+  classroomEndResultSchema,
+  classroomSessionSchema,
+  classroomTokenSchema,
   currentUserSchema,
   healthReportSchema,
   loginSchema,
@@ -52,6 +55,9 @@ export const OPENAPI_COMPONENTS: Record<string, SchemaObject> = {
   MaskedCredentialList: toOpenApi(maskedCredentialListSchema, 'output'),
   ValidationDetail: toOpenApi(validationDetailSchema, 'output'),
   ErrorEnvelope: toOpenApi(apiErrorSchema, 'output'),
+  ClassroomToken: toOpenApi(classroomTokenSchema, 'output'),
+  ClassroomSession: toOpenApi(classroomSessionSchema, 'output'),
+  ClassroomEndResult: toOpenApi(classroomEndResultSchema, 'output'),
 };
 
 /** Shorthand for the error responses, which every route can return. */

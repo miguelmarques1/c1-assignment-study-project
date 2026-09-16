@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 
 import { AuthModule } from './auth/auth.module';
 import { SessionGuard } from './auth/session.guard';
+import { ClassroomModule } from './classroom/classroom.module';
 import { CredentialsModule } from './credentials/credentials.module';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -21,6 +22,7 @@ import { StorageModule } from './storage/storage.module';
     HealthModule,
     CredentialsModule,
     PromptsModule,
+    ClassroomModule,
   ],
   providers: [
     // Authentication is global: a route is protected unless it opts out with

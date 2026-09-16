@@ -1,9 +1,9 @@
 # Implementation Progress: Live Classroom
 
-**Status:** in progress — paused after Stage 1 (context budget)
+**Status:** in progress — Stage 2 of 5 complete
 **Branch:** main
 **Started:** 2026-09-15
-**Last updated:** 2026-09-15
+**Last updated:** 2026-09-16
 
 ## Stage 1: Infrastructure, contracts and data model — ✅ done
 
@@ -26,29 +26,27 @@
 **Validation:** `pnpm --filter @english-quest/shared build` ✅ · `pnpm --filter @english-quest/api typecheck` ✅ · `pnpm --filter @english-quest/api test:unit` ✅ 85/85 (includes the OpenAPI committed-snapshot check and the new/extended `env.spec.ts` cases) · migration applied cleanly against local Postgres, Prisma client regenerated without error.
 **Commit:** `97fb1dc` — F05 spec/plan and stage 1 - infrastructure, contracts and data model
 
-## Stage 2: LiveKit access and the join path — ⬜ pending (not started)
+## Stage 2: LiveKit access and the join path — ✅ done
 
-- [ ] **5. LiveKit service**
-- [ ] **6. Lesson read and write model**
-- [ ] **7. Join orchestration and the cap**
-- [ ] **8. Authenticated classroom routes**
+- [x] **5. LiveKit service**
+- [x] **6. Lesson read and write model**
+- [x] **7. Join orchestration and the cap**
+- [x] **8. Authenticated classroom routes**
 
-**Observations:** Not started. `livekit-server-sdk@^2` confirmed available on the registry (`npm view` → `2.19.0`) but not yet installed. Next step: add the dependency, build `LiveKitService` wrapping `AccessToken`, `RoomServiceClient`'s `createRoom`/`listParticipants`/`deleteRoom`, and `WebhookReceiver`, translating transport failures into `AppError.classroomUnavailable(reason)` per the spec's Technical Decisions table.
+**Observations:**
+- Reconciled the two duplicate "Stage 2 — pending" blocks left by the prior run's context-budget pause into this single entry; no work had actually started on either, so nothing was lost.
+- `livekit-server-sdk@^2` added to `apps/api/package.json` and installed (resolved `2.19.0`); `RoomServiceClient` used directly (per the spec's Component Overview wording) rather than the newer `LiveKitAPI` wrapper.
+- **Deviation — participant-row write ownership resolved by design, not spec text alone:** the spec names `joined_at` as "this participant's own first connection" but also has the join-orchestration diagram (T6) upsert a `lesson_participants` row at *token issuance* time, before any WebRTC connection exists — and the webhook test table separately asserts `joined_at` is set "from the event timestamp" on a participant's first `participant_joined`. Reconciled as: `LessonService.registerParticipant` (called from the token route) creates the row idempotently with `joinedAt = now()` as a placeholder that is never touched again by that method; `LessonService.markConnected` (called from the webhook path in Stage 3) overwrites `joinedAt` with the event's own timestamp only on that participant's first-ever connection (detected via `lastConnectedAt` being null beforehand), and leaves it untouched on a reconnect. This satisfies both the "row exists right after token issuance" integration-test expectations and the webhook table's explicit "joined_at ... set from the event timestamp" wording.
+- **Deviation — `lesson_participants.left_at`:** interpreted "set when the lesson finalizes, or on a final disconnect" as meaning finalization is the only server-observable "final" disconnect (a mid-lesson `participant_left` may always be a reconnect within the 30s web-side window, which the API has no way to distinguish from a permanent departure at the webhook layer). `markDisconnected` (Stage 3) therefore only touches `connected`/`last_disconnected_at`; `finalizeLesson` batch-sets `left_at` for every still-open participant row of that lesson. Recorded here since it affects both Stage 2's `LessonService.finalizeLesson` and Stage 3's lifecycle handlers.
+- **Race safety:** two simultaneous first-token requests are handled by attempting a plain `lesson.create` and catching the `ux_lessons_open_room` unique-violation (Prisma `P2002`) — the loser re-reads and reuses the winner's row rather than retrying inside a transaction. Deliberately did **not** wrap the occupancy check (`listParticipants`, a network call to LiveKit) inside a Prisma transaction, since holding a DB transaction open across an external HTTP round trip is its own risk; instead, `ClassroomService.requestToken` tracks whether *this* request created the lesson row and issues a compensating `discardLesson` (hard delete) only in that case, when `listParticipants` throws CLASS002 — satisfying "no lesson row is committed" without a long-lived transaction.
+- `LiveKitService.unavailable()` always returns the fixed reason string `'LiveKit server not reachable'` in `details.reason`, per the unit-test requirement (Stage 5) that the raw SDK error message is never leaked to the client.
+- `AppError.notAParticipant()` is currently thrown both for "lesson doesn't exist" and "caller has no participant row" in `endLesson` — the spec defines no separate not-found code, and a nonexistent `lessonId` is indistinguishable from "not a participant" from the caller's point of view.
+- Found and fixed a pre-existing-looking but actually self-inflicted gap: `@ApiParam({ name: 'lessonId', format: 'uuid' })` without an explicit `type` produced a schema that matched when generated via `tsx` (`openapi:generate`) but not when the *same* document was rebuilt in-process by `vitest` (`unplugin-swc` transpilation) — the two pipelines apparently differ in whether NestJS's swagger plugin backfills `type: 'string'` from the TS parameter type. Fixed by specifying `type: 'string'` explicitly on the decorator so generation no longer depends on which transpiler runs it. Worth remembering for any future `@ApiParam` that only specifies `format`.
+- OpenAPI document regenerated (`pnpm --filter @english-quest/api openapi:generate`) after the three classroom routes landed, per the project's OpenAPI directive; 13 operations now documented (was 10).
+- Runtime check (routes actually called over HTTP) deferred: no testcontainers integration suite exists yet for classroom (`apps/api/test/integration/classroom.spec.ts` is Stage 5, step 21 per the plan) and a full two-party manual join needs the LiveKit media stack up, which is Stage 5 step 22. Logged under Soft-fails below rather than claimed.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
-
-## Stage 2: LiveKit access and the join path — ⬜ pending
-
-- [ ] **5. LiveKit service**
-- [ ] **6. Lesson read and write model**
-- [ ] **7. Join orchestration and the cap**
-- [ ] **8. Authenticated classroom routes**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** `pnpm --filter @english-quest/api typecheck` ✅ · `pnpm lint` ✅ · `pnpm --filter @english-quest/api test:unit` ✅ 85/85 (includes the OpenAPI committed-snapshot check) · **Soft-fail:** no classroom integration/runtime exercise yet — the routes have not been called over HTTP in this stage; deferred to Stage 5's test suites and manual verification, per the plan's own stage boundaries.
+**Commit:** _(recorded in the next stage's commit, per the skill's convention of not amending)_
 
 ## Stage 3: Lifecycle events and automatic closure — ⬜ pending
 
