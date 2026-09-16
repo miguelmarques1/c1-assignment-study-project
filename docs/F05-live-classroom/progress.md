@@ -1,6 +1,6 @@
 # Implementation Progress: Live Classroom
 
-**Status:** in progress — Stage 5 of 5 complete, final verification pending
+**Status:** success
 **Branch:** main
 **Started:** 2026-09-15
 **Last updated:** 2026-09-16
@@ -129,7 +129,39 @@
   - The API dev server was left running inside the `api` container (`docker compose exec api pnpm dev`, matching the project's own `pnpm api` script) for whoever continues from here — it is not something this run tears down, since it's the normal dev workflow, not scratch state.
 
 **Validation:** `pnpm --filter @english-quest/api typecheck` ✅ · `pnpm --filter @english-quest/web typecheck` ✅ · `pnpm lint` ✅ (repo-wide) · `pnpm --filter @english-quest/api` full suite (unit + integration, testcontainers) ✅ **197/197** · `pnpm --filter @english-quest/web` full suite ✅ **97/97** · `pnpm --filter @english-quest/web build` ✅ · **Real-stack smoke test** (see above) ✅ token issuance ×2, session projection, lesson end, all against live Postgres/Redis/LiveKit · **Soft-fail:** WebRTC media, mute/camera/device-switch UI clicks, simulated network drop, and a true two-browser join were not exercised — no browser/camera/microphone available to this run.
-**Commit:** _(this stage's commit, immediately below)_
+**Commit:** `fde8236` — F05 stage 5 - dashboard entry and closing the loop
+
+## Final verification
+
+**Status: success**
+
+- **6.1 Full-suite validation:** `pnpm --filter @english-quest/api typecheck/lint` ✅ · full API suite (22 files, unit + testcontainers integration) ✅ **197/197** · `pnpm --filter @english-quest/web typecheck/lint` ✅ · full web suite (15 files) ✅ **97/97** · `pnpm --filter @english-quest/web build` ✅ production build, `/classroom` compiles as a dynamic route. No regressions outside what Stage 5's own observations already list and fixed.
+- **6.2 Component Overview walk-through:** every file in spec.md's Component Overview (Shared, Backend, Frontend, Infrastructure, Database) confirmed present on disk with `ls`, cross-checked against the actual directory listings. One addition beyond the original overview: `apps/web/src/components/classroom/use-audio-level.ts`, extracted during Stage 5 to share the level-meter logic between the pre-join preview and the in-call waiting state — a deviation, not a gap. Nothing missing.
+- **6.3 AC re-check** (against `docs/prd.md` § 9, F05 — all 12 re-run fresh just now, not trusted from an earlier phase):
+  - ✓ Opening the classroom requests a token and connects with audio and video published — `classroom.spec.ts`, `classroom-screen.spec.tsx`
+  - ✓ Waiting state with a working local preview and level meter at one participant — `classroom-screen.spec.tsx: shows_the_waiting_state_with_the_local_preview`
+  - ✓ Start timestamp recorded at the second participant's connection — `classroom-webhook.spec.ts: the_second_simultaneous_join_starts_the_lesson`
+  - ✓ A join beyond the cap is rejected before a token is issued, naming the cap — `classroom.spec.ts: refuses_a_token_beyond_the_configured_cap` + `classroom-screen.spec.tsx: shows_the_classroom_full_message_with_the_cap`
+  - ✓ (admission only) Raising the cap to 3 admits a third participant with no schema/code branch difference — `classroom.spec.ts: admits_a_third_participant_when_the_cap_is_raised_to_3`. The rest of this AC (recording track, transcript, scores, analysis, profile, study plan for the third participant) is F07/F11/F15's own scope, not F05's — those features carry that half of this AC when they land.
+  - ✓ (join-timestamp only) A late joiner is recorded from their own timestamp — `classroom-webhook.spec.ts: a_late_join_does_not_move_started_at`. "Independent pipeline branch" is F07's scope.
+  - ✓ Mute badge on the muted participant's tile — `classroom-tiles.spec.tsx` (both the remote and local cases)
+  - ✓ 10-second drop shows the reconnecting overlay and restores the session — `classroom-room.spec.tsx: shows_the_reconnecting_overlay_on_a_drop_and_dismisses_it_on_recovery`
+  - ✓ A drop past 30 seconds treats the participant as having left — `classroom-room.spec.tsx: treats_a_drop_past_the_window_as_having_left` + `stops_retrying_after_30_seconds`
+  - ✓ End-lesson confirmation naming the consequence; confirming disconnects everyone — `classroom-screen.spec.tsx: confirms_before_ending_and_names_the_consequence`, `deleteRoom` also confirmed for real in the live smoke test
+  - ✓ Denying microphone blocks with guidance; denying camera starts audio-only — `classroom-screen.spec.tsx`, both cases
+  - ✓ A lesson at 120 minutes ends automatically and finalizes normally — `lesson-lifecycle.job.spec.ts: ends_a_lesson_at_the_120_minute_cap`
+  - Cross-feature (PRD § 9): both listed F05 rows (the session F06 attaches to; the start timestamp and identities F07 will use) have passing tests in `classroom.spec.ts` and `classroom-webhook.spec.ts` respectively.
+- **6.4 Environment smoke check:** backend — real docker-compose stack (`api`, `postgres`, `redis`, `minio`, `livekit`), two real users, two real signed LiveKit tokens, session projection, and a real `deleteRoom` call, all passed (see Stage 5's observations for the full run, including the bug it found). Frontend — `next build` passed, confirming the route compiles and is server-rendered correctly, but no real browser exercised the UI (no browser/camera/microphone available in this environment). Honestly logged below, not silently skipped.
+- **Missing from spec:** none.
+- **Regressions:** none surviving — the one found (`prompt-execution-telemetry.spec.ts` failing without `LIVEKIT_WS_URL`) was fixed in Stage 5 and the full suite is green.
+- **Soft-fails (final):**
+  - No real browser exercised the classroom UI — mute/camera button clicks, device switching, and the reconnecting overlay are verified against a fake `Room`/fake `createLocalTracks`, not real WebRTC or real hardware.
+  - A true two-human two-browser join, as the spec's manual-verification checklist describes literally, was not performed — this environment has one operator and no second physical device/browser.
+  - The AC covering the third participant's own recording track, transcript, pronunciation scores, analysis, profile update and study plan is only half-verifiable by F05 — the pipeline half belongs to F06/F07/F11/F15.
+- **Follow-up for whoever picks this up next:**
+  - Do the literal two-browser manual pass once two devices/browsers are available: join, mute/camera toggles observed from the other side, device switching mid-call, a real network-offline toggle, and ending from each side.
+  - The API dev server is left running inside the `api` container from this run's live verification (`docker compose exec api pnpm dev`) — normal dev state, not scratch, but worth knowing before starting a second instance.
+  - F06 and F07 build directly on this feature's `lessons`/`lesson_participants` rows and the `GET /classroom/session` / webhook-driven `started_at` contract — both are already covered by the cross-feature tests above, so no known gap is being handed off silently.
 
 ## Stage 3: Lifecycle events and automatic closure — ⬜ pending
 
