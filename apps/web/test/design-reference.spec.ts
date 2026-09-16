@@ -124,18 +124,20 @@ describe('design reference document', () => {
     const dashboard = byMockup.get('english_quest_dashboard') ?? [];
     const deferredRegions = dashboard.filter((row) => row.status === 'deferred').map((row) => row.region);
 
-    const expectedSubstrings = [
-      'Hero banner',
-      'Module card',
-      'Stat card',
-      'Recommended-scenario card',
-    ];
+    const expectedSubstrings = ['Module card', 'Stat card', 'Recommended-scenario card'];
     for (const expected of expectedSubstrings) {
       expect(
         deferredRegions.some((region) => region.includes(expected)),
         `no deferred dashboard region matching "${expected}"`,
       ).toBe(true);
     }
+
+    // F05 built the hero banner — it must have moved to implemented, not just
+    // vanished from the deferred list (which would also satisfy the loop above).
+    const heroRow = dashboard.find((row) => row.region.includes('Hero banner'));
+    expect(heroRow?.status, 'the hero banner row should be implemented now that F05 built it').toBe(
+      'implemented',
+    );
 
     const navRow = dashboard.find((row) => row.region.includes('pill navigation'));
     expect(navRow?.reference, 'pill navigation row must mention the deferred Scenarios & Practice destination').toMatch(

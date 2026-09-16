@@ -1,5 +1,5 @@
 import { cookies } from 'next/headers';
-import type { ApiResponse, CurrentUser } from '@english-quest/shared';
+import type { ApiResponse, ClassroomSession, CurrentUser } from '@english-quest/shared';
 
 import { internalApiUrl, SESSION_COOKIE } from './api-client';
 
@@ -31,6 +31,32 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   } catch {
     // API unreachable: treat as unauthenticated rather than rendering a shell
     // that will fail on its first real request.
+    return null;
+  }
+}
+
+/** Server-side read of the open classroom session, for the dashboard hero. */
+export async function getClassroomSession(): Promise<ClassroomSession> {
+  const store = await cookies();
+  const token = store.get(SESSION_COOKIE);
+
+  if (!token) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${internalApiUrl}/classroom/session`, {
+      headers: { cookie: `${SESSION_COOKIE}=${token.value}` },
+      cache: 'no-store',
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as ApiResponse<ClassroomSession>;
+    return 'data' in payload ? payload.data : null;
+  } catch {
     return null;
   }
 }

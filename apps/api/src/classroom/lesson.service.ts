@@ -203,11 +203,15 @@ export class LessonService {
       orderBy: { joinedAt: 'asc' },
     });
 
-    const connectedIds = rows.filter((row) => row.connected).map((row) => row.userId);
-    const remainingSeats = Math.max(lesson.maxParticipants - connectedIds.length, 0);
+    // A seat is claimed by registering for the lesson (a lesson_participants
+    // row from token issuance), not only by having actively connected yet —
+    // otherwise the caller who just requested their own token would show up
+    // "awaiting" themselves until their first participant_joined webhook.
+    const registeredIds = rows.map((row) => row.userId);
+    const remainingSeats = Math.max(lesson.maxParticipants - registeredIds.length, 0);
 
     const others = await this.prisma.user.findMany({
-      where: { id: { notIn: connectedIds } },
+      where: { id: { notIn: registeredIds } },
       select: { id: true, displayName: true },
       orderBy: { createdAt: 'asc' },
       take: remainingSeats,

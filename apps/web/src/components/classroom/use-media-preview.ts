@@ -9,6 +9,8 @@ import {
 } from 'livekit-client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { useAudioLevel } from './use-audio-level';
+
 export type PreviewDeviceKind = 'audioinput' | 'videoinput' | 'audiooutput';
 
 export interface PreviewDevices {
@@ -39,44 +41,6 @@ function classifyDenial(error: unknown): 'denied' | 'not-found' | 'other' {
   if (failure === MediaDeviceFailure.PermissionDenied) return 'denied';
   if (failure === MediaDeviceFailure.NotFound) return 'not-found';
   return 'other';
-}
-
-/** An AnalyserNode over the live microphone track, sampled on every animation frame. */
-function useLevelMeter(track: LocalAudioTrack | null): number | null {
-  const [level, setLevel] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (!track) {
-      setLevel(null);
-      return;
-    }
-
-    const audioContext = new AudioContext();
-    const source = audioContext.createMediaStreamSource(new MediaStream([track.mediaStreamTrack]));
-    const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 512;
-    source.connect(analyser);
-
-    const data = new Uint8Array(analyser.frequencyBinCount);
-    let frame: number;
-
-    const tick = () => {
-      analyser.getByteFrequencyData(data);
-      const average = data.reduce((sum, value) => sum + value, 0) / data.length;
-      setLevel(Math.min(100, Math.round((average / 255) * 200)));
-      frame = requestAnimationFrame(tick);
-    };
-    tick();
-
-    return () => {
-      cancelAnimationFrame(frame);
-      source.disconnect();
-      analyser.disconnect();
-      audioContext.close().catch(() => undefined);
-    };
-  }, [track]);
-
-  return level;
 }
 
 export interface UseMediaPreview extends MediaPreviewState {
@@ -203,7 +167,7 @@ export function useMediaPreview(): UseMediaPreview {
     });
   }, []);
 
-  const level = useLevelMeter(state.audioTrack);
+  const level = useAudioLevel(state.audioTrack?.mediaStreamTrack);
 
   return { ...state, level, selectDevice, retry: () => void acquire(), release };
 }

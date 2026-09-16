@@ -178,7 +178,7 @@ export function ClassroomScreen({ displayName }: ClassroomScreenProps) {
         {hasRemote ? (
           <ParticipantGrid participants={room.participants} />
         ) : (
-          <WaitingPanel awaiting={session?.awaiting ?? []} />
+          <WaitingPanel awaiting={session?.awaiting ?? []} local={local ?? null} />
         )}
         {deviceSettingsOpen ? (
           <div className="absolute bottom-md left-md flex w-64 flex-col gap-sm rounded-lg border-2 border-outline-strong bg-surface-container-lowest p-md shadow-modal">

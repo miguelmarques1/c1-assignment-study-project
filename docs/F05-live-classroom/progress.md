@@ -1,6 +1,6 @@
 # Implementation Progress: Live Classroom
 
-**Status:** in progress — Stage 4 of 5 complete
+**Status:** in progress — Stage 5 of 5 complete, final verification pending
 **Branch:** main
 **Started:** 2026-09-15
 **Last updated:** 2026-09-16
@@ -91,7 +91,45 @@
 - Runtime check: `pnpm --filter @english-quest/web build` (a real Next.js production build, not just `tsc --noEmit`) compiles clean and statically confirms `/classroom` is a server-rendered dynamic route with its session-gated layout — this is real signal beyond typecheck, but it is still not a live LiveKit connection. No browser has actually requested camera/microphone access or joined a room against a running LiveKit server in this stage; that needs Stage 5's manual two-browser verification. Logged under Soft-fails.
 
 **Validation:** `pnpm --filter @english-quest/web typecheck` ✅ · `pnpm lint` ✅ (repo-wide) · `pnpm --filter @english-quest/web test` ✅ 76/76 (existing suite — includes the token-resolution and design-reference guards; no classroom-specific tests exist yet, that's Stage 5) · `pnpm --filter @english-quest/web build` ✅ production build, `/classroom` route present · **Soft-fail:** no real LiveKit connection exercised (device permissions, join, reconnection, token refresh) — deferred to Stage 5's `classroom-*.spec.tsx` suites and the manual two-browser checklist.
-**Commit:** _(recorded in the next stage's commit)_
+**Commit:** `93ee6be` — F05 stage 4 - the classroom screen
+
+## Stage 5: Dashboard entry and closing the loop — ✅ done
+
+- [x] **19. Dashboard hero**
+- [x] **20. Design reference update**
+- [x] **21. Test suites**
+- [x] **22. Manual verification**
+
+**Observations:**
+
+**19/20 — Dashboard hero + design reference:**
+- `ClassroomHero` fetches the open session server-side (`getClassroomSession`, added to `lib/server-session.ts` mirroring `getCurrentUser`'s cookie-forwarding pattern) and renders "Open classroom" / "Rejoin classroom" + a live-lesson line, composed from `Card`/`Stack` plus a hand-styled `Link` (Button has no polymorphic `as`/`href` support, so the link reuses Button's own token classes directly rather than extending Button's API for one call site).
+- **Deviation:** the mockup's hero also has a "season badge"; left unbuilt, citing the same Section 7 (Social and comparison) exclusion that already dropped the identical badge on the sign-in mockup — recorded in the Reference column, not silently dropped.
+- **Deviation:** the CTA reads "Open classroom" (English) rather than the mockup's Portuguese "Iniciar Sessão Diária", matching the product's established English UI copy elsewhere (Sign in, error messages, etc.) rather than the literal mockup text.
+- Flipped the Hero banner row to `implemented` in `design/README.md`. This broke an existing guard: `design-reference.spec.ts`'s `the_deferred_dashboard_regions_are_all_present` test hardcoded "Hero banner" as a substring that must appear among the *still-deferred* regions — since F05 legitimately moved it to implemented, updated the test to assert the row is specifically `implemented` (not just "no longer in the deferred list", which the old assertion would have equally satisfied if the row had simply vanished by accident).
+
+**21 — Test suites:**
+- All test files from the spec's Testing Strategy table written and passing: `classroom.spec.ts` (16, incl. 1 added during manual verification), `classroom-webhook.spec.ts` (11), `livekit.service.spec.ts` (4), `lesson-lifecycle.job.spec.ts` (6), `classroom-room.spec.tsx` (5), `classroom-screen.spec.tsx` (7), `classroom-tiles.spec.tsx` (6), `classroom-hero.spec.tsx` (3). `env.spec.ts` was already extended in Stage 1.
+- `livekit.service.spec.ts`'s TTL assertion uses `exp − nbf`, not `exp − iat` — read the installed SDK's compiled source directly (`AccessToken.toJwt()`) and confirmed it never calls `setIssuedAt()`, only `setNotBefore(new Date())`; `iat` is simply absent from the token.
+- `classroom-webhook.spec.ts` signs its own test payloads with a real `AccessToken` carrying only a `sha256` claim (replicating `WebhookReceiver`'s own scheme, read from its compiled source) so signature verification runs for real, per the spec's explicit instruction. Found and fixed a genuine test-writing mistake this way: the `Authorization` header LiveKit sends carries the raw JWT with **no** `Bearer ` prefix (confirmed via `TokenVerifier.verify()`'s source — it passes the header straight to `jose.jwtVerify`) — every signed-webhook test initially 401'd until this was corrected.
+- Web mocks: `livekit-client`'s `Room` is replaced with a hand-rolled fake (`vi.hoisted` — `vi.mock` factories are hoisted above every top-level `const`, so the fake and its mutable capture state have to live inside `vi.hoisted()`); `MediaDeviceFailure`/`ConnectionQuality`/`RoomEvent` stay real via `importOriginal`, since they're plain data with no browser API dependency.
+- **Found and fixed two production bugs while writing `classroom-screen.spec.tsx`, not just test bugs:**
+  1. `useClassroomRoom.toView()` identified the local participant via `participant instanceof LocalParticipant`. That's fragile in general (breaks under module duplication) and was actively wrong against any fake that isn't a real `LocalParticipant` instance — fixed by passing `isLocal` explicitly from the one call site that actually knows which object is `room.localParticipant`, rather than inferring it.
+  2. `connect()` called `room.localParticipant.setCameraEnabled(true)` with no error handling — if the browser denies the camera at the *live* `setCameraEnabled` call (not just during the pre-join preview), the whole `connect()` promise rejected and the screen showed a generic "unavailable" error instead of starting audio-only. Wrapped just the camera call in try/catch; the microphone call stays unwrapped since it is required.
+- `WaitingPanel` gap found while writing the "waiting state" test: the spec's Core Scope explicitly says the waiting state carries "a live local preview and level meter", but Stage 4's `WaitingPanel` only rendered the `Waiting for {names}` text. Fixed properly rather than adjusting the test to match the gap: extracted the level-meter `AnalyserNode` logic out of `useMediaPreview` into a shared `useAudioLevel` hook (also guarded against `AudioContext` being undefined, which jsdom doesn't implement — degrades to "no reading" instead of throwing), added `audioPublication` to `ParticipantView`, and `WaitingPanel` now renders the local participant's tile + a live `Meter` fed from the connected room's own mic track.
+
+**22 — Manual verification:**
+- **Docker was not running at the start of this stage; started Docker Desktop and waited for the daemon**, which unlocked running the real testcontainers-based integration suites (previously only soft-failed as "Docker unavailable" in Stages 2–4) — all 197 API tests and 97 web tests now pass for real, not just typecheck/lint.
+- **Went further and stood up the actual docker-compose stack** (`api`, `web`, `livekit`, `postgres`, `redis`, `minio`) to exercise the classroom flow against a *real* LiveKit server, not the testcontainers-mocked `LiveKitService`:
+  - Installed the new dependencies into the container's isolated node_modules volumes (`docker compose exec api pnpm install` — these are named volumes, separate from the host's `node_modules`, per `docker-compose.yml`), regenerated the Prisma client, confirmed all 4 migrations already applied.
+  - **Deviation/gotcha:** the running `api`/`web` containers were ~25h old, created before Stage 1 added `LIVEKIT_WS_URL` to `.env` — Docker only injects `env_file` values at container *creation*, so the already-running container's environment was frozen without it. Fixed with `docker compose up -d --force-recreate api web`. Worth remembering: editing `.env` never affects an already-running container.
+  - Logged in as both seeded users (`you@example.com` / `partner@example.com`), requested real classroom tokens against the live LiveKit server for both (real signed JWTs came back, decodable and valid), confirmed both reused the same lesson and `GET /classroom/session` reflected both registrants, then ended the lesson and confirmed the real `deleteRoom` call against LiveKit succeeded (a 200, not a 503) and the session cleared to `null` afterward.
+  - **This live run is what found the `awaiting` self-listing bug** above — the caller showed up in their own `awaiting` list, something no existing test (all of which pre-connected a participant via `markConnected` before checking) happened to exercise. Fixed in `LessonService.projectSession`, added a dedicated regression test (`the_caller_never_awaits_themselves_before_they_have_connected`), and re-verified live against the running stack that the fix took effect (after discovering the dev server's `nest --watch` doesn't reliably pick up file changes through the Windows Docker Desktop bind mount — had to fully kill and restart the container's node process, not just save-and-wait).
+  - **Not exercised, and cannot be from this environment:** actual WebRTC audio/video (needs a real browser + camera/microphone), mute/camera toggle clicks, device switching, a simulated network drop and the reconnecting overlay, and the true two-human two-browser join. These remain genuinely unverified beyond the mocked/fake-`Room` unit tests in `classroom-room.spec.tsx` and `classroom-screen.spec.tsx`. Logged under Soft-fails, not silently claimed.
+  - The API dev server was left running inside the `api` container (`docker compose exec api pnpm dev`, matching the project's own `pnpm api` script) for whoever continues from here — it is not something this run tears down, since it's the normal dev workflow, not scratch state.
+
+**Validation:** `pnpm --filter @english-quest/api typecheck` ✅ · `pnpm --filter @english-quest/web typecheck` ✅ · `pnpm lint` ✅ (repo-wide) · `pnpm --filter @english-quest/api` full suite (unit + integration, testcontainers) ✅ **197/197** · `pnpm --filter @english-quest/web` full suite ✅ **97/97** · `pnpm --filter @english-quest/web build` ✅ · **Real-stack smoke test** (see above) ✅ token issuance ×2, session projection, lesson end, all against live Postgres/Redis/LiveKit · **Soft-fail:** WebRTC media, mute/camera/device-switch UI clicks, simulated network drop, and a true two-browser join were not exercised — no browser/camera/microphone available to this run.
+**Commit:** _(this stage's commit, immediately below)_
 
 ## Stage 3: Lifecycle events and automatic closure — ⬜ pending
 

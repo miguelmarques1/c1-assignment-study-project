@@ -38,7 +38,7 @@ Two things intentionally have no row anywhere in this document: elements that ne
 | Header: streak chip ("7 Day Streak") | — | dropped | Section 7, Social and comparison: "Leaderboards, streaks, badges…" |
 | Header: XP chip ("1,420 XP") | — | dropped | Section 7, Social and comparison: the same clause — XP is this product's name for the points mechanic it excludes |
 | Header: avatar | F22 | implemented | Shared with settings; initials avatar rather than the mockup's generic person icon |
-| Hero banner (season badge, welcome heading, subtitle, "Iniciar Sessão Diária" CTA) | F05 | deferred | The CTA starts a live classroom session, which is F05's surface to build |
+| Hero banner (season badge, welcome heading, subtitle, "Iniciar Sessão Diária" CTA) | F05 | implemented | Heading, subtitle and the primary action are `ClassroomHero`, labelled "Open classroom" (English, matching the product's established UI copy rather than the mockup's Portuguese text) and reflecting an in-progress lesson when one is open. The season badge is out of scope: Section 7, Social and comparison excludes it, the same clause that already dropped the identical badge on the sign-in mockup above |
 | Module cards — section header ("Módulos Essenciais") | F05 | deferred | Frames the module grid below; built with whichever module ships first |
 | Module card — "Praticar com IA" | — | dropped | Section 7, AI and providers: "…live voice conversation with the AI" — this card is exactly that capability |
 | Module card — "Cenários & Ligações" | F06 | deferred | Lesson Scenario and Role Cards |

@@ -56,6 +56,7 @@ beforeAll(async () => {
     S3_SECRET_KEY: 'minioadmin',
     S3_BUCKET: 'english-quest-test',
     LIVEKIT_URL: 'http://localhost:7880',
+    LIVEKIT_WS_URL: 'ws://localhost:7880',
     LIVEKIT_API_KEY: 'devkey',
     LIVEKIT_API_SECRET: 'devsecret',
   });

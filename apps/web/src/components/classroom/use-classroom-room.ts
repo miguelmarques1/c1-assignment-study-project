@@ -2,7 +2,6 @@
 
 import {
   ConnectionQuality,
-  LocalParticipant,
   Room,
   RoomEvent,
   type Participant,
@@ -36,11 +35,12 @@ export interface ParticipantView {
   cameraOff: boolean;
   quality: ConnectionQuality;
   videoPublication: TrackPublication | null;
+  audioPublication: TrackPublication | null;
 }
 
 export type RoomPhase = 'connecting' | 'connected' | 'reconnecting' | 'left';
 
-function toView(participant: Participant): ParticipantView {
+function toView(participant: Participant, isLocal: boolean): ParticipantView {
   const publications = [...participant.trackPublications.values()];
   const videoPublication = publications.find((pub) => pub.kind === 'video') ?? null;
   const audioPublication = publications.find((pub) => pub.kind === 'audio') ?? null;
@@ -48,11 +48,12 @@ function toView(participant: Participant): ParticipantView {
   return {
     identity: participant.identity,
     displayName: participant.name || participant.identity,
-    isLocal: participant instanceof LocalParticipant,
+    isLocal,
     muted: !audioPublication || audioPublication.isMuted,
     cameraOff: !videoPublication || videoPublication.isMuted,
     quality: participant.connectionQuality,
     videoPublication,
+    audioPublication,
   };
 }
 
@@ -81,7 +82,10 @@ export function useClassroomRoom(): UseClassroomRoom {
   const [reconnectSecondsLeft, setReconnectSecondsLeft] = useState<number | null>(null);
 
   const refreshParticipants = useCallback((room: Room) => {
-    setParticipants([room.localParticipant, ...room.remoteParticipants.values()].map(toView));
+    setParticipants([
+      toView(room.localParticipant, true),
+      ...[...room.remoteParticipants.values()].map((participant) => toView(participant, false)),
+    ]);
   }, []);
 
   const scheduleRefresh = useCallback((expiresAt: string, url: string) => {
@@ -156,7 +160,12 @@ export function useClassroomRoom(): UseClassroomRoom {
       setPhase('connecting');
       await room.connect(url, token);
       await room.localParticipant.setMicrophoneEnabled(true);
-      await room.localParticipant.setCameraEnabled(true);
+      try {
+        await room.localParticipant.setCameraEnabled(true);
+      } catch {
+        // Denied or unavailable — the lesson still starts, audio-only. The
+        // microphone above is not wrapped the same way: it is required.
+      }
       setPhase('connected');
       refreshParticipants(room);
       scheduleRefresh(expiresAt, url);
