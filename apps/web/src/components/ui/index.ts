@@ -25,6 +25,14 @@ export {
   GeminiIcon,
   AzureSpeechIcon,
   HelpIcon,
+  MicrophoneIcon,
+  MicrophoneOffIcon,
+  CameraIcon,
+  CameraOffIcon,
+  HangUpIcon,
+  SignalIcon,
+  type SignalIconProps,
+  VerifiedIcon,
   type IconProps,
 } from './icons';
 export { cn } from './cn';

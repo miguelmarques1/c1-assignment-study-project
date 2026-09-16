@@ -1,13 +1,20 @@
 import {
   AzureSpeechIcon,
+  CameraIcon,
+  CameraOffIcon,
   EyeIcon,
   EyeOffIcon,
   GeminiIcon,
+  HangUpIcon,
   HelpIcon,
   LockIcon,
   MailIcon,
+  MicrophoneIcon,
+  MicrophoneOffIcon,
   SettingsIcon,
+  SignalIcon,
   TrashIcon,
+  VerifiedIcon,
   type IconProps,
 } from '@/components/ui';
 
@@ -23,6 +30,13 @@ const ICONS: { name: string; Icon: (props: IconProps) => React.JSX.Element }[] =
   { name: 'Gemini', Icon: GeminiIcon },
   { name: 'AzureSpeech', Icon: AzureSpeechIcon },
   { name: 'Help', Icon: HelpIcon },
+  { name: 'Microphone', Icon: MicrophoneIcon },
+  { name: 'MicrophoneOff', Icon: MicrophoneOffIcon },
+  { name: 'Camera', Icon: CameraIcon },
+  { name: 'CameraOff', Icon: CameraOffIcon },
+  { name: 'HangUp', Icon: HangUpIcon },
+  { name: 'Signal', Icon: SignalIcon },
+  { name: 'Verified', Icon: VerifiedIcon },
 ];
 
 export function IconSection() {

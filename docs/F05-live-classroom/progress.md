@@ -1,6 +1,6 @@
 # Implementation Progress: Live Classroom
 
-**Status:** in progress — Stage 3 of 5 complete
+**Status:** in progress — Stage 4 of 5 complete
 **Branch:** main
 **Started:** 2026-09-15
 **Last updated:** 2026-09-16
@@ -66,6 +66,31 @@
 - Runtime check still deferred to Stage 5 for the same reason as Stage 2 — no webhook has actually been signed and POSTed against a running process in this stage. Logged under Soft-fails.
 
 **Validation:** `pnpm --filter @english-quest/api typecheck` ✅ · `pnpm lint` ✅ · `pnpm --filter @english-quest/api test:unit` ✅ 85/85 (includes the updated OpenAPI committed-snapshot and security-transport guards; 14 operations now documented) · **Soft-fail:** no live webhook POST or sweeper tick exercised against a running process yet — deferred to Stage 5.
+**Commit:** `3135614` — F05 stage 3 - lifecycle events and automatic closure
+
+## Stage 4: The classroom screen — ✅ done
+
+- [x] **12. Web API client and icons**
+- [x] **13. Device preview and level meter**
+- [x] **14. Room state hook**
+- [x] **15. Participant tiles and layout**
+- [x] **16. Classroom chrome**
+- [x] **17. Waiting state and screen orchestration**
+- [x] **18. Classroom route**
+
+**Observations:**
+- `livekit-client@^2` added to `apps/web` (resolved via `pnpm install`); wrapped in `useClassroomRoom` (participants, track publications, mute state, per-participant `ConnectionQuality`, reconnection phase) and `useMediaPreview` (pre-join device acquisition, switching, an `AnalyserNode`-driven level meter), kept as two separate hooks with two separate local-track lifecycles — the preview's tracks are stopped (`preview.release()`) once `connect()` succeeds, and the live call gets its own tracks via `room.localParticipant.setMicrophoneEnabled/setCameraEnabled` rather than the hook handing off its preview `LocalTrack` objects, which avoids track-ownership hand-off bugs at the cost of one extra `getUserMedia` prompt-free re-acquisition on join.
+- Requests the microphone and the camera as **two separate** `createLocalTracks` calls in `useMediaPreview`, not one combined `{ audio: true, video: true }` call — a combined call fails both together on a single denial, which would make "denying the camera starts audio-only" (an AC) unimplementable. Classified per-device via `MediaDeviceFailure.getFailure`.
+- **Deviation — token refresh mechanism:** `livekit-client` has no public API to hot-swap an active connection's token; the SDK's own documented pattern (confirmed via the library's docs) is `await room.disconnect(); await room.connect(url, newToken)`. Implemented that in `useClassroomRoom`'s 5-hour timer, guarded by a `refreshing` ref so the deliberate reconnect doesn't trip the same `Reconnecting`/`Disconnected` handlers a real network drop uses — otherwise a scheduled refresh would incorrectly show the reconnecting overlay or end the call. **Not exercised against a real LiveKit server in this stage** (would require a call already live for 5 hours) — flagged under Soft-fails; Stage 5's `classroom-room.spec.tsx` test (fake timers, fake `Room`) is what actually proves this path per the spec's own testing strategy.
+- **Deviation:** the design system's `token-resolution.spec.ts` guard does not resolve Tailwind opacity-modifier syntax (`bg-outline-strong/60`) against a declared color token — it only matches the bare role name. Replaced every translucent overlay (dialog backdrop, reconnecting overlay, the name/quality pill backgrounds) with the solid token color instead of introducing a raw value or extending the guard; the mockup's "hard offset shadow, no soft translucency" visual language made this a natural fit rather than a compromise.
+- No dialog/modal primitive exists yet in `components/ui` (checked — only `Card`, no `Dialog`). Built `EndLessonDialog` and `ReconnectingOverlay` as local, non-primitive markup composed from the same border/radius/shadow token classes `Card` itself uses, rather than reusing `Card` directly — `Card` hardcodes `shadow-card` in its own class list and `cn()` here is a plain concatenator (no tailwind-merge), so passing `shadow-modal` as an override would leave both classes present with an unpredictable winner. Confirmed `--shadow-modal` already exists in the generated token CSS, unused until now — this is likely what it was reserved for.
+- `Badge`'s `children` prop is typed `string` (checked `badge.tsx`) — the mute badge is text-only (`Muted`), no icon composed inside it; satisfies "never colour alone" without needing to fight the type.
+- `ParticipantGrid`: the local tile is always the small floating inset (never a grid cell) — at the default two-participant cap that reads as "two tiles" (one large remote, one small local); above the cap, remotes form a uniform 2-column grid with the same inset local tile over it. This one rule produces both tested layouts without a cap-specific branch.
+- The in-call "device settings" toggle (Full Scope addition) reuses `preview.devices`/`preview.selectDevice` for its device lists and switching rather than adding a second device-enumeration path — device labels/ids don't depend on connection state, only the preview *tracks* do.
+- Dashboard hero (`classroom-hero.tsx`) and the design-reference completeness flip are Stage 5's own steps (19-20 in the plan) — not touched here; `design/README.md`'s hero row is still `deferred` and `design-reference.spec.ts` still passes unchanged for that reason.
+- Runtime check: `pnpm --filter @english-quest/web build` (a real Next.js production build, not just `tsc --noEmit`) compiles clean and statically confirms `/classroom` is a server-rendered dynamic route with its session-gated layout — this is real signal beyond typecheck, but it is still not a live LiveKit connection. No browser has actually requested camera/microphone access or joined a room against a running LiveKit server in this stage; that needs Stage 5's manual two-browser verification. Logged under Soft-fails.
+
+**Validation:** `pnpm --filter @english-quest/web typecheck` ✅ · `pnpm lint` ✅ (repo-wide) · `pnpm --filter @english-quest/web test` ✅ 76/76 (existing suite — includes the token-resolution and design-reference guards; no classroom-specific tests exist yet, that's Stage 5) · `pnpm --filter @english-quest/web build` ✅ production build, `/classroom` route present · **Soft-fail:** no real LiveKit connection exercised (device permissions, join, reconnection, token refresh) — deferred to Stage 5's `classroom-*.spec.tsx` suites and the manual two-browser checklist.
 **Commit:** _(recorded in the next stage's commit)_
 
 ## Stage 3: Lifecycle events and automatic closure — ⬜ pending
