@@ -35,6 +35,12 @@ export const ERROR_CODES = {
   LESSON_NOT_ACTIVE: 'CLASS003',
   /** The caller is not a participant of the lesson they tried to end. */
   LESSON_NOT_A_PARTICIPANT: 'CLASS004',
+  /** Every reroll this lesson allows has already been used. */
+  SCENARIO_REROLL_LIMIT: 'SCEN001',
+  /** The lesson has started, so its scenario can no longer change. */
+  SCENARIO_LOCKED: 'SCEN002',
+  /** Only the participant who opened the room may reroll or retry the situation. */
+  SCENARIO_NOT_THE_OPENER: 'SCEN003',
   /** At least one infrastructure dependency is unreachable. */
   HEALTH_DEPENDENCY_DOWN: 'HEALTH001',
   /** Unhandled server-side failure. */
@@ -61,6 +67,9 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   [ERROR_CODES.CLASSROOM_UNAVAILABLE]: 503,
   [ERROR_CODES.LESSON_NOT_ACTIVE]: 409,
   [ERROR_CODES.LESSON_NOT_A_PARTICIPANT]: 403,
+  [ERROR_CODES.SCENARIO_REROLL_LIMIT]: 409,
+  [ERROR_CODES.SCENARIO_LOCKED]: 409,
+  [ERROR_CODES.SCENARIO_NOT_THE_OPENER]: 403,
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 503,
   [ERROR_CODES.INTERNAL_ERROR]: 500,
 };
@@ -89,6 +98,11 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ERROR_CODES.CLASSROOM_UNAVAILABLE]: 'The classroom is unavailable right now.',
   [ERROR_CODES.LESSON_NOT_ACTIVE]: 'This lesson is no longer active.',
   [ERROR_CODES.LESSON_NOT_A_PARTICIPANT]: 'You are not a participant in this lesson.',
+  // Overridden per call with the ceiling — see AppError.rerollLimitReached.
+  [ERROR_CODES.SCENARIO_REROLL_LIMIT]: 'You have used all 3 rerolls for this lesson.',
+  [ERROR_CODES.SCENARIO_LOCKED]: 'The lesson has started, so the scenario can no longer change.',
+  [ERROR_CODES.SCENARIO_NOT_THE_OPENER]:
+    'Only the participant who opened the room can change the situation.',
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 'One or more dependencies are unavailable.',
   [ERROR_CODES.INTERNAL_ERROR]: 'Something went wrong on our side.',
 };

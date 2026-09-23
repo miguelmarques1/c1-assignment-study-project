@@ -6,6 +6,7 @@ import { loadPromptFile } from '../../src/prompts/prompt-file-loader';
 
 const FIXTURES = join(__dirname, '..', 'fixtures', 'prompts-cases');
 const fixture = (name: string) => join(FIXTURES, `${name}.yaml`);
+const REAL_PROMPTS = join(__dirname, '..', '..', 'prompts');
 
 describe('loadPromptFile', () => {
   it('loads_a_well_formed_prompt', () => {
@@ -85,5 +86,19 @@ describe('loadPromptFile', () => {
     ]) {
       expect(() => loadPromptFile(fixture(name))).not.toThrow();
     }
+  });
+
+  it('loads_scenario_situation_v2_with_the_vocabulary_domain_as_an_input', () => {
+    const { prompt, issues } = loadPromptFile(join(REAL_PROMPTS, 'scenario-situation.yaml'));
+
+    expect(issues).toEqual([]);
+    expect(prompt?.version).toBe('2');
+    expect(prompt?.variables).toEqual([
+      { name: 'participant_count', required: true },
+      { name: 'vocabulary_domain', required: true },
+    ]);
+    // The model still echoes the domain back; the server persists its own choice.
+    const schema = prompt?.responseSchema as { required: string[] };
+    expect(schema.required).toContain('vocabulary_domain');
   });
 });

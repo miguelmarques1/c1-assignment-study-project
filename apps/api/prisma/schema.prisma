@@ -25,6 +25,8 @@ model User {
   lessonsOpened     Lesson[]            @relation("LessonOpener")
   lessonsEnded      Lesson[]            @relation("LessonEnder")
   lessonParticipations LessonParticipant[]
+  scenariosGenerated   LessonScenario[]
+  roleCards            LessonRoleCard[]
 
   @@map("users")
 }
@@ -126,6 +128,8 @@ model Lesson {
   opener       User                @relation("LessonOpener", fields: [openedBy], references: [id], onDelete: Restrict)
   ender        User?               @relation("LessonEnder", fields: [endedBy], references: [id], onDelete: SetNull)
   participants LessonParticipant[]
+  scenario     LessonScenario?
+  roleCards    LessonRoleCard[]
 
   @@index([status, openedAt(sort: Desc)], map: "ix_lessons_status_opened")
   @@map("lessons")
@@ -155,4 +159,72 @@ model LessonParticipant {
   @@unique([lessonId, userId], map: "ux_lesson_participants_lesson_user")
   @@index([userId, joinedAt(sort: Desc)], map: "ix_lesson_participants_user_joined")
   @@map("lesson_participants")
+}
+
+/// The shared situation — every participant sees it. Created the moment the
+/// lesson opens, before any model call, so `pending`, `failed` and
+/// `no_scenario` are states of a row rather than the absence of one; F11
+/// reads that status to be told explicitly when no scenario was in play.
+///
+/// Generated from no profile data of any participant, with the opener's own
+/// key. `vocabularyDomain` is chosen server-side from the PRD's fifteen and
+/// is the value F20 counts, never the model's echo of it.
+model LessonScenario {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId         String   @unique(map: "ux_lesson_scenarios_lesson") @map("lesson_id") @db.Uuid
+  /// One of pending, ready, failed, no_scenario.
+  status           String   @default("pending") @db.VarChar(16)
+  setting          String?
+  premise          String?
+  vocabularyDomain String?  @map("vocabulary_domain") @db.VarChar(48)
+  /// `[{ label, relationship }]`, one per seat (`lessons.max_participants`).
+  roles            Json?
+  discussionHooks  Json?    @map("discussion_hooks")
+  /// Bounded at 3 by a check constraint in the migration.
+  rerollCount      Int      @default(0) @map("reroll_count") @db.SmallInt
+  generatedBy      String?  @map("generated_by") @db.Uuid
+  promptId         String?  @map("prompt_id") @db.VarChar(64)
+  promptVersion    String?  @map("prompt_version") @db.VarChar(16)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  lesson    Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  generator User?  @relation(fields: [generatedBy], references: [id], onDelete: SetNull)
+
+  @@index([vocabularyDomain], map: "ix_lesson_scenarios_domain")
+  @@map("lesson_scenarios")
+}
+
+/// One participant's private role card. `userId` is the only person who may
+/// ever read this row — a product invariant, not a UI concern, so no later
+/// feature should read another participant's card either.
+///
+/// The column behind `constraintText` is `constraint_text` because
+/// CONSTRAINT is a reserved word in PostgreSQL; the API and client contracts
+/// keep the PRD's `constraint`.
+model LessonRoleCard {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId          String   @map("lesson_id") @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  /// Drawn at random from the situation's unassigned labels; null while the
+  /// situation is still pending.
+  roleLabel         String?  @map("role_label") @db.VarChar(120)
+  /// One of pending, ready, failed.
+  status            String   @default("pending") @db.VarChar(16)
+  background        String?
+  objective         String?
+  constraintText    String?  @map("constraint_text")
+  /// One of formal, neutral, informal.
+  register          String?  @db.VarChar(16)
+  targetExpressions Json?    @map("target_expressions")
+  promptId          String?  @map("prompt_id") @db.VarChar(64)
+  promptVersion     String?  @map("prompt_version") @db.VarChar(16)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, userId], map: "ux_lesson_role_cards_lesson_user")
+  @@map("lesson_role_cards")
 }

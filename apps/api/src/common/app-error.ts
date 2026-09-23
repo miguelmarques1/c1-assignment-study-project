@@ -74,4 +74,21 @@ export class AppError extends Error {
   static notAParticipant(): AppError {
     return new AppError(ERROR_CODES.LESSON_NOT_A_PARTICIPANT);
   }
+
+  /** The ceiling is a constant today, but the message states whatever value is in force. */
+  static rerollLimitReached(limit: number): AppError {
+    return new AppError(
+      ERROR_CODES.SCENARIO_REROLL_LIMIT,
+      { limit },
+      `You have used all ${limit} rerolls for this lesson.`,
+    );
+  }
+
+  static scenarioLocked(): AppError {
+    return new AppError(ERROR_CODES.SCENARIO_LOCKED);
+  }
+
+  static notTheOpener(): AppError {
+    return new AppError(ERROR_CODES.SCENARIO_NOT_THE_OPENER);
+  }
 }

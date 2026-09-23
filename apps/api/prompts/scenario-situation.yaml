@@ -1,5 +1,5 @@
 id: scenario-situation
-version: "1"
+version: "2"
 model: gemini-3.6-flash
 temperature: 0.9
 max_output_tokens: 1500
@@ -11,19 +11,26 @@ system: |
 user_template: |
   Generate a shared roleplay situation for {{participant_count}} participants
   who are about to have a spontaneous English conversation practice session.
-  The vocabulary domain should be rich enough for C1-level learners to stretch
-  their range without feeling forced.
+
+  The vocabulary domain for this conversation is: {{vocabulary_domain}}
+  Build the setting, the premise and the discussion hooks so the conversation
+  naturally draws on that domain. Do not substitute a different domain, and
+  return it unchanged in the vocabulary_domain field.
 
   Produce:
-  - A setting (where and when this is happening)
-  - A premise (why these people are talking, in one or two sentences)
+  - A setting (where and when this is happening), in one or two sentences
+  - A premise (why these people are talking, in one or two sentences) that
+    carries a tension the conversation has to work through, without saying
+    how it is resolved
   - Exactly {{participant_count}} role labels, with the relationship between
-    each pair of roles stated explicitly
-  - A vocabulary domain the conversation naturally draws from
+    each role and the others stated explicitly
+  - The vocabulary domain given above
   - 3 to 5 discussion hooks: open questions or tensions a participant could
     raise to keep the conversation moving
 variables:
   - name: participant_count
+    required: true
+  - name: vocabulary_domain
     required: true
 response_schema:
   type: object
@@ -54,6 +61,7 @@ response_schema:
 examples:
   - user: |
       Generate a shared roleplay situation for 2 participants...
+      The vocabulary domain for this conversation is: workplace negotiation
     output:
       setting: "A co-working space in Lisbon, late afternoon."
       premise: "Two freelancers who share a desk are deciding whether to split a client project."
@@ -62,7 +70,7 @@ examples:
           relationship: "Peer freelancer weighing the same offer"
         - label: "The eager one"
           relationship: "Peer freelancer weighing the same offer"
-      vocabulary_domain: "freelance work, risk and negotiation"
+      vocabulary_domain: "workplace negotiation"
       discussion_hooks:
         - "Is splitting the fee fair if the workload isn't equal?"
         - "What happens if the client wants changes after the deadline?"
@@ -71,4 +79,5 @@ constraints:
   - Do not write any dialogue lines or sample sentences to read aloud.
   - Do not state how the conversation ends or resolves.
   - Do not include any participant's name, history or profile information.
+  - Use the vocabulary domain you were given; never invent a different one.
 banned_phrases: []

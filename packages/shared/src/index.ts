@@ -69,3 +69,22 @@ export {
   type LessonEndReason,
   type LessonStatus,
 } from './schemas/classroom';
+
+export {
+  registerSchema,
+  roleCardSchema,
+  roleCardStatusSchema,
+  roleSchema,
+  scenarioStatusSchema,
+  scenarioViewSchema,
+  sharedSituationSchema,
+  vocabularyDomainSchema,
+  type Register,
+  type Role,
+  type RoleCard,
+  type RoleCardStatus,
+  type ScenarioStatus,
+  type ScenarioView,
+  type SharedSituation,
+  type VocabularyDomain,
+} from './schemas/scenario';
