@@ -58,10 +58,12 @@ export class ClassroomService {
     await this.liveKit.createRoom(room, lesson.maxParticipants);
     await this.lessons.registerParticipant(lesson.id, user.id, user.id);
 
-    // Fire-and-forget, per the spec: the token response must not wait on a
-    // model call. A failure here must never break token issuance — the
-    // lesson can always proceed without a scenario.
-    this.scenario.onParticipantRegistered(lesson, user.id).catch((error: unknown) => {
+    // Awaits only the scenario row's creation — one small write, so the
+    // row exists the moment the lesson does (spec: `pending` is a state of a
+    // row, not an absent one). The model calls behind it run in the
+    // background and never hold this response. A failure here must never
+    // break token issuance: the lesson can always proceed without a scenario.
+    await this.scenario.onParticipantRegistered(lesson, user.id).catch((error: unknown) => {
       this.logger.error(`Scenario orchestration failed for lesson ${lesson.id}`, error);
     });
 

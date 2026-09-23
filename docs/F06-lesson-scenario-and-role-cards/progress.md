@@ -85,15 +85,27 @@
 - **Environment gotchas (local dev only):** the dev servers inside Docker did not see host edits — `nest start --watch` kept serving pre-`title` code until restarted, which is why the first two scenarios generated in the browser run have a null title. Restarted both with polling (`TSC_WATCHFILE=DynamicPriorityPolling` for the API, `WATCHPACK_POLLING=true` for Next). The embedded browser gets LiveKit disconnect reason 14 (`CONNECTION_TIMEOUT`) — signalling connects, ICE never does — so the **live stage (remote video, "is speaking", brief column, sound toggle) could not be exercised in the pane**; it is covered by `classroom-screen.spec.tsx` with a seeded remote participant and needs the two-browser run in Stage 5 step 17.
 
 **Validation:** `pnpm -r typecheck` ✅ · `pnpm lint` ✅ · `pnpm --filter @english-quest/web test` ✅ 98/98 (incl. updated `classroom-screen.spec.tsx`, `classroom-tiles.spec.tsx`, `design-reference.spec.ts`, `token-resolution.spec.ts`) · `pnpm --filter @english-quest/api test:unit` ✅ 101/101 (OpenAPI snapshot now carries `title`) · migration `0006` applied to local Postgres · **Soft-fail:** live-call stage not exercised in a browser — the embedded pane cannot establish WebRTC; deferred to the Stage 5 two-browser manual run.
-**Commit:** _(recorded in the next stage's commit)_
+**Commit:** `5ada277` — F06 stage 4 - the classroom surfaces
 
-## Stage 5: Closing the loop — ⬜ pending
+## Stage 5: Closing the loop — ✅ done
 
-- [ ] **15. Design reference update**
-- [ ] **16. Test suites**
-- [ ] **17. Manual verification**
+- [x] **15. Design reference update**
+- [x] **16. Test suites**
+- [ ] **17. Manual verification** — the single-browser half is done (see below); the two-browser checklist needs two real browsers with working WebRTC and is left to the user, itemised under Final verification
 
-**Observations:** _(none yet)_
+**Observations:**
+- **Step 15** was done in Stage 4, when the four new classroom mockups made the completeness guard fail: the recommended-scenario row is `implemented`, `design-reference.spec.ts` asserts it (the same correction F05 made for the hero banner), and "Scenarios & Practice" and the "Cenários & Ligações" module card stay `deferred` to F06 as the spec decided — nothing in F06's Capabilities describes a destination outside the classroom.
+- **Step 16 — suites written:** `apps/api/test/integration/scenario-generation.spec.ts` (18 tests: the generation fan-out, its failure paths, and four of the cross-feature criteria), `apps/api/test/integration/scenario.spec.ts` (13: read, reroll, retry, the visibility rule, auth, the session cross-check), `apps/web/test/scenario-panel.spec.tsx` (10), `scenario-visibility.spec.tsx` (3), `recommended-scenario-card.spec.tsx` (5). `domain-rotation.service.spec.ts` (5) and the v2 case in `prompt-file-loader.spec.ts` landed in Stages 1–2.
+- **Deviation — Gemini is stubbed at the SDK, not at `PromptExecutionService`** as the spec's Testing Strategy says. `helpers/fake-gemini.ts` replaces `@google/genai` only; F04's real pipeline — vault resolution and decryption of each user's stored key, schema validation and its one retry, `prompt_execution` telemetry and `credential_usage` audit — all run. That is what lets `only_the_owners_gemini_key_is_used_for_their_own_card` read real audit rows, and every card test assert which *key* reached the model, not just which user id was passed. Keys are stored through the real `CredentialCryptoService` (`helpers/scenario-fixtures.ts`).
+- **Harness gap found:** `createTestContext` stops at `app.init()`, but prompts are loaded by `main.ts`'s boot sequence, not by a Nest lifecycle hook — so in every integration suite the registry was empty and any generation failed silently (caught, `failed`). `createScenarioTestContext` loads the real prompt directory after boot. The pre-existing suites that open lessons (`classroom.spec.ts`) still boot without prompts; their background generation fails quietly and nothing asserts on it.
+- **Bugs the suites surfaced and Stage 5 fixed:**
+  - *Duplicate roles.* When the second participant registers while the situation is still generating — the normal flow — both cards are produced in parallel and each read the same label as free. Label assignment is now one transaction per card holding `SELECT … FOR UPDATE` on the lesson's scenario row (`RoleCardService.claimLabel`). Covered by `assigns_distinct_roles_when_both_cards_are_generated_together`.
+  - *Missing card.* The fan-out reused the participant list read *before* the situation generated, so whoever registered during generation (they saw `pending` and deferred to the fan-out) never got a card. The list is now re-read after the situation is ready.
+  - *"Differs across consecutive lessons" was only probabilistic.* A purely random draw repeats the same side half the time. Among the free roles the draw now prefers any other than the one the participant played in their previous lesson — deterministic alternation for a pair, still random among the rest. Covered by `role_assignment_varies_across_lessons` over four lessons.
+  - *Seat count.* The response schema cannot demand exactly N roles (N is a variable); `SituationService` now fails a situation with fewer roles than seats or duplicate labels (the waiting room offers `Try again`) and trims extras. A participant with no seat left gets a `failed` card instead of an eternal `pending`.
+  - *Row-first ordering.* `ClassroomService.requestToken` now awaits the scenario row's creation (one small write) before answering, so `pending` exists the moment the lesson does, as the spec assumes; the model calls stay in the background and a failure there still never breaks token issuance.
+- **Step 17 — single-browser runtime check (Stage 4, repeated here):** pre-call screen, join, and the waiting room against the real API with a real Gemini generation (title, roles, private briefing, reroll counter, end dialog opened and cancelled), at 1080px and 390px. **Not exercised:** the two-browser checklist — see Final verification.
+- Known leftover: in the integration logs, card writes that land after a test's table reset log a caught `P2025`; the stale-generation race recorded in Stage 3 (back-to-back rerolls) is still open.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** `pnpm -r typecheck` ✅ · `pnpm lint` ✅ · `pnpm --filter @english-quest/web test` ✅ 116/116 · `pnpm --filter @english-quest/api test:unit` ✅ 101/101 · `scenario-generation.spec.ts` + `scenario.spec.ts` ✅ 31/31 against Testcontainers Postgres/Redis · **Soft-fail:** two-browser manual checklist not run (no second WebRTC-capable browser in this environment).
+**Commit:** _(recorded in the final-verification commit)_

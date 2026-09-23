@@ -15,6 +15,20 @@ interface ScenarioSituationOutput {
   discussion_hooks: string[];
 }
 
+/**
+ * The response schema cannot say "exactly N roles" — N is a variable — so
+ * the seat count is checked here: fewer roles than seats, or two seats with
+ * the same label, cannot be assigned and count as a failed generation (the
+ * waiting room offers `Try again`); extra roles are dropped.
+ */
+function fitToSeats(data: ScenarioSituationOutput, seats: number): ScenarioSituationOutput | null {
+  const labels = new Set(data.roles.map((role) => role.label.trim()));
+  if (data.roles.length < seats || labels.size !== data.roles.length) {
+    return null;
+  }
+  return { ...data, roles: data.roles.slice(0, seats) };
+}
+
 function isUniqueViolation(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
 }
@@ -109,7 +123,10 @@ export class SituationService {
         vocabulary_domain: domain,
       });
 
-      const data = result.data as ScenarioSituationOutput;
+      const data = fitToSeats(result.data as ScenarioSituationOutput, lesson.maxParticipants);
+      if (!data) {
+        return this.markFailed(lesson.id);
+      }
       return this.markReady(lesson.id, generatorUserId, domain, data, result.promptId, result.promptVersion);
     } catch (error) {
       if (this.isMissingKey(error)) {

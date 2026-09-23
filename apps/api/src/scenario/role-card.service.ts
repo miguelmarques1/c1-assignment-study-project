@@ -46,19 +46,18 @@ export class RoleCardService {
     }
 
     const roles = rolesArraySchema.parse(scenario.roles);
-    const ownLabel = existing?.roleLabel ?? (await this.pickFreeLabel(lessonId, userId, roles));
+    const ownLabel = await this.claimLabel(lessonId, userId, roles);
     if (!ownLabel) {
-      // More registered participants than roles — should never happen since
-      // roles.length === lessons.max_participants, but generating no card is
-      // safer than assigning a label that collides with someone else's.
+      // More registered participants than seats. Recorded as a failed card
+      // with no role rather than left pending forever, so the owner sees the
+      // card message instead of a spinner that never resolves.
+      await this.prisma.lessonRoleCard.upsert({
+        where: { lessonId_userId: { lessonId, userId } },
+        create: { lessonId, userId, status: 'failed' },
+        update: { status: 'failed' },
+      });
       return;
     }
-
-    await this.prisma.lessonRoleCard.upsert({
-      where: { lessonId_userId: { lessonId, userId } },
-      create: { lessonId, userId, roleLabel: ownLabel, status: 'pending' },
-      update: { roleLabel: ownLabel, status: 'pending' },
-    });
 
     const otherRoleLabels = roles
       .filter((role) => role.label !== ownLabel)
@@ -118,21 +117,64 @@ export class RoleCardService {
     });
   }
 
-  private async pickFreeLabel(
+  /**
+   * Assigns this participant a role, once. Serialized per lesson by locking
+   * the scenario row: the cards of everyone registered while the situation
+   * was generating are produced in parallel, and without the lock two of
+   * them would read the same label as free.
+   *
+   * Among the free roles it prefers any other than the one this participant
+   * played in their previous lesson, so neither side is always the same
+   * person's; within that preference the draw is random.
+   */
+  private claimLabel(
     lessonId: string,
     userId: string,
     roles: Array<{ label: string; relationship: string }>,
   ): Promise<string | null> {
-    const taken = await this.prisma.lessonRoleCard.findMany({
-      where: { lessonId, userId: { not: userId }, roleLabel: { not: null } },
-      select: { roleLabel: true },
-    });
-    const takenLabels = new Set(taken.map((row) => row.roleLabel));
-    const free = roles.map((role) => role.label).filter((label) => !takenLabels.has(label));
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM lesson_scenarios WHERE lesson_id = ${lessonId}::uuid FOR UPDATE`;
 
-    if (free.length === 0) {
-      return null;
-    }
-    return free[Math.floor(Math.random() * free.length)]!;
+      const card = await tx.lessonRoleCard.findUnique({
+        where: { lessonId_userId: { lessonId, userId } },
+      });
+      if (card?.roleLabel) {
+        await tx.lessonRoleCard.update({ where: { id: card.id }, data: { status: 'pending' } });
+        return card.roleLabel;
+      }
+
+      const taken = await tx.lessonRoleCard.findMany({
+        where: { lessonId, userId: { not: userId }, roleLabel: { not: null } },
+        select: { roleLabel: true },
+      });
+      const takenLabels = new Set(taken.map((row) => row.roleLabel));
+      const free = roles
+        .map((role, index) => ({ label: role.label, index }))
+        .filter((role) => !takenLabels.has(role.label));
+      if (free.length === 0) {
+        return null;
+      }
+
+      const previous = await tx.lessonRoleCard.findFirst({
+        where: { userId, lessonId: { not: lessonId }, roleLabel: { not: null } },
+        orderBy: { createdAt: 'desc' },
+        select: { roleLabel: true, lesson: { select: { scenario: { select: { roles: true } } } } },
+      });
+      const previousRoles = rolesArraySchema.safeParse(previous?.lesson.scenario?.roles);
+      const previousIndex = previousRoles.success
+        ? previousRoles.data.findIndex((role) => role.label === previous?.roleLabel)
+        : -1;
+
+      const preferred = free.filter((role) => role.index !== previousIndex);
+      const pool = preferred.length > 0 ? preferred : free;
+      const chosen = pool[Math.floor(Math.random() * pool.length)]!;
+
+      await tx.lessonRoleCard.upsert({
+        where: { lessonId_userId: { lessonId, userId } },
+        create: { lessonId, userId, roleLabel: chosen.label, status: 'pending' },
+        update: { roleLabel: chosen.label, status: 'pending' },
+      });
+      return chosen.label;
+    });
   }
 }

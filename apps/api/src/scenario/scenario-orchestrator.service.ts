@@ -92,8 +92,13 @@ export class ScenarioOrchestratorService {
       return;
     }
 
+    // Re-read, not reuse: anyone who registered while the situation was
+    // generating saw it `pending` and left their card to this fan-out.
+    // Registration is written before that status read, so every such
+    // participant is already in this list.
+    const cardOwners = await this.registeredParticipantIds(lesson.id);
     await Promise.all(
-      participantIds.map((userId) =>
+      cardOwners.map((userId) =>
         this.roleCards
           .ensureCard(lesson.id, userId, scenario)
           .catch((error: unknown) =>
