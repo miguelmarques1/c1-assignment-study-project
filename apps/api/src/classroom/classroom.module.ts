@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 
+import { ScenarioModule } from '../scenario/scenario.module';
 import { ClassroomWebhookController } from './classroom-webhook.controller';
 import { ClassroomController } from './classroom.controller';
 import { ClassroomService } from './classroom.service';
@@ -9,6 +10,7 @@ import { LessonService } from './lesson.service';
 import { LiveKitService } from './livekit.service';
 
 @Module({
+  imports: [ScenarioModule],
   controllers: [ClassroomController, ClassroomWebhookController],
   providers: [
     ClassroomService,

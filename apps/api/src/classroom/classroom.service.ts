@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type {
   ClassroomEndResult,
   ClassroomSession,
@@ -8,6 +8,7 @@ import type {
 
 import { AppError } from '../common/app-error';
 import { env } from '../config/env';
+import { ScenarioOrchestratorService } from '../scenario/scenario-orchestrator.service';
 import { CLASSROOM_ROOM_NAME } from './classroom.constants';
 import { LessonService } from './lesson.service';
 import { LiveKitService } from './livekit.service';
@@ -17,9 +18,12 @@ const TERMINAL_STATUSES = ['ended', 'ended_unexpectedly', 'abandoned'];
 /** Resolves or creates the open lesson, enforces the cap, issues tokens, ends lessons on request. */
 @Injectable()
 export class ClassroomService {
+  private readonly logger = new Logger(ClassroomService.name);
+
   constructor(
     private readonly lessons: LessonService,
     private readonly liveKit: LiveKitService,
+    private readonly scenario: ScenarioOrchestratorService,
   ) {}
 
   async requestToken(user: { id: string; displayName: string }): Promise<ClassroomToken> {
@@ -53,6 +57,13 @@ export class ClassroomService {
     // Idempotent for an existing room; gives LiveKit its own cap enforcement.
     await this.liveKit.createRoom(room, lesson.maxParticipants);
     await this.lessons.registerParticipant(lesson.id, user.id, user.id);
+
+    // Fire-and-forget, per the spec: the token response must not wait on a
+    // model call. A failure here must never break token issuance — the
+    // lesson can always proceed without a scenario.
+    this.scenario.onParticipantRegistered(lesson, user.id).catch((error: unknown) => {
+      this.logger.error(`Scenario orchestration failed for lesson ${lesson.id}`, error);
+    });
 
     const { token, expiresAt } = await this.liveKit.issueAccessToken({
       identity: user.id,
