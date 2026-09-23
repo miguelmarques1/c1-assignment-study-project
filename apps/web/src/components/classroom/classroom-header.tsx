@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
+import { cn, TimerIcon } from '@/components/ui';
+
 function formatElapsed(startedAt: string | null, now: number): string {
   if (!startedAt) {
     return '00:00';
@@ -14,12 +16,14 @@ function formatElapsed(startedAt: string | null, now: number): string {
   return `${minutes}:${seconds}`;
 }
 
-export interface ClassroomHeaderProps {
+export interface ElapsedTimerProps {
   startedAt: string | null;
+  /** The live lesson's pill carries a pulsing dot; the waiting room's a stopwatch. */
+  live?: boolean;
 }
 
-/** Elapsed time and the slot F07 fills with the recording indicator — F05 renders neither yet. */
-export function ClassroomHeader({ startedAt }: ClassroomHeaderProps) {
+/** Elapsed lesson time — `00:00` until `lessons.started_at` is set. */
+export function ElapsedTimer({ startedAt, live = false }: ElapsedTimerProps) {
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
@@ -28,12 +32,21 @@ export function ClassroomHeader({ startedAt }: ClassroomHeaderProps) {
   }, []);
 
   return (
-    <header className="flex items-center justify-between gap-md border-b-2 border-outline-strong px-md py-sm">
-      <span aria-label="Elapsed time" className="text-label-lg tabular-nums text-on-surface">
+    <span
+      className={cn(
+        'inline-flex items-center gap-xs border-2 border-outline-strong px-md py-xs text-label-lg text-on-surface',
+        live && 'rounded-full bg-surface-container-lowest shadow-button',
+        !live && 'rounded-md bg-surface-container',
+      )}
+    >
+      {live ? (
+        <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-tertiary motion-safe:animate-pulse" />
+      ) : (
+        <TimerIcon size={18} />
+      )}
+      <span aria-label="Elapsed time" className="tabular-nums">
         {formatElapsed(startedAt, now)}
       </span>
-      {/* F07's recording indicator mounts here once egress lands; F05 leaves it empty. */}
-      <div data-slot="recording-indicator" />
-    </header>
+    </span>
   );
 }

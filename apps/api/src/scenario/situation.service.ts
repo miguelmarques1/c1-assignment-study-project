@@ -8,6 +8,7 @@ import { PromptExecutionService } from '../prompts/prompt-execution.service';
 
 /** The model's raw output shape for `scenario-situation`, before persistence. */
 interface ScenarioSituationOutput {
+  title: string;
   setting: string;
   premise: string;
   roles: Array<{ label: string; relationship: string }>;
@@ -64,6 +65,7 @@ export class SituationService {
       where: { lessonId },
       data: {
         status: 'pending',
+        title: null,
         setting: null,
         premise: null,
         vocabularyDomain: null,
@@ -144,6 +146,7 @@ export class SituationService {
       where: { lessonId },
       data: {
         status: 'ready',
+        title: data.title,
         setting: data.setting,
         premise: data.premise,
         // The server's own choice is persisted, never the model's echo of it

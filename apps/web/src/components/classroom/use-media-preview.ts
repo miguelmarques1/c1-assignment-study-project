@@ -34,6 +34,9 @@ export interface MediaPreviewState {
   selectedDeviceId: Partial<Record<PreviewDeviceKind, string>>;
   /** 0-100, or null while there is no audio track to measure. */
   level: number | null;
+  /** The pre-join mute toggles — carried into the call when joining. */
+  microphoneEnabled: boolean;
+  cameraEnabled: boolean;
 }
 
 function classifyDenial(error: unknown): 'denied' | 'not-found' | 'other' {
@@ -48,6 +51,8 @@ export interface UseMediaPreview extends MediaPreviewState {
   retry: () => void;
   /** Stops both tracks — called once the caller moves on from the preview. */
   release: () => void;
+  toggleMicrophone: () => void;
+  toggleCamera: () => void;
 }
 
 /** Local track creation, device enumeration/switching and the level meter for the pre-join screen. */
@@ -61,6 +66,8 @@ export function useMediaPreview(): UseMediaPreview {
     devices: EMPTY_DEVICES,
     selectedDeviceId: {},
     level: null,
+    microphoneEnabled: true,
+    cameraEnabled: true,
   });
   const attempt = useRef(0);
 
@@ -100,7 +107,8 @@ export function useMediaPreview(): UseMediaPreview {
       audiooutput: await Room.getLocalDevices('audiooutput').catch(() => []),
     };
 
-    setState({
+    setState((prev) => ({
+      ...prev,
       status: 'ready',
       audioTrack,
       videoTrack,
@@ -112,7 +120,7 @@ export function useMediaPreview(): UseMediaPreview {
         videoinput: videoTrack?.mediaStreamTrack.getSettings().deviceId,
       },
       level: null,
-    });
+    }));
   }, []);
 
   useEffect(() => {
@@ -167,7 +175,38 @@ export function useMediaPreview(): UseMediaPreview {
     });
   }, []);
 
+  // A disabled MediaStreamTrack keeps its device open but carries silence
+  // or black frames — the preview's mute, without releasing the hardware the
+  // join is about to need.
+  useEffect(() => {
+    if (state.audioTrack) {
+      state.audioTrack.mediaStreamTrack.enabled = state.microphoneEnabled;
+    }
+  }, [state.audioTrack, state.microphoneEnabled]);
+
+  useEffect(() => {
+    if (state.videoTrack) {
+      state.videoTrack.mediaStreamTrack.enabled = state.cameraEnabled;
+    }
+  }, [state.videoTrack, state.cameraEnabled]);
+
+  const toggleMicrophone = useCallback(() => {
+    setState((prev) => ({ ...prev, microphoneEnabled: !prev.microphoneEnabled }));
+  }, []);
+
+  const toggleCamera = useCallback(() => {
+    setState((prev) => ({ ...prev, cameraEnabled: !prev.cameraEnabled }));
+  }, []);
+
   const level = useAudioLevel(state.audioTrack?.mediaStreamTrack);
 
-  return { ...state, level, selectDevice, retry: () => void acquire(), release };
+  return {
+    ...state,
+    level: state.microphoneEnabled ? level : 0,
+    selectDevice,
+    retry: () => void acquire(),
+    release,
+    toggleMicrophone,
+    toggleCamera,
+  };
 }

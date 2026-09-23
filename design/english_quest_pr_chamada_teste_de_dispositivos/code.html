@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base { html, body { margin: 0; padding: 0; } body { overscroll-behavior: none; } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-secondary-fixed-variant": "#004395", "on-tertiary-container": "#003b26", "primary": "#ae3115", "surface-bright": "#fbf8fc", "on-primary-fixed": "#3d0600", "surface-container": "#f0edf1", "surface-container-highest": "#e4e1e6", "on-tertiary-fixed": "#002113", "on-secondary-container": "#fefcff", "error": "#ba1a1a", "outline": "#8d716a", "on-background": "#1b1b1e", "surface-container-low": "#f6f2f7", "outline-variant": "#e1bfb8", "surface-tint": "#ae3115", "secondary-container": "#2170e4", "on-primary-container": "#661000", "inverse-on-surface": "#f3f0f4", "primary-fixed": "#ffdad2", "tertiary-fixed": "#6ffbbe", "surface-dim": "#dcd9dd", "background": "#fbf8fc", "inverse-surface": "#303033", "on-tertiary": "#ffffff", "on-surface": "#1b1b1e", "on-secondary-fixed": "#001a42", "on-secondary": "#ffffff", "surface": "#fbf8fc", "surface-variant": "#e4e1e6", "secondary-fixed-dim": "#adc6ff", "tertiary-fixed-dim": "#4edea3", "surface-container-lowest": "#ffffff", "inverse-primary": "#ffb4a3", "tertiary-container": "#00b07a", "on-error-container": "#93000a", "error-container": "#ffdad6", "surface-container-high": "#eae7eb", "on-error": "#ffffff", "on-tertiary-fixed-variant": "#005236", "on-primary": "#ffffff", "primary-container": "#ff6b4a", "on-surface-variant": "#59413c", "tertiary": "#006c49", "primary-fixed-dim": "#ffb4a3", "on-primary-fixed-variant": "#8c1900", "secondary-fixed": "#d8e2ff", "secondary": "#0058be" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "gutter": "1.25rem", "space-xs": "0.25rem", "gutter-mobile": "0.75rem", "margin-mobile": "1rem", "margin": "2rem", "space-xl": "2.5rem", "space-lg": "1.5rem", "space-md": "1rem", "space-sm": "0.5rem" }, "fontFamily": { "title-md": [ "Plus Jakarta Sans" ], "label-md": [ "Plus Jakarta Sans" ], "body-lg": [ "Plus Jakarta Sans" ], "display-mobile": [ "Plus Jakarta Sans" ], "label-lg": [ "Plus Jakarta Sans" ], "headline-lg": [ "Plus Jakarta Sans" ], "label-sm": [ "Plus Jakarta Sans" ], "body-sm": [ "Plus Jakarta Sans" ], "headline-sm": [ "Plus Jakarta Sans" ], "headline-md": [ "Plus Jakarta Sans" ], "display": [ "Plus Jakarta Sans" ], "title-lg": [ "Plus Jakarta Sans" ], "body-md": [ "Plus Jakarta Sans" ], "headline-lg-mobile": [ "Plus Jakarta Sans" ] }, "fontSize": { "title-md": [ "16px", { "lineHeight": "24px", "fontWeight": "600" } ], "label-md": [ "12px", { "lineHeight": "16px", "fontWeight": "700" } ], "body-lg": [ "16px", { "lineHeight": "26px", "fontWeight": "400" } ], "display-mobile": [ "32px", { "lineHeight": "40px", "fontWeight": "800" } ], "label-lg": [ "14px", { "lineHeight": "20px", "fontWeight": "700" } ], "headline-lg": [ "32px", { "lineHeight": "40px", "fontWeight": "700" } ], "label-sm": [ "11px", { "lineHeight": "14px", "fontWeight": "800" } ], "body-sm": [ "12px", { "lineHeight": "18px", "fontWeight": "500" } ], "headline-sm": [ "20px", { "lineHeight": "28px", "fontWeight": "700" } ], "headline-md": [ "24px", { "lineHeight": "32px", "fontWeight": "700" } ], "display": [ "44px", { "lineHeight": "52px", "fontWeight": "800" } ], "title-lg": [ "18px", { "lineHeight": "26px", "fontWeight": "600" } ], "body-md": [ "14px", { "lineHeight": "22px", "fontWeight": "400" } ], "headline-lg-mobile": [ "26px", { "lineHeight": "34px", "fontWeight": "700" } ] } } } }</script><meta content="web_standard" name="shell-type"/></head><body class="bg-surface font-body-md text-body-md text-on-surface min-h-screen"><header class="fixed top-0 left-0 right-0 z-50 bg-[#F8F4EE] border-b-2 border-black"><div class="h-20 max-w-[1200px] mx-auto px-margin flex items-center justify-between gap-gutter"><div class="flex items-center gap-space-md"><img alt="English Quest Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1UHEVb4m8uv2qGOQKt8cyHILG7SIM9gacNCEHnLBza1RW9XlqzhejrxNk9cUuzPDVn1UuNavPPP7Uoek9kITeIw0bcH4D_5SEOkE17v5HwrD5-spz2Q8A3se9ahgPf3_drNn8ax6CFN9Ry1Hc8l_RNl8aIHdmwq-bA7ZEaT4YEeoqMIynKWLGZMfXg_Tq5vVkkSu3rv6tqwkD7hE9MAcI4wG73xYRh5wE0UPp-SyI6-9LM0vO1SidcKX8x0"/><span class="font-headline-sm text-headline-sm tracking-tight text-on-surface">English Quest</span></div><nav class="hidden md:flex items-center gap-space-sm bg-surface-container-high p-space-xs rounded-xl border-2 border-black shadow-[2px_2px_0px_#18181B]" data-active-classes="bg-surface-container-lowest text-on-surface border-2 border-black shadow-[2px_2px_0px_#18181B] font-label-lg text-label-lg"><a class="px-space-md py-space-xs rounded-lg text-on-surface-variant font-label-lg text-label-lg hover:text-on-surface transition-all" data-path="dashboard" href="#">Dashboard</a><a class="px-space-md py-space-xs rounded-lg text-on-surface-variant font-label-lg text-label-lg hover:text-on-surface transition-all" data-path="scenarios-practice" href="#">Scenarios &amp; Practice</a><a class="px-space-md py-space-xs rounded-lg text-on-surface-variant font-label-lg text-label-lg hover:text-on-surface transition-all" data-path="settings" href="#">Settings</a></nav><div class="flex items-center gap-space-md"><div class="hidden sm:flex items-center gap-space-xs px-space-md py-space-xs rounded-full bg-surface-container-lowest border-2 border-black shadow-[2px_2px_0px_#18181B]"><span class="material-symbols-outlined text-primary text-[18px]">local_fire_department</span><span class="font-label-md text-label-md text-on-surface">7 Day Streak</span></div><div class="hidden sm:flex items-center gap-space-xs px-space-md py-space-xs rounded-full bg-tertiary-container border-2 border-black shadow-[2px_2px_0px_#18181B]"><span class="material-symbols-outlined text-on-tertiary-container text-[18px]">bolt</span><span class="font-label-md text-label-md text-on-tertiary-container">1,420 XP</span></div><div class="flex items-center gap-space-sm pl-space-xs"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center border-2 border-black"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></div></header><main class="w-full pt-20 max-w-[1200px] mx-auto px-margin py-space-xl"><div class="flex flex-col w-full max-w-[1080px] mx-auto pb-space-xl">
+<!-- Top Session Breadcrumb & Status Bar -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-space-sm mb-space-lg">
+<div class="flex flex-col">
+<div class="flex items-center gap-space-xs text-on-surface-variant font-label-md text-label-md mb-1">
+<span class="inline-flex items-center justify-center w-2 h-2 rounded-full bg-primary animate-ping mr-1"></span>
+<span class="inline-flex items-center justify-center w-2 h-2 rounded-full bg-primary mr-1 -ml-3"></span>
+<span>SESSÃO AO VIVO</span>
+<span>•</span>
+<span class="text-primary font-label-md text-label-md">NÍVEL B2 INTERMEDIÁRIO</span>
+</div>
+<h1 class="font-headline-md text-headline-md text-on-surface tracking-tight">
+        Cenário de Conversação em Dupla • Sala de Prática
+      </h1>
+<p class="font-body-md text-body-md text-on-surface-variant mt-0.5">
+        Prática imersiva: <em>"Ordering at a London Coffee Shop &amp; Small Talk"</em>
+</p>
+</div>
+<!-- Quick Status Badge -->
+<div class="flex items-center self-start md:self-auto gap-space-xs px-space-md py-space-xs rounded-full bg-surface-container-lowest border-2 border-black shadow-[3px_3px_0px_#18181B]">
+<span class="material-symbols-outlined text-tertiary text-[18px]" style="font-variation-settings: 'FILL' 1;">sensors</span>
+<span class="font-label-md text-label-md text-on-surface">Conexão de baixa latência pronta</span>
+<span class="w-1.5 h-1.5 rounded-full bg-outline-variant mx-1"></span>
+<span class="font-label-sm text-label-sm text-tertiary">38ms</span>
+</div>
+</div>
+<!-- Main Grid: Video Preview (Left 7 cols) & Device Panel (Right 5 cols) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg items-start">
+<!-- Left Column: Video Feed & In-Call Controls -->
+<div class="lg:col-span-7 flex flex-col gap-space-md">
+<!-- Camera Preview Box -->
+<div class="relative w-full aspect-[4/3] sm:aspect-[16/10] bg-inverse-surface rounded-2xl border-2 border-black shadow-[4px_4px_0px_#18181B] overflow-hidden group">
+<!-- Camera Stream Mock (Placeholder Image of user ready for class) -->
+<img alt="Webcam Preview" class="w-full h-full object-cover transform -scale-x-100" data-alt="Young professional student seated at a warm bright wooden home desk wearing headphones, smiling gently at laptop webcam, soft ambient indoor lighting, studio quality, clean educational room background with warm terracotta accents" id="preview-video" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVUh75MrYFDRznI9QHIuNLFPgsOIMD99WP1uI8rma-04cKK0qmt7yfh7syq8kJGV_62VT-yj83wZQ700CTZlTsyYiBCEus98nX59b2_CnFbC4c3h56dgnb4x63SBk9aT8tTc0IKyAo7NwMb1FLObBG8d984JL1fSQqwdiIyzLhIhqL18Cge3hqggxLfOlj77R9t_Xh5gcGpfnyQab5ZSE4OcwWkVc5Z0zdMSyPHW0FU6CVxRjputWOkg"/>
+<!-- Top Badges Overlay -->
+<div class="absolute top-space-md left-space-md right-space-md flex items-center justify-between pointer-events-none">
+<div class="flex items-center gap-space-xs px-space-md py-1 rounded-full bg-inverse-surface/85 backdrop-blur-sm border-2 border-black text-white text-label-sm font-label-sm shadow-[2px_2px_0px_#18181B] pointer-events-auto">
+<span class="w-2 h-2 rounded-full bg-tertiary-container animate-pulse"></span>
+<span id="cam-status-text">Câmera ligada (HD 1080p)</span>
+</div>
+<div class="flex items-center gap-space-xs px-space-sm py-1 rounded-lg bg-inverse-surface/80 backdrop-blur-sm border border-black/40 text-white font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px] text-tertiary-fixed">graphic_eq</span>
+<span>Áudio estéreo ativo</span>
+</div>
+</div>
+<!-- Muted State Visual Overlay (Hidden by default) -->
+<div class="hidden absolute inset-0 bg-[#242426] flex-col items-center justify-center text-center p-space-md text-white" id="cam-off-placeholder">
+<div class="w-20 h-20 rounded-full bg-surface-container-high border-2 border-black flex items-center justify-center mb-space-sm shadow-[3px_3px_0px_#000]">
+<span class="material-symbols-outlined text-on-surface-variant text-[36px]">videocam_off</span>
+</div>
+<span class="font-title-md text-title-md text-white">Sua câmera está desligada</span>
+<span class="font-body-sm text-body-sm text-outline-variant max-w-[240px] mt-1">Os outros participantes verão apenas sua foto de perfil ao entrar.</span>
+</div>
+<!-- Floating Mic Activity Pill on Video -->
+<div class="absolute bottom-20 left-space-md pointer-events-none flex items-center gap-2 bg-inverse-surface/85 backdrop-blur-sm px-3 py-1.5 rounded-xl border border-black/50 text-white shadow-[2px_2px_0px_#18181B]">
+<span class="material-symbols-outlined text-[16px] text-tertiary-fixed" id="mic-indicator-icon">mic</span>
+<div class="flex items-end gap-1 h-3.5 w-12" id="mini-audio-bars">
+<span class="w-1.5 bg-tertiary-fixed rounded-full h-1.5 transition-all duration-150"></span>
+<span class="w-1.5 bg-tertiary-fixed rounded-full h-3 transition-all duration-150"></span>
+<span class="w-1.5 bg-tertiary-fixed rounded-full h-2 transition-all duration-150"></span>
+<span class="w-1.5 bg-tertiary-fixed rounded-full h-3.5 transition-all duration-150"></span>
+</div>
+<span class="font-label-sm text-label-sm text-white/90">Voz detectada</span>
+</div>
+<!-- Floating Bottom Floating Controls -->
+<div class="absolute bottom-space-md inset-x-0 flex items-center justify-center gap-space-sm px-space-md">
+<div class="flex items-center gap-space-sm bg-surface-container-lowest/95 backdrop-blur-md p-1.5 rounded-2xl border-2 border-black shadow-[3px_3px_0px_#18181B]">
+<!-- Toggle Mic Button -->
+<button class="flex items-center justify-center w-11 h-11 rounded-xl bg-surface-container hover:bg-surface-container-highest border-2 border-black active:translate-x-[2px] active:translate-y-[2px] transition-transform text-on-surface" id="btn-toggle-mic" title="Ativar ou desativar microfone" type="button">
+<span class="material-symbols-outlined text-[22px]" id="icon-mic-toggle">mic</span>
+</button>
+<!-- Toggle Cam Button -->
+<button class="flex items-center justify-center w-11 h-11 rounded-xl bg-surface-container hover:bg-surface-container-highest border-2 border-black active:translate-x-[2px] active:translate-y-[2px] transition-transform text-on-surface" id="btn-toggle-cam" title="Ativar ou desativar câmera" type="button">
+<span class="material-symbols-outlined text-[22px]" id="icon-cam-toggle">videocam</span>
+</button>
+<div class="w-[1px] h-6 bg-outline-variant mx-1"></div>
+<!-- Visual Filters / Background Effects -->
+<button class="flex items-center gap-1.5 px-3 h-11 rounded-xl bg-surface-container hover:bg-surface-container-highest border-2 border-black font-label-md text-label-md text-on-surface active:translate-x-[2px] active:translate-y-[2px] transition-transform" type="button">
+<span class="material-symbols-outlined text-[18px]">auto_fix_high</span>
+<span class="hidden sm:inline">Desfoque de fundo</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Realtime Microphone Volume Meter Box -->
+<div class="bg-surface-container-lowest rounded-2xl border-2 border-black p-space-md shadow-[4px_4px_0px_#18181B]">
+<div class="flex items-center justify-between mb-space-xs">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-[20px]">mic_double</span>
+<span class="font-title-md text-title-md text-on-surface">Nível do microfone</span>
+</div>
+<span class="font-label-sm text-label-sm text-tertiary uppercase tracking-wider bg-tertiary-fixed/40 px-2 py-0.5 rounded-full border border-black/20">
+            Excelente captação
+          </span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-space-sm">
+          Fale normalmente em voz alta para testar a sensibilidade da sua voz antes da chamada.
+        </p>
+<!-- Dynamic Segmented Audio Meter -->
+<div class="flex items-center gap-1.5 w-full bg-surface-container-high p-2 rounded-xl border-2 border-black">
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">volume_down</span>
+<div class="grid grid-cols-16 flex-1 gap-1 h-3.5" id="audio-vu-meter">
+<!-- 16 discrete audio segments for authentic hardware feel -->
+<div class="h-full rounded-sm bg-tertiary-container transition-opacity duration-100"></div>
+<div class="h-full rounded-sm bg-tertiary-container transition-opacity duration-100"></div>
+<div class="h-full rounded-sm bg-tertiary-container transition-opacity duration-100"></div>
+<div class="h-full rounded-sm bg-tertiary-container transition-opacity duration-100"></div>
+<div class="h-full rounded-sm bg-tertiary-container transition-opacity duration-100"></div>
+<div class="h-full rounded-sm bg-tertiary-container transition-opacity duration-100"></div>
+<div class="h-full rounded-sm bg-tertiary-container transition-opacity duration-100"></div>
+<div class="h-full rounded-sm bg-tertiary-container transition-opacity duration-100"></div>
+<div class="h-full rounded-sm bg-tertiary-container transition-opacity duration-100"></div>
+<div class="h-full rounded-sm bg-tertiary-container transition-opacity duration-100"></div>
+<div class="h-full rounded-sm bg-tertiary-container transition-opacity duration-100"></div>
+<div class="h-full rounded-sm bg-tertiary-container transition-opacity duration-100"></div>
+<div class="h-full rounded-sm bg-[#eab308] opacity-20 transition-opacity duration-100"></div>
+<div class="h-full rounded-sm bg-[#eab308] opacity-20 transition-opacity duration-100"></div>
+<div class="h-full rounded-sm bg-primary opacity-20 transition-opacity duration-100"></div>
+<div class="h-full rounded-sm bg-primary opacity-20 transition-opacity duration-100"></div>
+</div>
+<span class="material-symbols-outlined text-[18px] text-on-surface-variant">volume_up</span>
+</div>
+</div>
+</div>
+<!-- Right Column: Hardware Selectors & Call Entry Action -->
+<div class="lg:col-span-5 flex flex-col gap-space-md">
+<!-- Device Configuration Card -->
+<div class="bg-surface-container-lowest rounded-2xl border-2 border-black p-space-lg shadow-[4px_4px_0px_#18181B] flex flex-col gap-space-md">
+<div class="flex items-center justify-between border-b-2 border-black/10 pb-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-on-surface text-[22px]">settings_input_component</span>
+<span class="font-title-lg text-title-lg text-on-surface">Configurar dispositivos</span>
+</div>
+<span class="font-label-sm text-label-sm text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-full border border-black/20">3 detectados</span>
+</div>
+<!-- 1. Microfone Input Select -->
+<div class="flex flex-col gap-1.5">
+<label class="flex items-center justify-between font-label-md text-label-md text-on-surface" for="select-mic">
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px] text-primary">mic</span>
+              Microfone (Entrada de Áudio)
+            </span>
+<span class="text-tertiary font-label-sm text-label-sm flex items-center gap-0.5">
+<span class="w-2 h-2 rounded-full bg-tertiary-container inline-block"></span>
+              Ativo
+            </span>
+</label>
+<div class="relative">
+<select class="w-full bg-[#FFFDF9] text-on-surface font-body-md text-body-md border-2 border-black rounded-xl py-2.5 pl-3 pr-10 appearance-none focus:outline-none focus:shadow-[2px_2px_0px_#18181B] transition-all cursor-pointer" id="select-mic">
+<option selected="" value="cirrus-mic">Digital Microphone (Cirrus Logic High Definition Audio)</option>
+<option value="headset-mic">Headset Microphone (Logitech H390 USB)</option>
+<option value="virtual-mic">Default - System Virtual Audio Device</option>
+</select>
+<div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-on-surface">
+<span class="material-symbols-outlined text-[20px]">expand_more</span>
+</div>
+</div>
+</div>
+<!-- 2. Câmera Input Select -->
+<div class="flex flex-col gap-1.5">
+<label class="flex items-center justify-between font-label-md text-label-md text-on-surface" for="select-camera">
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[18px] text-secondary">videocam</span>
+              Câmera de Vídeo
+            </span>
+<span class="text-tertiary font-label-sm text-label-sm flex items-center gap-0.5">
+<span class="w-2 h-2 rounded-full bg-tertiary-container inline-block"></span>
+              Pronta
+            </span>
+</label>
+<div class="relative">
+<select class="w-full bg-[#FFFDF9] text-on-surface font-body-md text-body-md border-2 border-black rounded-xl py-2.5 pl-3 pr-10 appearance-none focus:outline-none focus:shadow-[2px_2px_0px_#18181B] transition-all cursor-pointer" id="select-camera">
+<option selected="" value="integrated-cam">Integrated Webcam (1bcf:2b9d)</option>
+<option value="external-cam">Logitech C920 Pro HD Webcam</option>
+<option value="obs-virtual">OBS Virtual Camera</option>
+</select>
+<div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-on-surface">
+<span class="material-symbols-outlined text-[20px]">expand_more</span>
+</div>
+</div>
+</div>
+<!-- 3. Alto-falante / Saída de áudio Select -->
+<div class="flex flex-col gap-1.5">
+<div class="flex items-center justify-between font-label-md text-label-md text-on-surface">
+<label class="flex items-center gap-1.5" for="select-speaker">
+<span class="material-symbols-outlined text-[18px] text-tertiary">headphones</span>
+              Alto-falante (Saída de Áudio)
+            </label>
+<button class="font-label-sm text-label-sm text-secondary hover:text-on-secondary-fixed flex items-center gap-1 underline underline-offset-2" id="btn-test-sound" type="button">
+<span class="material-symbols-outlined text-[14px]">volume_up</span>
+              Testar som
+            </button>
+</div>
+<div class="relative">
+<select class="w-full bg-[#FFFDF9] text-on-surface font-body-md text-body-md border-2 border-black rounded-xl py-2.5 pl-3 pr-10 appearance-none focus:outline-none focus:shadow-[2px_2px_0px_#18181B] transition-all cursor-pointer" id="select-speaker">
+<option selected="" value="default-cirrus">Padrão - Fones de ouvido (Cirrus Logic High Definition Audio)</option>
+<option value="speakers-cirrus">Alto-falantes internos (Realtek Audio)</option>
+<option value="usb-headphones">Fones de ouvido USB externos</option>
+</select>
+<div class="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-on-surface">
+<span class="material-symbols-outlined text-[20px]">expand_more</span>
+</div>
+</div>
+</div>
+<!-- Test tone toast notification (hidden by default) -->
+<div class="hidden items-center justify-between bg-secondary-fixed text-on-secondary-fixed px-3 py-2 rounded-xl border-2 border-black text-body-sm font-body-sm" id="sound-test-alert">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] animate-bounce">music_note</span>
+<span>Tocando som de teste... Você ouviu claramente?</span>
+</div>
+<span class="material-symbols-outlined text-[16px] cursor-pointer" onclick="this.parentElement.classList.add('hidden')">close</span>
+</div>
+</div>
+<!-- Class Readiness & Big Call-to-Action Card -->
+<div class="bg-surface-container-low rounded-2xl border-2 border-black p-space-lg shadow-[4px_4px_0px_#18181B] flex flex-col gap-space-md">
+<!-- Partner & Classroom Info -->
+<div class="flex items-center gap-space-md bg-surface-container-lowest p-space-md rounded-xl border-2 border-black">
+<div class="relative w-12 h-12 rounded-full overflow-hidden border-2 border-black flex-shrink-0 bg-secondary-fixed">
+<img alt="Partner Avatar" class="w-full h-full object-cover" data-alt="Friendly native English tutor avatar woman smiling warmly with glasses in a modern studio portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCpjruVIwvZZRIAqzMpiHcEC1UzaPvsHM6VfhtVMHkizlAPZG1QtYtMVAoiSqKrRITdU0yh7GIddjQbA3HYfB-UX-mZh2CMxg-Ua1Fk8Jqp_D7L4cibb9BHLFo9khMh3SHe3G09L5RAtfDGIzUROF_0pPKvtd-Hsy339aW8aadOLLFIT_ywXgqvSHmOLa-nq8cBEi-4hdwoJlBfxJGsJlbkcu-VGpfoJqQ8JqIO9vtG1dpR4auBvKQt1Q"/>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="font-title-md text-title-md text-on-surface truncate">Sarah Jenkins (Tutor AI)</span>
+<span class="material-symbols-outlined text-secondary text-[16px]" style="font-variation-settings: 'FILL' 1;" title="Verified AI Partner">verified</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant truncate">
+              Aguardando sua entrada na sala...
+            </p>
+</div>
+</div>
+<!-- Pre-call Checklist Reminder -->
+<div class="flex flex-col gap-2">
+<div class="flex items-center gap-2 text-body-sm font-body-sm text-on-surface">
+<span class="material-symbols-outlined text-tertiary text-[18px]">check_circle</span>
+<span>Recomendamos usar fones de ouvido para evitar eco.</span>
+</div>
+<div class="flex items-center gap-2 text-body-sm font-body-sm text-on-surface">
+<span class="material-symbols-outlined text-tertiary text-[18px]">check_circle</span>
+<span>Você receberá +50 XP ao completar esta sessão de 15 min.</span>
+</div>
+</div>
+<!-- Big Primary Join Button -->
+<button class="w-full py-4 px-space-lg rounded-xl bg-primary-container hover:bg-[#ff5530] text-on-primary-container font-headline-sm text-headline-sm border-[2.5px] border-black shadow-[4px_4px_0px_#18181B] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none transition-all flex items-center justify-center gap-space-sm group cursor-pointer" id="btn-join-room" type="button">
+<span>Entrar na sala de aula</span>
+<span class="material-symbols-outlined text-[24px] group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+<!-- Secondary action -->
+<div class="text-center">
+<a class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface underline underline-offset-4" href="#">
+            Voltar para a lista de cenários
+          </a>
+</div>
+</div>
+</div>
+</div>
+<!-- Micro-Interactions Script -->
+<script>
+    (function() {
+      // Toggle Camera Logic
+      const btnToggleCam = document.getElementById('btn-toggle-cam');
+      const iconCamToggle = document.getElementById('icon-cam-toggle');
+      const camOverlay = document.getElementById('cam-off-placeholder');
+      const camStatusText = document.getElementById('cam-status-text');
+      let camEnabled = true;
+
+      btnToggleCam.addEventListener('click', () => {
+        camEnabled = !camEnabled;
+        if (!camEnabled) {
+          camOverlay.classList.remove('hidden');
+          camOverlay.classList.add('flex');
+          iconCamToggle.textContent = 'videocam_off';
+          btnToggleCam.classList.add('bg-error-container', 'text-on-error-container');
+          btnToggleCam.classList.remove('bg-surface-container');
+          camStatusText.textContent = 'Câmera desativada';
+        } else {
+          camOverlay.classList.add('hidden');
+          camOverlay.classList.remove('flex');
+          iconCamToggle.textContent = 'videocam';
+          btnToggleCam.classList.remove('bg-error-container', 'text-on-error-container');
+          btnToggleCam.classList.add('bg-surface-container');
+          camStatusText.textContent = 'Câmera ligada (HD 1080p)';
+        }
+      });
+
+      // Toggle Microphone Logic
+      const btnToggleMic = document.getElementById('btn-toggle-mic');
+      const iconMicToggle = document.getElementById('icon-mic-toggle');
+      const micIndicator = document.getElementById('mic-indicator-icon');
+      let micEnabled = true;
+
+      btnToggleMic.addEventListener('click', () => {
+        micEnabled = !micEnabled;
+        if (!micEnabled) {
+          iconMicToggle.textContent = 'mic_off';
+          micIndicator.textContent = 'mic_off';
+          btnToggleMic.classList.add('bg-error-container', 'text-on-error-container');
+          btnToggleMic.classList.remove('bg-surface-container');
+        } else {
+          iconMicToggle.textContent = 'mic';
+          micIndicator.textContent = 'mic';
+          btnToggleMic.classList.remove('bg-error-container', 'text-on-error-container');
+          btnToggleMic.classList.add('bg-surface-container');
+        }
+      });
+
+      // Simulated Real-time VU-Meter Oscillation
+      const vuMeter = document.getElementById('audio-vu-meter');
+      const segments = vuMeter ? Array.from(vuMeter.children) : [];
+
+      setInterval(() => {
+        if (!micEnabled) {
+          segments.forEach(seg => {
+            seg.classList.add('opacity-10');
+            seg.classList.remove('opacity-100');
+          });
+          return;
+        }
+
+        // Random speaking intensity between 4 and 14 segments active
+        const activeCount = Math.floor(Math.random() * 8) + 5;
+        segments.forEach((seg, idx) => {
+          if (idx < activeCount) {
+            seg.classList.remove('opacity-10', 'opacity-20');
+            seg.classList.add('opacity-100');
+          } else {
+            seg.classList.remove('opacity-100');
+            seg.classList.add('opacity-20');
+          }
+        });
+      }, 200);
+
+      // Sound test button toast trigger
+      const testSoundBtn = document.getElementById('btn-test-sound');
+      const soundTestAlert = document.getElementById('sound-test-alert');
+      if (testSoundBtn && soundTestAlert) {
+        testSoundBtn.addEventListener('click', () => {
+          soundTestAlert.classList.remove('hidden');
+          soundTestAlert.classList.add('flex');
+          setTimeout(() => {
+            soundTestAlert.classList.add('hidden');
+            soundTestAlert.classList.remove('flex');
+          }, 4000);
+        });
+      }
+
+      // Enter Classroom Button Click Effect
+      const joinBtn = document.getElementById('btn-join-room');
+      if (joinBtn) {
+        joinBtn.addEventListener('click', () => {
+          joinBtn.innerHTML = `
+            <span class="material-symbols-outlined text-[24px] animate-spin">progress_activity</span>
+            <span>Conectando à sala...</span>
+          `;
+          setTimeout(() => {
+            alert('Conexão estabelecida! Entrando na sala com Sarah Jenkins.');
+            joinBtn.innerHTML = `
+              <span>Entrar na sala de aula</span>
+              <span class="material-symbols-outlined text-[24px]">arrow_forward</span>
+            `;
+          }, 1200);
+        });
+      }
+    })();
+  </script>
+</div></main><footer class="w-full bg-[#F8F4EE] border-t-2 border-black mt-space-xl py-space-lg"><div class="max-w-[1200px] mx-auto px-margin flex flex-col sm:flex-row items-center justify-between gap-space-md text-on-surface-variant font-body-sm text-body-sm"><span>© 2025 English Quest. All rights reserved.</span><div class="flex items-center gap-space-md"><a class="hover:text-on-surface font-label-sm text-label-sm" href="#">Privacy Policy</a><a class="hover:text-on-surface font-label-sm text-label-sm" href="#">Terms of Service</a><a class="hover:text-on-surface font-label-sm text-label-sm" href="#">Support Desk</a></div></div></footer></body></html>

@@ -14,5 +14,5 @@ export default async function ClassroomPage() {
     redirect('/login?expired=1');
   }
 
-  return <ClassroomScreen displayName={user.displayName} />;
+  return <ClassroomScreen userId={user.id} />;
 }

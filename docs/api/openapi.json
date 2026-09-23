@@ -1645,6 +1645,12 @@
                   {
                     "type": "object",
                     "properties": {
+                      "title": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
                       "setting": {
                         "type": "string"
                       },
@@ -1701,6 +1707,7 @@
                       }
                     },
                     "required": [
+                      "title",
                       "setting",
                       "premise",
                       "roles",

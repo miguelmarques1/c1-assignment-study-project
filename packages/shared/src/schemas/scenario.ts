@@ -48,6 +48,8 @@ export type Role = z.infer<typeof roleSchema>;
 
 /** The shared situation — the only half of the scenario every participant sees. */
 export const sharedSituationSchema = z.object({
+  /** A short headline; null only on a situation generated before titles existed. */
+  title: z.string().nullable(),
   setting: z.string(),
   premise: z.string(),
   roles: z.array(roleSchema).min(1),

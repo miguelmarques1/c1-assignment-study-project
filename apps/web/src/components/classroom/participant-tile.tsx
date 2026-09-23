@@ -3,7 +3,7 @@
 import type { TrackPublication } from 'livekit-client';
 import { useEffect, useRef } from 'react';
 
-import { Avatar, Badge, cn } from '@/components/ui';
+import { Avatar, Badge, cn, MicrophoneIcon } from '@/components/ui';
 import { ConnectionQualityIndicator } from './connection-quality';
 import type { ParticipantView } from './use-classroom-room';
 
@@ -25,10 +25,20 @@ function useAttachedTrack(publication: TrackPublication | null) {
   return ref;
 }
 
+export type ParticipantTileSize = 'large' | 'card' | 'small';
+
+const SIZE_CLASSES: Record<ParticipantTileSize, string> = {
+  // The main stage: fills its column at the mockup's 16:9.
+  large: 'aspect-video w-full rounded-lg shadow-card',
+  // The waiting room's own-preview card: fills the card's width.
+  card: 'aspect-video w-full rounded-md',
+  // The floating picture-in-picture inset over the stage.
+  small: 'aspect-video w-full max-w-64 rounded-md shadow-button',
+};
+
 export interface ParticipantTileProps {
   participant: ParticipantView;
-  /** The size variant — the local tile is smaller at the default two-participant cap. */
-  size: 'large' | 'small';
+  size: ParticipantTileSize;
 }
 
 /** Attaches the video track or renders initials, shows the mute badge and the name. */
@@ -39,8 +49,8 @@ export function ParticipantTile({ participant, size }: ParticipantTileProps) {
   return (
     <div
       className={cn(
-        'relative aspect-video overflow-hidden rounded-lg border-2 border-outline-strong bg-surface-container-highest',
-        size === 'large' ? 'w-full' : 'w-full max-w-64',
+        'relative overflow-hidden border-2 border-outline-strong bg-surface-container-highest',
+        SIZE_CLASSES[size],
       )}
     >
       {showVideo ? (
@@ -50,7 +60,7 @@ export function ParticipantTile({ participant, size }: ParticipantTileProps) {
           ref={videoRef}
           muted={participant.isLocal}
           playsInline
-          className="h-full w-full object-cover"
+          className={cn('h-full w-full object-cover', participant.isLocal && '-scale-x-100')}
         />
       ) : (
         <div className="flex h-full w-full items-center justify-center">
@@ -63,7 +73,8 @@ export function ParticipantTile({ participant, size }: ParticipantTileProps) {
       )}
 
       <div className="absolute bottom-sm left-sm flex items-center gap-xs">
-        <span className="rounded-md bg-surface-container-lowest px-sm py-xs text-label-sm text-on-surface">
+        <span className="inline-flex items-center gap-xs rounded-md border border-outline-strong bg-surface-container-lowest px-sm py-xs text-label-sm text-on-surface">
+          {size === 'large' && !participant.muted ? <MicrophoneIcon size={14} /> : null}
           {participant.displayName}
           {participant.isLocal ? ' (you)' : ''}
         </span>

@@ -112,6 +112,7 @@ export class ScenarioService {
       situation:
         status === 'ready' && scenario
           ? {
+              title: scenario.title,
               setting: scenario.setting!,
               premise: scenario.premise!,
               roles: scenario.roles as unknown as Role[],

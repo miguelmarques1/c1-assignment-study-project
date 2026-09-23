@@ -31,6 +31,8 @@ export interface ParticipantView {
   identity: string;
   displayName: string;
   isLocal: boolean;
+  /** LiveKit's own voice-activity flag, refreshed on `ActiveSpeakersChanged`. */
+  isSpeaking: boolean;
   muted: boolean;
   cameraOff: boolean;
   quality: ConnectionQuality;
@@ -39,6 +41,25 @@ export interface ParticipantView {
 }
 
 export type RoomPhase = 'connecting' | 'connected' | 'reconnecting' | 'left';
+
+export type RoomDeviceKind = 'audioinput' | 'videoinput' | 'audiooutput';
+
+export interface ConnectParams {
+  url: string;
+  token: string;
+  expiresAt: string;
+  /** What the pre-join screen left on or off; both default to on. */
+  microphoneEnabled?: boolean;
+  cameraEnabled?: boolean;
+  /** The devices picked on the pre-join screen, so the call starts on them. */
+  devices?: Partial<Record<RoomDeviceKind, string>>;
+  /**
+   * Development only: join publishing nothing, for browsers that cannot grant
+   * devices at all (the embedded preview pane). Production never sets this —
+   * F05 requires a denied microphone to block the connection.
+   */
+  withoutMedia?: boolean;
+}
 
 function toView(participant: Participant, isLocal: boolean): ParticipantView {
   const publications = [...participant.trackPublications.values()];
@@ -49,6 +70,7 @@ function toView(participant: Participant, isLocal: boolean): ParticipantView {
     identity: participant.identity,
     displayName: participant.name || participant.identity,
     isLocal,
+    isSpeaking: participant.isSpeaking,
     muted: !audioPublication || audioPublication.isMuted,
     cameraOff: !videoPublication || videoPublication.isMuted,
     quality: participant.connectionQuality,
@@ -61,10 +83,14 @@ export interface UseClassroomRoom {
   phase: RoomPhase;
   participants: ParticipantView[];
   reconnectSecondsLeft: number | null;
-  connect: (params: { url: string; token: string; expiresAt: string }) => Promise<void>;
+  /** The device each kind is currently running on inside the call. */
+  activeDeviceIds: Partial<Record<RoomDeviceKind, string>>;
+  connect: (params: ConnectParams) => Promise<void>;
   disconnect: () => Promise<void>;
   toggleMicrophone: () => Promise<void>;
   toggleCamera: () => Promise<void>;
+  /** Switches the room's own device — not a preview track, which the call never reads. */
+  switchDevice: (kind: RoomDeviceKind, deviceId: string) => Promise<void>;
 }
 
 /**
@@ -80,6 +106,7 @@ export function useClassroomRoom(): UseClassroomRoom {
   const [phase, setPhase] = useState<RoomPhase>('connecting');
   const [participants, setParticipants] = useState<ParticipantView[]>([]);
   const [reconnectSecondsLeft, setReconnectSecondsLeft] = useState<number | null>(null);
+  const [activeDeviceIds, setActiveDeviceIds] = useState<Partial<Record<RoomDeviceKind, string>>>({});
 
   const refreshParticipants = useCallback((room: Room) => {
     setParticipants([
@@ -119,8 +146,22 @@ export function useClassroomRoom(): UseClassroomRoom {
   }, [refreshParticipants]);
 
   const connect = useCallback(
-    async ({ url, token, expiresAt }: { url: string; token: string; expiresAt: string }) => {
-      const room = new Room({ reconnectPolicy: new BoundedReconnectPolicy() });
+    async ({
+      url,
+      token,
+      expiresAt,
+      microphoneEnabled = true,
+      cameraEnabled = true,
+      devices = {},
+      withoutMedia = false,
+    }: ConnectParams) => {
+      const room = new Room({
+        reconnectPolicy: new BoundedReconnectPolicy(),
+        audioCaptureDefaults: devices.audioinput ? { deviceId: devices.audioinput } : undefined,
+        videoCaptureDefaults: devices.videoinput ? { deviceId: devices.videoinput } : undefined,
+        audioOutput: devices.audiooutput ? { deviceId: devices.audiooutput } : undefined,
+      });
+      setActiveDeviceIds(devices);
       roomRef.current = room;
 
       const onChanged = () => refreshParticipants(room);
@@ -135,6 +176,7 @@ export function useClassroomRoom(): UseClassroomRoom {
         .on(RoomEvent.LocalTrackPublished, onChanged)
         .on(RoomEvent.LocalTrackUnpublished, onChanged)
         .on(RoomEvent.ConnectionQualityChanged, onChanged)
+        .on(RoomEvent.ActiveSpeakersChanged, onChanged)
         .on(RoomEvent.Reconnecting, () => {
           if (refreshing.current) return;
           setPhase('reconnecting');
@@ -159,9 +201,21 @@ export function useClassroomRoom(): UseClassroomRoom {
 
       setPhase('connecting');
       await room.connect(url, token);
+      if (withoutMedia) {
+        setPhase('connected');
+        refreshParticipants(room);
+        scheduleRefresh(expiresAt, url);
+        return;
+      }
+      // Published even when the pre-join screen left it off, then muted: the
+      // microphone is required, and toggling it later is an unmute rather
+      // than a first publish.
       await room.localParticipant.setMicrophoneEnabled(true);
+      if (!microphoneEnabled) {
+        await room.localParticipant.setMicrophoneEnabled(false);
+      }
       try {
-        await room.localParticipant.setCameraEnabled(true);
+        await room.localParticipant.setCameraEnabled(cameraEnabled);
       } catch {
         // Denied or unavailable — the lesson still starts, audio-only. The
         // microphone above is not wrapped the same way: it is required.
@@ -185,7 +239,11 @@ export function useClassroomRoom(): UseClassroomRoom {
     const room = roomRef.current;
     if (!room) return;
     const enabled = room.localParticipant.isMicrophoneEnabled;
-    await room.localParticipant.setMicrophoneEnabled(!enabled);
+    try {
+      await room.localParticipant.setMicrophoneEnabled(!enabled);
+    } catch {
+      // No device or no permission — the tile keeps showing the muted state.
+    }
     refreshParticipants(room);
   }, [refreshParticipants]);
 
@@ -193,9 +251,24 @@ export function useClassroomRoom(): UseClassroomRoom {
     const room = roomRef.current;
     if (!room) return;
     const enabled = room.localParticipant.isCameraEnabled;
-    await room.localParticipant.setCameraEnabled(!enabled);
+    try {
+      await room.localParticipant.setCameraEnabled(!enabled);
+    } catch {
+      // No device or no permission — the tile keeps showing initials.
+    }
     refreshParticipants(room);
   }, [refreshParticipants]);
+
+  const switchDevice = useCallback(async (kind: RoomDeviceKind, deviceId: string) => {
+    const room = roomRef.current;
+    if (!room) return;
+    try {
+      await room.switchActiveDevice(kind, deviceId);
+      setActiveDeviceIds((prev) => ({ ...prev, [kind]: deviceId }));
+    } catch {
+      // The previous device keeps running; the select stays on it.
+    }
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -206,5 +279,15 @@ export function useClassroomRoom(): UseClassroomRoom {
     };
   }, []);
 
-  return { phase, participants, reconnectSecondsLeft, connect, disconnect, toggleMicrophone, toggleCamera };
+  return {
+    phase,
+    participants,
+    reconnectSecondsLeft,
+    activeDeviceIds,
+    connect,
+    disconnect,
+    toggleMicrophone,
+    toggleCamera,
+    switchDevice,
+  };
 }

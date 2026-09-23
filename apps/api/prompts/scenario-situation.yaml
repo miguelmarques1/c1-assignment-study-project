@@ -18,6 +18,8 @@ user_template: |
   return it unchanged in the vocabulary_domain field.
 
   Produce:
+  - A short title for the situation, 3 to 7 words, naming its tension
+    without resolving it
   - A setting (where and when this is happening), in one or two sentences
   - A premise (why these people are talking, in one or two sentences) that
     carries a tension the conversation has to work through, without saying
@@ -35,6 +37,8 @@ variables:
 response_schema:
   type: object
   properties:
+    title:
+      type: string
     setting:
       type: string
     premise:
@@ -57,12 +61,13 @@ response_schema:
       maxItems: 5
       items:
         type: string
-  required: [setting, premise, roles, vocabulary_domain, discussion_hooks]
+  required: [title, setting, premise, roles, vocabulary_domain, discussion_hooks]
 examples:
   - user: |
       Generate a shared roleplay situation for 2 participants...
       The vocabulary domain for this conversation is: workplace negotiation
     output:
+      title: "Splitting the Lisbon Project"
       setting: "A co-working space in Lisbon, late afternoon."
       premise: "Two freelancers who share a desk are deciding whether to split a client project."
       roles:

@@ -19,7 +19,15 @@ const SHADOW_TOKENS = new Set(shadowNames as readonly string[]);
  * (`border-2`, `border-b-2`, ...), which uses the same `border-` prefix as
  * our border *colour* roles but means something structurally different.
  */
-const BUILTIN_TAILWIND_UTILITIES = new Set(['text-center', 'text-left', 'text-right', 'mx-auto', 'my-auto']);
+const BUILTIN_TAILWIND_UTILITIES = new Set([
+  'text-center',
+  'text-left',
+  'text-right',
+  'mx-auto',
+  'my-auto',
+  // A border *style*, sharing the `border-` prefix with the colour roles.
+  'border-dashed',
+]);
 const BORDER_WIDTH_PATTERN = /^([trbl]-)?\d+$/;
 
 /**
@@ -109,8 +117,16 @@ function extractCandidates(content: string): CandidateUtility[] {
   return candidates;
 }
 
-function isDeclared({ prefix, suffix, raw }: CandidateUtility): boolean {
+/**
+ * `bg-outline-strong/60` is the `outline-strong` role at 60% opacity — the
+ * modifier scales a token, it never introduces a value, so the suffix is
+ * checked without it.
+ */
+const OPACITY_MODIFIER = /\/\d{1,3}$/;
+
+function isDeclared({ prefix, suffix: rawSuffix, raw }: CandidateUtility): boolean {
   if (BUILTIN_TAILWIND_UTILITIES.has(raw)) return true;
+  const suffix = rawSuffix.replace(OPACITY_MODIFIER, '');
   if (NON_UTILITY_ALLOWLIST.has(raw)) return true;
 
   switch (prefix) {

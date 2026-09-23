@@ -12,6 +12,7 @@ function participant(overrides: Partial<ParticipantView> = {}): ParticipantView 
     identity: 'user-1',
     displayName: 'Alice',
     isLocal: false,
+    isSpeaking: false,
     muted: false,
     cameraOff: true,
     quality: ConnectionQuality.Excellent,

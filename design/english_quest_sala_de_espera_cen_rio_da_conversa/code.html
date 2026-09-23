@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+
+<html lang="en"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0" name="viewport"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base { html, body { margin: 0; padding: 0; } body { overscroll-behavior: none; } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { "colors": { "on-secondary-fixed-variant": "#004395", "on-tertiary-container": "#003b26", "primary": "#ae3115", "surface-bright": "#fbf8fc", "on-primary-fixed": "#3d0600", "surface-container": "#f0edf1", "surface-container-highest": "#e4e1e6", "on-tertiary-fixed": "#002113", "on-secondary-container": "#fefcff", "error": "#ba1a1a", "outline": "#8d716a", "on-background": "#1b1b1e", "surface-container-low": "#f6f2f7", "outline-variant": "#e1bfb8", "surface-tint": "#ae3115", "secondary-container": "#2170e4", "on-primary-container": "#661000", "inverse-on-surface": "#f3f0f4", "primary-fixed": "#ffdad2", "tertiary-fixed": "#6ffbbe", "surface-dim": "#dcd9dd", "background": "#fbf8fc", "inverse-surface": "#303033", "on-tertiary": "#ffffff", "on-surface": "#1b1b1e", "on-secondary-fixed": "#001a42", "on-secondary": "#ffffff", "surface": "#fbf8fc", "surface-variant": "#e4e1e6", "secondary-fixed-dim": "#adc6ff", "tertiary-fixed-dim": "#4edea3", "surface-container-lowest": "#ffffff", "inverse-primary": "#ffb4a3", "tertiary-container": "#00b07a", "on-error-container": "#93000a", "error-container": "#ffdad6", "surface-container-high": "#eae7eb", "on-error": "#ffffff", "on-tertiary-fixed-variant": "#005236", "on-primary": "#ffffff", "primary-container": "#ff6b4a", "on-surface-variant": "#59413c", "tertiary": "#006c49", "primary-fixed-dim": "#ffb4a3", "on-primary-fixed-variant": "#8c1900", "secondary-fixed": "#d8e2ff", "secondary": "#0058be" }, "borderRadius": { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, "spacing": { "gutter": "1.25rem", "space-xs": "0.25rem", "gutter-mobile": "0.75rem", "margin-mobile": "1rem", "margin": "2rem", "space-xl": "2.5rem", "space-lg": "1.5rem", "space-md": "1rem", "space-sm": "0.5rem" }, "fontFamily": { "title-md": [ "Plus Jakarta Sans" ], "label-md": [ "Plus Jakarta Sans" ], "body-lg": [ "Plus Jakarta Sans" ], "display-mobile": [ "Plus Jakarta Sans" ], "label-lg": [ "Plus Jakarta Sans" ], "headline-lg": [ "Plus Jakarta Sans" ], "label-sm": [ "Plus Jakarta Sans" ], "body-sm": [ "Plus Jakarta Sans" ], "headline-sm": [ "Plus Jakarta Sans" ], "headline-md": [ "Plus Jakarta Sans" ], "display": [ "Plus Jakarta Sans" ], "title-lg": [ "Plus Jakarta Sans" ], "body-md": [ "Plus Jakarta Sans" ], "headline-lg-mobile": [ "Plus Jakarta Sans" ] }, "fontSize": { "title-md": [ "16px", { "lineHeight": "24px", "fontWeight": "600" } ], "label-md": [ "12px", { "lineHeight": "16px", "fontWeight": "700" } ], "body-lg": [ "16px", { "lineHeight": "26px", "fontWeight": "400" } ], "display-mobile": [ "32px", { "lineHeight": "40px", "fontWeight": "800" } ], "label-lg": [ "14px", { "lineHeight": "20px", "fontWeight": "700" } ], "headline-lg": [ "32px", { "lineHeight": "40px", "fontWeight": "700" } ], "label-sm": [ "11px", { "lineHeight": "14px", "fontWeight": "800" } ], "body-sm": [ "12px", { "lineHeight": "18px", "fontWeight": "500" } ], "headline-sm": [ "20px", { "lineHeight": "28px", "fontWeight": "700" } ], "headline-md": [ "24px", { "lineHeight": "32px", "fontWeight": "700" } ], "display": [ "44px", { "lineHeight": "52px", "fontWeight": "800" } ], "title-lg": [ "18px", { "lineHeight": "26px", "fontWeight": "600" } ], "body-md": [ "14px", { "lineHeight": "22px", "fontWeight": "400" } ], "headline-lg-mobile": [ "26px", { "lineHeight": "34px", "fontWeight": "700" } ] } } } }</script><meta content="web_standard" name="shell-type"/></head><body class="bg-surface font-body-md text-body-md text-on-surface min-h-screen"><header class="fixed top-0 left-0 right-0 z-50 bg-[#F8F4EE] border-b-2 border-black"><div class="h-20 max-w-[1200px] mx-auto px-margin flex items-center justify-between gap-gutter"><div class="flex items-center gap-space-md"><img alt="English Quest Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1UHEVb4m8uv2qGOQKt8cyHILG7SIM9gacNCEHnLBza1RW9XlqzhejrxNk9cUuzPDVn1UuNavPPP7Uoek9kITeIw0bcH4D_5SEOkE17v5HwrD5-spz2Q8A3se9ahgPf3_drNn8ax6CFN9Ry1Hc8l_RNl8aIHdmwq-bA7ZEaT4YEeoqMIynKWLGZMfXg_Tq5vVkkSu3rv6tqwkD7hE9MAcI4wG73xYRh5wE0UPp-SyI6-9LM0vO1SidcKX8x0"/><span class="font-headline-sm text-headline-sm tracking-tight text-on-surface">English Quest</span></div><nav class="hidden md:flex items-center gap-space-sm bg-surface-container-high p-space-xs rounded-xl border-2 border-black shadow-[2px_2px_0px_#18181B]" data-active-classes="bg-surface-container-lowest text-on-surface border-2 border-black shadow-[2px_2px_0px_#18181B] font-label-lg text-label-lg"><a class="px-space-md py-space-xs rounded-lg text-on-surface-variant font-label-lg text-label-lg hover:text-on-surface transition-all" data-path="dashboard" href="#">Dashboard</a><a class="px-space-md py-space-xs rounded-lg text-on-surface-variant font-label-lg text-label-lg hover:text-on-surface transition-all" data-path="scenarios-practice" href="#">Scenarios &amp; Practice</a><a class="px-space-md py-space-xs rounded-lg text-on-surface-variant font-label-lg text-label-lg hover:text-on-surface transition-all" data-path="settings" href="#">Settings</a></nav><div class="flex items-center gap-space-md"><div class="hidden sm:flex items-center gap-space-xs px-space-md py-space-xs rounded-full bg-surface-container-lowest border-2 border-black shadow-[2px_2px_0px_#18181B]"><span class="material-symbols-outlined text-primary text-[18px]">local_fire_department</span><span class="font-label-md text-label-md text-on-surface">7 Day Streak</span></div><div class="hidden sm:flex items-center gap-space-xs px-space-md py-space-xs rounded-full bg-tertiary-container border-2 border-black shadow-[2px_2px_0px_#18181B]"><span class="material-symbols-outlined text-on-tertiary-container text-[18px]">bolt</span><span class="font-label-md text-label-md text-on-tertiary-container">1,420 XP</span></div><div class="flex items-center gap-space-sm pl-space-xs"><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center border-2 border-black"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></div></header><main class="w-full pt-20 max-w-[1200px] mx-auto px-margin py-space-xl"><div class="flex flex-col w-full pb-28">
+<!-- Top Session Bar / Status -->
+<div class="w-full flex flex-col md:flex-row items-center justify-between gap-space-md p-space-md bg-surface-container-lowest border-2 border-black rounded-2xl shadow-[4px_4px_0px_#18181B] mb-space-lg">
+<div class="flex items-center gap-space-md">
+<div class="flex items-center gap-space-xs px-space-md py-space-xs bg-error-container text-on-error-container border-2 border-black rounded-full font-label-md text-label-md">
+<span class="w-2.5 h-2.5 rounded-full bg-error animate-ping"></span>
+<span>Aguardando parceiro entrar...</span>
+</div>
+<div class="flex items-center gap-space-xs font-label-md text-label-md text-on-surface-variant">
+<span class="material-symbols-outlined text-[18px]">group</span>
+<span>Sala 1:1 Conversação</span>
+</div>
+</div>
+<div class="flex items-center gap-space-md">
+<div class="flex items-center gap-space-xs px-space-md py-space-xs bg-surface-container-high border-2 border-black rounded-xl font-label-lg text-label-lg text-on-surface">
+<span class="material-symbols-outlined text-primary text-[20px]">timer</span>
+<span id="session-timer">00:00</span>
+</div>
+<div class="hidden sm:flex items-center gap-space-xs px-space-md py-space-xs bg-secondary-fixed text-on-secondary-fixed border-2 border-black rounded-xl font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[16px]">wifi</span>
+<span>Estável (34ms)</span>
+</div>
+</div>
+</div>
+<!-- Main Grid: Video Preview & Briefings -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-space-lg">
+<!-- Left Column: AV Check & Video Preview (Lg: 4 Cols) -->
+<div class="lg:col-span-4 flex flex-col gap-space-lg">
+<!-- Camera Preview Box -->
+<div class="w-full bg-surface-container-lowest border-2 border-black rounded-2xl p-space-md shadow-[4px_4px_0px_#18181B] flex flex-col gap-space-md">
+<div class="flex items-center justify-between">
+<span class="font-label-lg text-label-lg text-on-surface flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[18px] text-tertiary">videocam</span>
+            Sua Prévia de Vídeo
+          </span>
+<span class="px-2 py-0.5 bg-tertiary-fixed text-on-tertiary-fixed font-label-sm text-label-sm rounded-full border border-black">Ao Vivo</span>
+</div>
+<!-- Video Viewport / Avatar -->
+<div class="relative w-full aspect-video bg-surface-container-highest rounded-xl border-2 border-black overflow-hidden flex items-center justify-center">
+<img class="w-full h-full object-cover" data-alt="Portrait of a young friendly language student looking attentively at the camera with soft cinematic studio light and warm terracotta background tones" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCJ7miBeSSqMgdgs2bOrWcPayo-tJF9QoV2m7hQ4gsnzpGT5vZG-NDxp1-3Y_u10GQ3Wic83eSVxVsw4MyiP7r5fl__IbTnUSUtXQ5k9uNAb1H-8Ib1y9ihDzgbLjbeCCR2F_L0jg27nJI4y80ebQLZRFzFWMZhzkV27xbfGU-xrJAbMb0L_awm_sZndKwtL074wxgNqluWuu8vFSFFu-PlLoqBX1MSFHS81CtfBwulH-ES4loimfFD1Q"/>
+<div class="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-1 bg-surface-container-lowest/90 border border-black rounded-lg text-on-surface font-label-sm text-label-sm shadow-[1px_1px_0px_#18181B]">
+<span class="w-2 h-2 rounded-full bg-tertiary-container"></span>
+<span>Você (Lucas V.)</span>
+</div>
+<div class="absolute top-2 right-2 flex gap-1">
+<button class="w-7 h-7 bg-surface-container-lowest border border-black rounded-lg flex items-center justify-center hover:bg-surface-container transition-all">
+<span class="material-symbols-outlined text-[16px]">flip_camera_ios</span>
+</button>
+</div>
+</div>
+<!-- Mic Monitor -->
+<div class="flex flex-col gap-1.5 pt-1">
+<div class="flex items-center justify-between text-on-surface font-label-sm text-label-sm">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-[16px]">mic</span>
+              Nível do Microfone
+            </span>
+<span class="text-tertiary font-bold">Excelente</span>
+</div>
+<div class="w-full h-3 bg-surface-container border-2 border-black rounded-full overflow-hidden p-0.5 flex gap-1 items-center">
+<div class="h-full bg-tertiary-container rounded-full w-[65%] transition-all duration-300"></div>
+<div class="h-full bg-tertiary-container/40 rounded-full w-[20%]"></div>
+</div>
+</div>
+<!-- Partner Waiting Status Banner -->
+<div class="p-space-md bg-surface-container-low rounded-xl border-2 border-dashed border-black flex flex-col items-center justify-center text-center gap-space-xs">
+<div class="w-10 h-10 rounded-full bg-secondary-fixed border-2 border-black flex items-center justify-center shadow-[2px_2px_0px_#18181B]">
+<span class="material-symbols-outlined text-secondary animate-spin">sync</span>
+</div>
+<p class="font-title-md text-title-md text-on-surface">Procurando parceiro...</p>
+<p class="font-body-sm text-body-sm text-on-surface-variant max-w-[240px]">
+            Conectando com estudantes do nível B2/C1 compatíveis com este tema.
+          </p>
+</div>
+</div>
+<!-- Quick Session Rules -->
+<div class="w-full bg-surface-container-high border-2 border-black rounded-2xl p-space-md shadow-[4px_4px_0px_#18181B] flex flex-col gap-space-sm">
+<h4 class="font-label-lg text-label-lg text-on-surface flex items-center gap-1.5">
+<span class="material-symbols-outlined text-primary text-[18px]">verified</span>
+          Lembretes da Sessão
+        </h4>
+<ul class="font-body-sm text-body-sm text-on-surface-variant space-y-1.5 list-disc list-inside">
+<li>Fale apenas em <strong>inglês</strong> durante o roleplay.</li>
+<li>Mantenha a conversa fluindo por no mínimo 10 minutos.</li>
+<li>Incorpore naturalmente os objetivos ocultos.</li>
+</ul>
+</div>
+</div>
+<!-- Right Column: Scenario & Exclusive Secret Card (Lg: 8 Cols) -->
+<div class="lg:col-span-8 flex flex-col gap-space-lg">
+<!-- Main Scenario Card -->
+<div class="w-full bg-surface-container-lowest border-2 border-black rounded-2xl p-space-lg shadow-[4px_4px_0px_#18181B] flex flex-col gap-space-md">
+<!-- Topic Badge & Category -->
+<div class="flex flex-wrap items-center justify-between gap-space-sm pb-space-xs border-b-2 border-surface-container-highest">
+<div class="flex items-center gap-space-xs">
+<span class="px-space-md py-1 bg-surface-container-lowest border-2 border-black rounded-full font-label-sm text-label-sm uppercase tracking-wider text-on-surface shadow-[2px_2px_0px_#18181B] flex items-center gap-1">
+<span class="material-symbols-outlined text-primary text-[16px]">favorite</span>
+              Relationships / Relacionamentos
+            </span>
+<span class="px-space-md py-1 bg-surface-container border-2 border-black rounded-full font-label-sm text-label-sm text-on-surface-variant">
+              B2 - C1 Advanced
+            </span>
+</div>
+<!-- Reroll Scenario Button -->
+<button class="flex items-center gap-space-xs px-space-md py-1.5 bg-surface-container-lowest hover:bg-surface-container-high active:translate-x-[2px] active:translate-y-[2px] active:shadow-none border-2 border-black rounded-xl font-label-md text-label-md text-on-surface shadow-[2px_2px_0px_#18181B] transition-all">
+<span class="material-symbols-outlined text-[16px]">restart_alt</span>
+<span>Novo cenário (3 restantes)</span>
+</button>
+</div>
+<!-- Scenario Description Header -->
+<div class="flex flex-col gap-space-xs">
+<h2 class="font-headline-md text-headline-md text-on-surface tracking-tight">
+            Sunday Coffee: The Broken Trust
+          </h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant leading-relaxed">
+            “A quiet corner of a dimly lit coffee shop on a rainy Sunday afternoon. Two close friends are discussing whether one of them should forgive a long-term partner after a breach of trust, exposing deep disagreements about loyalty and second chances.”
+          </p>
+</div>
+<!-- Assigned Roles Grid -->
+<div class="flex flex-col gap-space-xs pt-space-xs">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant">Papéis atribuídos na chamada:</span>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+<!-- User Role (Coral / Accent) -->
+<div class="p-space-md bg-primary-fixed border-2 border-black rounded-xl shadow-[3px_3px_0px_#18181B] flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<span class="px-2 py-0.5 bg-primary text-on-primary font-label-sm text-label-sm rounded-md border border-black">Seu Papel</span>
+<span class="material-symbols-outlined text-on-primary-fixed text-[20px]">shield_person</span>
+</div>
+<h3 class="font-title-lg text-title-lg text-on-primary-fixed">The Protective Friend</h3>
+<p class="font-body-md text-body-md text-on-primary-fixed-variant">
+                Longtime close friend who distrusts the partner and prioritizes emotional protection.
+              </p>
+</div>
+<!-- Partner Role (Neutral Outline) -->
+<div class="p-space-md bg-surface-container-lowest border-2 border-black rounded-xl shadow-[3px_3px_0px_#18181B] flex flex-col gap-space-xs">
+<div class="flex items-center justify-between">
+<span class="px-2 py-0.5 bg-surface-container-high text-on-surface-variant font-label-sm text-label-sm rounded-md border border-black">Papel do Parceiro</span>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]">help_center</span>
+</div>
+<h3 class="font-title-lg text-title-lg text-on-surface">The Conflicted Partner</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">
+                Longtime close friend who is emotionally torn and considering reconciliation.
+              </p>
+</div>
+</div>
+</div>
+<!-- Talk About / Tópicos para debater -->
+<div class="flex flex-col gap-space-xs pt-space-xs">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface-variant flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-primary">chat_bubble</span>
+            Tópicos para Debater (Talk About):
+          </span>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-space-sm text-on-surface font-body-md text-body-md">
+<div class="flex items-start gap-space-xs p-space-sm bg-surface-container-low border border-black rounded-lg">
+<span class="material-symbols-outlined text-primary text-[18px] shrink-0 mt-0.5">check_circle</span>
+<span>Where is the boundary between a simple mistake and unforgivable disrespect?</span>
+</div>
+<div class="flex items-start gap-space-xs p-space-sm bg-surface-container-low border border-black rounded-lg">
+<span class="material-symbols-outlined text-primary text-[18px] shrink-0 mt-0.5">check_circle</span>
+<span>Can trust truly be rebuilt after lies, or does paranoia always linger?</span>
+</div>
+<div class="flex items-start gap-space-xs p-space-sm bg-surface-container-low border border-black rounded-lg">
+<span class="material-symbols-outlined text-primary text-[18px] shrink-0 mt-0.5">check_circle</span>
+<span>The pressure of shared history: is throwing away 5 years together justified?</span>
+</div>
+<div class="flex items-start gap-space-xs p-space-sm bg-surface-container-low border border-black rounded-lg">
+<span class="material-symbols-outlined text-primary text-[18px] shrink-0 mt-0.5">check_circle</span>
+<span>The role of friendship: when should friends stay neutral versus intervening?</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Secret Mission Card (ONLY YOU CAN SEE THIS) -->
+<div class="w-full bg-[#FFF6F3] border-2 border-black rounded-2xl p-space-lg shadow-[4px_4px_0px_#18181B] flex flex-col gap-space-md relative overflow-hidden">
+<!-- Badge Flag -->
+<div class="flex items-center justify-between pb-space-xs border-b-2 border-black/10">
+<div class="flex items-center gap-space-xs">
+<span class="px-space-md py-1 bg-primary text-on-primary border-2 border-black rounded-full font-label-sm text-label-sm tracking-wider uppercase shadow-[2px_2px_0px_#18181B] flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">visibility_off</span>
+              Somente Você Pode Ver Isso / Secret Briefing
+            </span>
+</div>
+<span class="px-space-sm py-0.5 bg-surface-container-lowest border border-black rounded text-on-surface font-label-sm text-label-sm">
+            Informal Register
+          </span>
+</div>
+<!-- Role Objectives & Constraints -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-space-md">
+<div class="flex flex-col gap-1 bg-surface-container-lowest p-space-md rounded-xl border-2 border-black shadow-[2px_2px_0px_#18181B]">
+<span class="font-label-md text-label-md text-primary flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">flag</span>
+              Seu Objetivo (Your Objective):
+            </span>
+<p class="font-body-md text-body-md text-on-surface">
+              Convince your friend to end the relationship rather than making excuses for their partner's betrayal.
+            </p>
+</div>
+<div class="flex flex-col gap-1 bg-surface-container-lowest p-space-md rounded-xl border-2 border-black shadow-[2px_2px_0px_#18181B]">
+<span class="font-label-md text-label-md text-error flex items-center gap-1">
+<span class="material-symbols-outlined text-[18px]">warning</span>
+              Sua Restrição (Your Constraint):
+            </span>
+<p class="font-body-md text-body-md text-on-surface">
+              You must avoid sounding overly aggressive or judgmental so your friend doesn't get defensive and shut down.
+            </p>
+</div>
+</div>
+<!-- Recommended Expressions -->
+<div class="flex flex-col gap-space-sm pt-space-xs">
+<div class="flex items-center justify-between">
+<span class="font-label-sm text-label-sm uppercase tracking-widest text-on-surface flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-tertiary">psychology</span>
+              Expressões Recomendadas para Usar (Expressions to Try):
+            </span>
+<span class="font-label-sm text-label-sm text-tertiary font-bold">+10 XP por expressão</span>
+</div>
+<div class="flex flex-wrap gap-2">
+<button class="px-space-md py-1.5 bg-surface-container-lowest hover:bg-tertiary-fixed border-2 border-black rounded-lg font-label-md text-label-md text-on-surface shadow-[2px_2px_0px_#18181B] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all flex items-center gap-1">
+<span>cross a line</span>
+</button>
+<button class="px-space-md py-1.5 bg-surface-container-lowest hover:bg-tertiary-fixed border-2 border-black rounded-lg font-label-md text-label-md text-on-surface shadow-[2px_2px_0px_#18181B] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all flex items-center gap-1">
+<span>sweep it under the rug</span>
+</button>
+<button class="px-space-md py-1.5 bg-surface-container-lowest hover:bg-tertiary-fixed border-2 border-black rounded-lg font-label-md text-label-md text-on-surface shadow-[2px_2px_0px_#18181B] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all flex items-center gap-1">
+<span>break someone's trust</span>
+</button>
+<button class="px-space-md py-1.5 bg-surface-container-lowest hover:bg-tertiary-fixed border-2 border-black rounded-lg font-label-md text-label-md text-on-surface shadow-[2px_2px_0px_#18181B] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all flex items-center gap-1">
+<span>give the benefit of the doubt</span>
+</button>
+<button class="px-space-md py-1.5 bg-surface-container-lowest hover:bg-tertiary-fixed border-2 border-black rounded-lg font-label-md text-label-md text-on-surface shadow-[2px_2px_0px_#18181B] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all flex items-center gap-1">
+<span>pattern of behavior</span>
+</button>
+<button class="px-space-md py-1.5 bg-surface-container-lowest hover:bg-tertiary-fixed border-2 border-black rounded-lg font-label-md text-label-md text-on-surface shadow-[2px_2px_0px_#18181B] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all flex items-center gap-1">
+<span>cut your losses</span>
+</button>
+<button class="px-space-md py-1.5 bg-surface-container-lowest hover:bg-tertiary-fixed border-2 border-black rounded-lg font-label-md text-label-md text-on-surface shadow-[2px_2px_0px_#18181B] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all flex items-center gap-1">
+<span>at the end of the day</span>
+</button>
+<button class="px-space-md py-1.5 bg-surface-container-lowest hover:bg-tertiary-fixed border-2 border-black rounded-lg font-label-md text-label-md text-on-surface shadow-[2px_2px_0px_#18181B] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all flex items-center gap-1">
+<span>have your best interests at heart</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom Floating Call Controls (Google Meet / Neo-brutalist Style) -->
+<div class="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 w-[92%] max-w-[800px]">
+<div class="w-full bg-[#F8F4EE] border-2 border-black rounded-2xl p-space-sm shadow-[6px_6px_0px_#18181B] flex items-center justify-between gap-space-sm">
+<!-- Media Toggles -->
+<div class="flex items-center gap-space-xs">
+<!-- Mic Button -->
+<button class="w-12 h-12 bg-surface-container-lowest hover:bg-surface-container active:translate-x-[2px] active:translate-y-[2px] active:shadow-none border-2 border-black rounded-xl shadow-[3px_3px_0px_#18181B] flex items-center justify-center transition-all" id="btn-toggle-mic">
+<span class="material-symbols-outlined text-[22px] text-on-surface">mic</span>
+</button>
+<!-- Camera Button -->
+<button class="w-12 h-12 bg-surface-container-lowest hover:bg-surface-container active:translate-x-[2px] active:translate-y-[2px] active:shadow-none border-2 border-black rounded-xl shadow-[3px_3px_0px_#18181B] flex items-center justify-center transition-all" id="btn-toggle-cam">
+<span class="material-symbols-outlined text-[22px] text-on-surface">videocam</span>
+</button>
+<!-- Device Settings -->
+<button class="w-12 h-12 bg-surface-container-lowest hover:bg-surface-container active:translate-x-[2px] active:translate-y-[2px] active:shadow-none border-2 border-black rounded-xl shadow-[3px_3px_0px_#18181B] flex items-center justify-center transition-all">
+<span class="material-symbols-outlined text-[22px] text-on-surface">tune</span>
+</button>
+</div>
+<!-- Center View Switcher / Scenario Toggle -->
+<div class="flex items-center gap-space-xs bg-surface-container-high p-1 border-2 border-black rounded-xl shadow-[2px_2px_0px_#18181B]">
+<button class="px-space-md py-1.5 bg-surface-container-lowest border-2 border-black rounded-lg font-label-md text-label-md text-on-surface shadow-[2px_2px_0px_#18181B] flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px] text-primary">auto_stories</span>
+<span>Cenário</span>
+</button>
+<button class="px-space-md py-1.5 hover:bg-surface-container-lowest rounded-lg font-label-md text-label-md text-on-surface-variant flex items-center gap-1 transition-all">
+<span class="material-symbols-outlined text-[16px]">chat</span>
+<span class="hidden sm:inline">Chat</span>
+</button>
+</div>
+<!-- Action / End Lesson -->
+<div class="flex items-center gap-space-xs">
+<button class="px-space-md h-12 bg-error text-on-error hover:bg-[#a01515] active:translate-x-[3px] active:translate-y-[3px] active:shadow-none border-2 border-black rounded-xl font-label-lg text-label-lg shadow-[3px_3px_0px_#18181B] flex items-center gap-1.5 transition-all">
+<span class="material-symbols-outlined text-[20px]">call_end</span>
+<span class="hidden sm:inline">Encerrar aula</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<script>
+  // Simple Waiting Room Micro-interactions
+  let seconds = 0;
+  const timerElem = document.getElementById('session-timer');
+  if (timerElem) {
+    setInterval(() => {
+      seconds++;
+      const mins = String(Math.floor(seconds / 60)).padStart(2, '0');
+      const secs = String(seconds % 60).padStart(2, '0');
+      timerElem.textContent = `${mins}:${secs}`;
+    }, 1000);
+  }
+
+  // Toggle Mic Icon
+  const micBtn = document.getElementById('btn-toggle-mic');
+  if (micBtn) {
+    micBtn.addEventListener('click', () => {
+      const icon = micBtn.querySelector('span');
+      if (icon.textContent === 'mic') {
+        icon.textContent = 'mic_off';
+        micBtn.classList.add('bg-error-container');
+      } else {
+        icon.textContent = 'mic';
+        micBtn.classList.remove('bg-error-container');
+      }
+    });
+  }
+
+  // Toggle Camera Icon
+  const camBtn = document.getElementById('btn-toggle-cam');
+  if (camBtn) {
+    camBtn.addEventListener('click', () => {
+      const icon = camBtn.querySelector('span');
+      if (icon.textContent === 'videocam') {
+        icon.textContent = 'videocam_off';
+        camBtn.classList.add('bg-error-container');
+      } else {
+        icon.textContent = 'videocam';
+        camBtn.classList.remove('bg-error-container');
+      }
+    });
+  }
+</script></main><footer class="w-full bg-[#F8F4EE] border-t-2 border-black mt-space-xl py-space-lg"><div class="max-w-[1200px] mx-auto px-margin flex flex-col sm:flex-row items-center justify-between gap-space-md text-on-surface-variant font-body-sm text-body-sm"><span>© 2025 English Quest. All rights reserved.</span><div class="flex items-center gap-space-md"><a class="hover:text-on-surface font-label-sm text-label-sm" href="#">Privacy Policy</a><a class="hover:text-on-surface font-label-sm text-label-sm" href="#">Terms of Service</a><a class="hover:text-on-surface font-label-sm text-label-sm" href="#">Support Desk</a></div></div></footer></body></html>

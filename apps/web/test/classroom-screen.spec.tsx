@@ -17,13 +17,18 @@ const {
   requestClassroomTokenMock,
   fetchClassroomSessionMock,
   endLessonMock,
+  fetchScenarioMock,
+  rerollSituationMock,
+  retrySituationMock,
   createLocalTracksMock,
   routerPushMock,
   setAudioBehavior,
   setVideoBehavior,
   setCameraEnabledBehavior,
+  setRemotePresent,
 } = vi.hoisted(() => {
   type DeviceBehavior = 'grant' | 'deny';
+  let remotePresent = false;
   let audioBehavior: DeviceBehavior = 'grant';
   let videoBehavior: DeviceBehavior = 'grant';
   let cameraEnabledBehavior: DeviceBehavior = 'grant';
@@ -59,8 +64,7 @@ const {
     constructor() {
       this.localParticipant = {
         identity: 'local-user',
-        // Matches the ClassroomScreen `displayName` prop below — LiveKit
-        // reflects the token's `name` claim back as `participant.name`.
+        // LiveKit reflects the token's `name` claim back as `participant.name`.
         name: 'Alice',
         trackPublications: new Map(),
         connectionQuality: 'excellent',
@@ -76,6 +80,14 @@ const {
           this.localParticipant.isCameraEnabled = enabled;
         }),
       };
+      if (remotePresent) {
+        this.remoteParticipants.set('bob-id', {
+          identity: 'bob-id',
+          name: 'Bob',
+          trackPublications: new Map(),
+          connectionQuality: 'excellent',
+        });
+      }
     }
 
     on(event: string, handler: (...args: unknown[]) => void): this {
@@ -96,6 +108,9 @@ const {
     requestClassroomTokenMock: vi.fn(),
     fetchClassroomSessionMock: vi.fn(),
     endLessonMock: vi.fn(),
+    fetchScenarioMock: vi.fn(),
+    rerollSituationMock: vi.fn(),
+    retrySituationMock: vi.fn(),
     routerPushMock: vi.fn(),
     createLocalTracksMock: vi.fn(async (options: { audio?: unknown; video?: unknown }) => {
       if (options.audio) {
@@ -115,6 +130,9 @@ const {
     setCameraEnabledBehavior: (value: DeviceBehavior) => {
       cameraEnabledBehavior = value;
     },
+    setRemotePresent: (value: boolean) => {
+      remotePresent = value;
+    },
   };
 });
 
@@ -127,6 +145,12 @@ vi.mock('@/lib/classroom', () => ({
   requestClassroomToken: requestClassroomTokenMock,
   fetchClassroomSession: fetchClassroomSessionMock,
   endLesson: endLessonMock,
+}));
+
+vi.mock('@/lib/scenario', () => ({
+  fetchScenario: fetchScenarioMock,
+  rerollSituation: rerollSituationMock,
+  retrySituation: retrySituationMock,
 }));
 
 vi.mock('next/navigation', () => ({
@@ -155,7 +179,7 @@ const SESSION_RESPONSE = {
 };
 
 async function joinClassroom() {
-  render(<ClassroomScreen displayName="Alice" />);
+  render(<ClassroomScreen userId="local-user" />);
   await waitFor(() => expect(screen.getByRole('button', { name: 'Join classroom' })).toBeInTheDocument());
   await userEvent.click(screen.getByRole('button', { name: 'Join classroom' }));
 }
@@ -164,8 +188,12 @@ beforeEach(() => {
   setAudioBehavior('grant');
   setVideoBehavior('grant');
   setCameraEnabledBehavior('grant');
+  setRemotePresent(false);
   requestClassroomTokenMock.mockReset().mockResolvedValue(TOKEN_RESPONSE);
   fetchClassroomSessionMock.mockReset().mockResolvedValue(SESSION_RESPONSE);
+  fetchScenarioMock.mockReset().mockResolvedValue(null);
+  rerollSituationMock.mockReset();
+  retrySituationMock.mockReset();
   endLessonMock.mockReset().mockResolvedValue({
     lessonId: TOKEN_RESPONSE.lessonId,
     status: 'ended',
@@ -184,7 +212,7 @@ afterEach(() => {
 describe('ClassroomScreen', () => {
   it('blocks_connection_when_the_microphone_is_denied', async () => {
     setAudioBehavior('deny');
-    render(<ClassroomScreen displayName="Alice" />);
+    render(<ClassroomScreen userId="local-user" />);
 
     await waitFor(() =>
       expect(
@@ -259,10 +287,11 @@ describe('ClassroomScreen', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'End lesson' }));
 
+    // The PRD's wording, split across the mockup's heading and information box.
+    const confirmation = screen.getByRole('alertdialog');
+    expect(within(confirmation).getByText('End the lesson for everyone?')).toBeInTheDocument();
     expect(
-      screen.getByText(
-        'End the lesson for everyone? Processing will start and results will be ready in about 30 minutes.',
-      ),
+      within(confirmation).getByText('Processing will start and results will be ready in about 30 minutes.'),
     ).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
@@ -278,11 +307,31 @@ describe('ClassroomScreen', () => {
     expect(routerPushMock).toHaveBeenCalledWith('/dashboard');
   });
 
-  it('renders_the_disabled_scenario_toggle', async () => {
+  it('shows_the_scenario_as_the_waiting_rooms_main_column', async () => {
     await joinClassroom();
     await waitFor(() => expect(screen.getByLabelText('Elapsed time')).toBeInTheDocument());
 
-    const scenarioButton = screen.getByRole('button', { name: 'Scenario — coming soon' });
-    expect(scenarioButton).toBeDisabled();
+    // Before anyone else connects the scenario is already on the page, so the
+    // toggle reads as pressed and opens nothing.
+    const toggle = screen.getByRole('button', { name: 'Scenario shown on this page' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByText("Preparing today's scenario…")).toBeInTheDocument();
+  });
+
+  it('opens_the_in_call_scenario_panel_from_the_control_bar', async () => {
+    setRemotePresent(true);
+    await joinClassroom();
+    await waitFor(() => expect(screen.getByLabelText('Elapsed time')).toBeInTheDocument());
+
+    const scenarioButton = screen.getByRole('button', { name: 'Show scenario panel' });
+    expect(scenarioButton).toBeEnabled();
+    expect(screen.queryByRole('complementary', { name: 'Scenario panel' })).not.toBeInTheDocument();
+
+    await userEvent.click(scenarioButton);
+    expect(screen.getByRole('complementary', { name: 'Scenario panel' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hide scenario panel' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Close scenario panel' }));
+    expect(screen.queryByRole('complementary', { name: 'Scenario panel' })).not.toBeInTheDocument();
   });
 });
