@@ -779,6 +779,193 @@
           "classroom"
         ]
       }
+    },
+    "/classroom/scenario": {
+      "get": {
+        "description": "The shared situation plus only the caller's own role card — never any other participant's card, in any response shape. Null when no lesson is open.",
+        "operationId": "ScenarioController_read",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "The scenario, or null.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ScenarioView"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH003: no valid session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionBearer": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Read the current scenario",
+        "tags": [
+          "scenario"
+        ]
+      }
+    },
+    "/classroom/scenario/reroll": {
+      "post": {
+        "description": "Regenerates the shared situation and every registered participant's role card, each with its own owner's key. Only the participant who opened the room may call this, up to 3 times, and only before the lesson starts.",
+        "operationId": "ScenarioController_reroll",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Reset to pending; the client keeps polling until ready.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ScenarioView"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH003: no valid session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "SCEN003: the caller did not open the room.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CLASS003: no lesson is open.\n\nSCEN002: the lesson has already started; the scenario is immutable.\n\nSCEN001: all 3 rerolls used.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionBearer": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Reroll the situation",
+        "tags": [
+          "scenario"
+        ]
+      }
+    },
+    "/classroom/scenario/retry": {
+      "post": {
+        "description": "Backs the \"Try again\" action after a failed generation. Does not consume a reroll — a failed generation produced no situation to replace.",
+        "operationId": "ScenarioController_retry",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "Reset to pending; the client keeps polling until ready.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ScenarioView"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH003: no valid session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "SCEN003: the caller did not open the room.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CLASS003: no lesson is open.\n\nSCEN002: the lesson has already started.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionBearer": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Retry a failed situation",
+        "tags": [
+          "scenario"
+        ]
+      }
     }
   },
   "info": {
@@ -799,6 +986,10 @@
     {
       "name": "classroom",
       "description": "The persistent live-lesson room"
+    },
+    {
+      "name": "scenario",
+      "description": "The lesson scenario: shared situation and private role cards"
     }
   ],
   "servers": [
@@ -1429,6 +1620,205 @@
           "durationSeconds"
         ],
         "additionalProperties": false
+      },
+      "ScenarioView": {
+        "anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "lessonId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "ready",
+                  "failed",
+                  "no_scenario"
+                ]
+              },
+              "situation": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "setting": {
+                        "type": "string"
+                      },
+                      "premise": {
+                        "type": "string"
+                      },
+                      "roles": {
+                        "minItems": 1,
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "label": {
+                              "type": "string"
+                            },
+                            "relationship": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "label",
+                            "relationship"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "vocabularyDomain": {
+                        "type": "string",
+                        "enum": [
+                          "travel",
+                          "workplace negotiation",
+                          "healthcare",
+                          "housing",
+                          "technology ethics",
+                          "education",
+                          "food and hospitality",
+                          "media and news",
+                          "environment",
+                          "personal finance",
+                          "culture and the arts",
+                          "law and rights",
+                          "sport",
+                          "relationships",
+                          "science"
+                        ]
+                      },
+                      "discussionHooks": {
+                        "minItems": 3,
+                        "maxItems": 5,
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "setting",
+                      "premise",
+                      "roles",
+                      "vocabularyDomain",
+                      "discussionHooks"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "rerollsRemaining": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "canReroll": {
+                "type": "boolean"
+              },
+              "myRoleLabel": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "myCard": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "pending",
+                          "ready",
+                          "failed"
+                        ]
+                      },
+                      "background": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "objective": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "constraint": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "register": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "enum": [
+                              "formal",
+                              "neutral",
+                              "informal"
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "targetExpressions": {
+                        "anyOf": [
+                          {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "status",
+                      "background",
+                      "objective",
+                      "constraint",
+                      "register",
+                      "targetExpressions"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "lessonId",
+              "status",
+              "situation",
+              "rerollsRemaining",
+              "canReroll",
+              "myRoleLabel",
+              "myCard"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "null"
+          }
+        ]
       }
     }
   }

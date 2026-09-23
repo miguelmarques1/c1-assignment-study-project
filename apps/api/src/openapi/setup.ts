@@ -49,6 +49,7 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     .addTag('auth', 'Session lifecycle and credentials')
     .addTag('health', 'Infrastructure dependency probes')
     .addTag('classroom', 'The persistent live-lesson room')
+    .addTag('scenario', 'The lesson scenario: shared situation and private role cards')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

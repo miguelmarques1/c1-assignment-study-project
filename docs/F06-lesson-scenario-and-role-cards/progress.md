@@ -46,16 +46,23 @@
 **Validation:** `pnpm -r typecheck` ✅ · `pnpm lint` ✅ · `pnpm --filter @english-quest/api test:unit` ✅ 101/101 (96 pre-existing + 5 new `domain-rotation.service.spec.ts`) · `apps/api/test/integration/classroom.spec.ts` ✅ 16/16 against real Postgres/Redis (re-run after the classroom wiring change).
 **Commit:** _(recorded in the next stage's commit)_
 
-## Stage 3: The scenario surface — ⬜ pending
+## Stage 3: The scenario surface — ✅ done
 
-- [ ] **8. Authenticated scenario routes**
-- [ ] **9. Reroll and retry rules**
-- [ ] **10. Document regeneration**
+- [x] **8. Authenticated scenario routes**
+- [x] **9. Reroll and retry rules**
+- [x] **10. Document regeneration**
 
-**Observations:** _(none yet)_
+**Observations:**
+- **Deviation — added `scenario.service.ts`, not in the spec's Component Overview file list.** The spec's diagram shows the controller calling the orchestrator directly (`CTRL --> ORCH`), but every other controller in this codebase (`ClassroomController`, `CredentialsController`) is a thin adapter over its own service; `ScenarioController` follows the same shape. `ScenarioService` is the policy layer the spec describes narratively ("who may call them, how many times, and the point after which the scenario can no longer change") in front of the orchestrator's mechanics, plus the `GET` read projection (situation + caller's own card only). This keeps `ScenarioOrchestratorService` purely about *how* to regenerate, never *whether* it's allowed right now.
+- `ScenarioService.read/reroll/retry` resolve the open lesson by querying `lessons` directly (room = `classroom-main`, status in `waiting`/`live`) rather than importing `ClassroomModule`'s `LessonService` — importing it would make `ScenarioModule` depend on `ClassroomModule`, which already depends on `ScenarioModule` (Stage 2), a circular module import. Matches the same direct-Prisma-read decision already recorded in Stage 2 for participant lookups.
+- `canReroll` is `true` whenever the lesson hasn't started, the caller is the opener, and the ceiling isn't reached — **not** gated on `status === 'ready'`, so a `pending` or `failed` situation can also be rerolled (restarted) by the opener; the API contract's own field description only names the three gates the spec's table lists (lesson not started / not the opener / at the limit).
+- `GET /classroom/scenario` degrades to `status: 'pending'` with everything else empty when the lesson is open but the `lesson_scenarios` row does not exist yet (a small window right after token issuance, since the row's creation is itself part of the fire-and-forget chain kicked off by `classroom.service.ts` without being awaited — see Stage 2). Never surfaces as an error to the client; the next poll picks up the real row.
+- `docs/api/openapi.json` regenerated: 14 → 17 operations (the three scenario routes). `ScenarioView` registered as an OpenAPI component from the Zod contract, same as `ClassroomSession`'s nullable-object precedent. Added the `scenario` tag.
+- **Live end-to-end smoke test against the real local stack** (not simulated): logged in as both seeded accounts (`you@example.com`, holding a valid Gemini key; `partner@example.com`, holding none), opened a real lesson, and drove the actual HTTP surface with `curl`. Verified for real: the shared situation renders identically for both participants; role assignment differs between them ("The Sports Brand Sponsor" vs "The Athlete's Manager"); the opener's card generates `ready` with 8 target expressions inside the 6–10 range; the partner's card correctly lands on `status: 'failed'` with the role label still set, because their key is genuinely missing (`GET /credentials` confirms `gemini: missing`) — the PRD's own "role card fails while the situation succeeded" path, hit naturally rather than mocked; reroll resets to `pending`, decrements `rerollsRemaining` (3→2→1→0), and regenerates a materially different situation and cards; a non-opener's reroll is rejected `403 SCEN003`; the fourth reroll is rejected `409 SCEN001` with `details.limit: 3` and does not touch `reroll_count`; a request with no lesson open returns `CLASS003` on both reroll and retry. The lesson was ended afterward and the manually started dev-server process stopped.
+- **Known limitation, found during that manual run, not covered by any AC or spec test:** firing reroll requests back-to-back without waiting for the previous one's background generation to finish (three rerolls inside ~9 seconds, against real multi-second Gemini latency) can let a stale in-flight generation from an earlier reroll write its `status`/content after a later reroll has already reset the row, producing a momentarily inconsistent card (observed once: `status: 'ready'` with a `null` `role_label` on an already-`ended` lesson). No generation-attempt token exists to make a write conditional on "the reroll that started me is still the current one." A real client naturally avoids triggering this by disabling `New situation` while `status === 'pending'` (built into Stage 4's `ScenarioRegion`); the server-side race is left as a documented limitation rather than fixed with optimistic-concurrency tokens, since no acceptance criterion exercises concurrent/rapid rerolls and the fix is non-trivial hardening beyond this feature's scope.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** `pnpm -r typecheck` ✅ · `pnpm lint` ✅ · `pnpm --filter @english-quest/api test:unit` ✅ 101/101 (includes the OpenAPI committed-snapshot check, now 17 operations, and the security-transport guard) · **Runtime check:** the three scenario routes exercised live over HTTP against the real Docker stack with real Gemini calls (see above) — every response shape, status transition and error code matched the API contract.
+**Commit:** _(recorded in the next stage's commit)_
 
 ## Stage 4: The classroom surfaces — ⬜ pending
 

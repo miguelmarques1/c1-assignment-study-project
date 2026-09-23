@@ -11,6 +11,7 @@ import {
   maskedCredentialSchema,
   publicUserSchema,
   saveCredentialSchema,
+  scenarioViewSchema,
   sessionTokenSchema,
   validationDetailSchema,
 } from '@english-quest/shared';
@@ -58,6 +59,7 @@ export const OPENAPI_COMPONENTS: Record<string, SchemaObject> = {
   ClassroomToken: toOpenApi(classroomTokenSchema, 'output'),
   ClassroomSession: toOpenApi(classroomSessionSchema, 'output'),
   ClassroomEndResult: toOpenApi(classroomEndResultSchema, 'output'),
+  ScenarioView: toOpenApi(scenarioViewSchema, 'output'),
 };
 
 /** Shorthand for the error responses, which every route can return. */

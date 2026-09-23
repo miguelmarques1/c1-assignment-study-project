@@ -10,6 +10,7 @@ import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PromptsModule } from './prompts/prompts.module';
 import { RedisModule } from './redis/redis.module';
+import { ScenarioModule } from './scenario/scenario.module';
 import { StorageModule } from './storage/storage.module';
 
 @Module({
@@ -23,6 +24,7 @@ import { StorageModule } from './storage/storage.module';
     CredentialsModule,
     PromptsModule,
     ClassroomModule,
+    ScenarioModule,
   ],
   providers: [
     // Authentication is global: a route is protected unless it opts out with
