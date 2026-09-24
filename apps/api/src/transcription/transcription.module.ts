@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 
 import { ExcerptSelectionModule } from '../excerpts/excerpt-selection.module';
 import { PipelineModule } from '../pipeline/pipeline.module';
+import { PronunciationModule } from '../pronunciation/pronunciation.module';
 import { SpeechModule } from '../speech/speech.module';
 import { TranscriptController } from './transcript.controller';
 import { TranscriptService } from './transcript.service';
@@ -11,10 +12,11 @@ import { TranscriptionStageHandler } from './transcription-stage.handler';
 /**
  * The `transcription` stage (F08). Registers its handler with the pipeline
  * runner at module init; the merged transcript read lives here too, and
- * shows the caller's own excerpt selection through F09's reader.
+ * shows the caller's own excerpt selection through F09's reader and its
+ * pronunciation status and scores through F10's.
  */
 @Module({
-  imports: [PipelineModule, SpeechModule, ExcerptSelectionModule],
+  imports: [PipelineModule, SpeechModule, ExcerptSelectionModule, PronunciationModule],
   controllers: [TranscriptController],
   providers: [TranscriptWriter, TranscriptionStageHandler, TranscriptService],
 })

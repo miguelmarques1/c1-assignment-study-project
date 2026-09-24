@@ -1381,6 +1381,85 @@
           "transcript"
         ]
       }
+    },
+    "/lessons/{lessonId}/pronunciation": {
+      "get": {
+        "description": "The caller's own truthful state (`pending`, `assessed`, `no_sample`, `failed` or `unavailable`), their result when assessed — duration-weighted scores, the 5 worst phonemes and 10 worst words, flags and notes — and every one of their selected excerpts with its own status and scores. Never another participant's data.",
+        "operationId": "PronunciationController_get",
+        "parameters": [
+          {
+            "name": "lessonId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The caller's pronunciation view.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/LessonPronunciationView"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VAL001: lessonId is not a valid UUID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH003: no valid session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "CLASS004: the caller is not a participant of that lesson.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionBearer": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Read the caller's pronunciation assessment",
+        "tags": [
+          "pronunciation"
+        ]
+      }
     }
   },
   "info": {
@@ -1417,6 +1496,10 @@
     {
       "name": "transcript",
       "description": "The merged lesson transcript"
+    },
+    {
+      "name": "pronunciation",
+      "description": "The caller's pronunciation assessment: scores, worst phonemes and words, per-excerpt detail"
     }
   ],
   "servers": [
@@ -3130,6 +3213,316 @@
           "speakers",
           "myExcerptSelection",
           "utterances"
+        ],
+        "additionalProperties": false
+      },
+      "LessonPronunciationView": {
+        "type": "object",
+        "properties": {
+          "lessonId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "assessed",
+              "no_sample",
+              "failed",
+              "unavailable"
+            ]
+          },
+          "result": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "scores": {
+                    "type": "object",
+                    "properties": {
+                      "pronunciation": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "accuracy": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "fluency": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "prosody": {
+                        "anyOf": [
+                          {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "completeness": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 100
+                      }
+                    },
+                    "required": [
+                      "pronunciation",
+                      "accuracy",
+                      "fluency",
+                      "prosody",
+                      "completeness"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "excerptCount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "assessedCount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "partialAssessment": {
+                    "type": "boolean"
+                  },
+                  "sparsePronunciationSample": {
+                    "type": "boolean"
+                  },
+                  "quotaExhausted": {
+                    "type": "boolean"
+                  },
+                  "notes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "worstPhonemes": {
+                    "maxItems": 5,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "phoneme": {
+                          "type": "string"
+                        },
+                        "meanAccuracy": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "occurrences": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "exampleWord": {
+                          "type": "string"
+                        },
+                        "exampleUtteranceId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        }
+                      },
+                      "required": [
+                        "phoneme",
+                        "meanAccuracy",
+                        "occurrences",
+                        "exampleWord",
+                        "exampleUtteranceId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "worstWords": {
+                    "maxItems": 10,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "word": {
+                          "type": "string"
+                        },
+                        "meanAccuracy": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "occurrences": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "errorTypes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "exampleUtteranceId": {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        }
+                      },
+                      "required": [
+                        "word",
+                        "meanAccuracy",
+                        "occurrences",
+                        "errorTypes",
+                        "exampleUtteranceId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "scores",
+                  "excerptCount",
+                  "assessedCount",
+                  "partialAssessment",
+                  "sparsePronunciationSample",
+                  "quotaExhausted",
+                  "notes",
+                  "worstPhonemes",
+                  "worstWords"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "excerpts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "excerptId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "utteranceId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "rank": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "referenceText": {
+                  "type": "string"
+                },
+                "durationMs": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "pronunciation": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "assessed",
+                        "not_assessed"
+                      ]
+                    },
+                    "scores": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "pronunciation": {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 100
+                            },
+                            "accuracy": {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 100
+                            },
+                            "fluency": {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 100
+                            },
+                            "prosody": {
+                              "anyOf": [
+                                {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 100
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "completeness": {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 100
+                            }
+                          },
+                          "required": [
+                            "pronunciation",
+                            "accuracy",
+                            "fluency",
+                            "prosody",
+                            "completeness"
+                          ],
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "scores"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "excerptId",
+                "utteranceId",
+                "rank",
+                "referenceText",
+                "durationMs",
+                "pronunciation"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "lessonId",
+          "status",
+          "result",
+          "excerpts"
         ],
         "additionalProperties": false
       }

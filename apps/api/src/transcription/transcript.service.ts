@@ -12,6 +12,11 @@ import { z } from 'zod';
 import { ExcerptSelectionReader, type StoredExcerptSelection } from '../excerpts/excerpt-selection.reader';
 import { LessonAccessService } from '../pipeline/lesson-access.service';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  excerptPronunciationStatusView,
+  PronunciationResultReader,
+  type StoredPronunciationExcerpt,
+} from '../pronunciation/pronunciation-result.reader';
 import { mergeTranscript, type TranscriptTrack } from './transcript-merge';
 
 const wordsSchema = z.array(transcriptWordSchema);
@@ -26,12 +31,13 @@ export class TranscriptService {
     private readonly prisma: PrismaService,
     private readonly access: LessonAccessService,
     private readonly excerpts: ExcerptSelectionReader,
+    private readonly pronunciation: PronunciationResultReader,
   ) {}
 
   async getView(lessonId: string, callerId: string): Promise<LessonTranscriptView> {
     const lesson = await this.access.requireParticipant(lessonId, callerId);
 
-    const [participants, branches, transcripts, utterances, mySelection] = await Promise.all([
+    const [participants, branches, transcripts, utterances, mySelection, myPronunciation] = await Promise.all([
       this.prisma.lessonParticipant.findMany({
         where: { lessonId },
         include: { user: { select: { displayName: true } } },
@@ -41,6 +47,7 @@ export class TranscriptService {
       this.prisma.lessonUtterance.findMany({ where: { lessonId }, orderBy: [{ userId: 'asc' }, { idx: 'asc' }] }),
       // Only ever the caller's: another participant's selection is never read here.
       this.excerpts.forParticipant(lessonId, callerId),
+      this.pronunciation.forParticipant(lessonId, callerId),
     ]);
 
     const transcribed = new Set(transcripts.map((transcript) => transcript.userId));
@@ -83,7 +90,7 @@ export class TranscriptService {
       lessonStartedAt: lesson.startedAt?.toISOString() ?? null,
       speakers,
       myExcerptSelection: mySelection ? this.summary(mySelection) : null,
-      utterances: mergeTranscript(lesson.startedAt, callerId, tracks, this.badges(mySelection)),
+      utterances: mergeTranscript(lesson.startedAt, callerId, tracks, this.badges(mySelection, myPronunciation?.excerpts ?? [])),
     };
   }
 
@@ -99,25 +106,38 @@ export class TranscriptService {
   }
 
   /**
-   * The caller's badges, by utterance id. `pronunciation` is wired to the
-   * real per-excerpt status and scores once F10's reader exists (see its
-   * spec, Stage 4); until then every excerpt reads as not yet assessed.
+   * The caller's badges, by utterance id. `pronunciation` is the same
+   * object, with the same values, as the pronunciation route's own
+   * `excerpts[].pronunciation` for that excerpt — an excerpt F10 has not
+   * reached yet reads as `pending` (the reader's default for a row that
+   * exists but was never settled).
    */
-  private badges(mine: StoredExcerptSelection | null): Map<string, TranscriptExcerpt> {
+  private badges(
+    mine: StoredExcerptSelection | null,
+    myPronunciation: StoredPronunciationExcerpt[],
+  ): Map<string, TranscriptExcerpt> {
+    const pronunciationByExcerptId = new Map(myPronunciation.map((excerpt) => [excerpt.excerptId, excerpt]));
+
     return new Map(
-      (mine?.excerpts ?? []).map((excerpt) => [
-        excerpt.utteranceId,
-        {
-          rank: excerpt.rank,
-          reason: excerpt.reason,
-          confidence: excerpt.confidence,
-          wordCount: excerpt.wordCount,
-          durationMs: excerpt.endMs - excerpt.startMs,
-          focusWordCount: excerpt.focusWordCount,
-          ruleVersion: excerpt.selectionRuleVersion,
-          pronunciation: { status: 'pending', scores: null },
-        },
-      ]),
+      (mine?.excerpts ?? []).map((excerpt) => {
+        const assessed = pronunciationByExcerptId.get(excerpt.id);
+        return [
+          excerpt.utteranceId,
+          {
+            rank: excerpt.rank,
+            reason: excerpt.reason,
+            confidence: excerpt.confidence,
+            wordCount: excerpt.wordCount,
+            durationMs: excerpt.endMs - excerpt.startMs,
+            focusWordCount: excerpt.focusWordCount,
+            ruleVersion: excerpt.selectionRuleVersion,
+            pronunciation: {
+              status: assessed ? excerptPronunciationStatusView(assessed.status) : 'pending',
+              scores: assessed?.scores ?? null,
+            },
+          },
+        ];
+      }),
     );
   }
 

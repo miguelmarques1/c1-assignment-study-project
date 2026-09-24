@@ -63,15 +63,23 @@
 - `pronunciation-pipeline.spec.ts` (Stage 3's own suite, 22 tests) generates one shared ~22-minute real tone once in `beforeAll` (cheap: synthesis and Opus encoding are not real-time) and re-uploads it per test under each lesson's own object key, since F09's 5-minute window/3-per-window rule means a 12-excerpt scenario genuinely needs a timeline that long, not 12 excerpts' worth of audio. All 22 tests map onto the spec's test table by name.
 
 **Validation:** typecheck ✅ · lint ✅ · unit 207/207 (18 new: 10 aggregate, 3 slicer, +5 pre-existing untouched) ✅ · integration full suite 23 files / 275 tests ✅ (includes the new 22-test `pronunciation-pipeline.spec.ts`, and every previously-adapted F08/F09 suite from Stage 1) · openapi snapshot fresh (no route change this stage) ✅
-**Commit:** _(pending — recorded after Stage 4's commit)_
+**Commit:** 37520a2 "F10 stage 3 - pronunciation stage"
 
-## Stage 4: Routes and document — ⬜ pending
+## Stage 4: Routes and document — ✅ done
 
-- [ ] **13. Pronunciation route**
-- [ ] **14. Transcript badge and pipeline progress**
-- [ ] **15. OpenAPI document**
+- [x] **13. Pronunciation route**
+- [x] **14. Transcript badge and pipeline progress**
+- [x] **15. OpenAPI document**
 
-**Observations:** _(none yet)_
+**Observations:**
+- `pronunciation.service.ts`'s status derivation reads the branch row, then the `pronunciation_assessment` stage row specifically (not the branch's current stage, which may already have moved on to `lesson_analysis`) — `unavailable` when there's no branch at all or it failed before ever reaching F10 (no stage row yet, branch already failed), `pending` covering queued/running/retrying/blocked (the branch may be sitting at `blocked_missing_key` and the client never needs to know that's different from still processing), `failed`/`no_sample`/`assessed` read directly off the completed stage row and the stored result. `excerpts[]` is populated as soon as F09's selection exists, independent of the overall status, which is what lets the client show `pending` badges before F10 even starts.
+- The three-way `excerptPronunciationStatusView` mapping (store's five-way status → the wire's `pending`/`assessed`/`not_assessed`) is now a single exported function in `pronunciation-result.reader.ts`, used by both `pronunciation.service.ts` (the route) and `transcript.service.ts` (the badge) — the only way to guarantee they can never quietly disagree, per the cross-feature criterion. `transcript.service.ts`'s badge placeholder from Stage 1 is gone; it now reads `PronunciationResultReader.forParticipant` alongside F09's selection and merges by `excerptId`.
+- **A real, non-obvious tooling gap, cost real debugging time:** the committed `openapi:generate` npm script (`node --import tsx src/openapi/generate.ts`) silently crashed with a bare `process.exit(1)` and zero output once `PronunciationStageHandler`'s 11-parameter constructor (9 plain-typed params, then 2 `@Optional() @Inject()` ones) entered the app graph. Root cause: `tsx` transforms TypeScript with esbuild, and esbuild's `emitDecoratorMetadata` support is incomplete for some constructor shapes — confirmed by comparing against `vitest.config.ts`'s own use of `unplugin-swc` specifically *because* "esbuild … does not emit [emitDecoratorMetadata]". The vitest-run `openapi.spec.ts` (SWC-transformed) built the exact same document correctly the whole time — this was never a document-correctness problem, only the standalone script's transform. Worked around by generating through the real production build instead: `pnpm --filter @english-quest/api build` (tsc, full decorator metadata) then `node dist/openapi/generate.js`. Filed as a follow-up (Stage 5) rather than changing the committed npm script or `tsx`/esbuild versions, since that's a project-wide tooling decision beyond this feature and `db:seed` uses the identical pattern without (yet) hitting the same edge case.
+- `pronunciation-routes.spec.ts` (9 tests, matching the spec's table by name) builds its own small fixtures (1–3 excerpts, ~60 s of real short audio) rather than reusing Stage 3's 22-minute shared file, since route tests don't need F09's window/spacing complexity — this kept the whole suite under 45 s.
+- `reports_each_status_truthfully` constructs all five states from first principles rather than mocking: `pending` (never queued), `blocked` reading as `pending` (no Azure key, real block), `failed` (real `pronunciation_storage_unreadable`, audio never uploaded), `no_sample` (real empty selection), `unavailable` (a `lessonParticipant` row with no pipeline branch at all — confirmed by reading `LessonAccessService.requireParticipant`, which only checks `lessonParticipant`, not the branch).
+
+**Validation:** typecheck ✅ · lint ✅ · unit 207/207 ✅ · integration full suite 24 files / 284 tests ✅ (includes the new 9-test `pronunciation-routes.spec.ts`) · openapi snapshot regenerated and fresh ✅ (23 operations, `GET /lessons/:lessonId/pronunciation` new)
+**Commit:** _(pending — recorded after Stage 5's commit)_
 
 **Validation:** _(not run)_
 **Commit:** _(none)_

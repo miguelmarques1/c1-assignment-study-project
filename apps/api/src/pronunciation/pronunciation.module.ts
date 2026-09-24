@@ -9,13 +9,15 @@ import { ExcerptClipSlicer } from './excerpt-clip.slicer';
 import { PronunciationResultReader } from './pronunciation-result.reader';
 import { PronunciationResultWriter } from './pronunciation-result.writer';
 import { PronunciationStageHandler } from './pronunciation-stage.handler';
+import { PronunciationController } from './pronunciation.controller';
 import { PRONUNCIATION_EXCERPT_RETRY_DELAYS_OVERRIDE, PRONUNCIATION_WORK_ROOT } from './pronunciation.constants';
+import { PronunciationService } from './pronunciation.service';
 
 /**
  * The `pronunciation_assessment` stage (F10). Registers its handler with
- * the pipeline runner at module init; F19's route is added here in a later
- * stage of this feature's own implementation. Exports the reader F11 and
- * F12 will read the aggregate through.
+ * the pipeline runner at module init, and exposes the caller's own view at
+ * `GET /lessons/:lessonId/pronunciation`. Exports the reader F11 and F12
+ * will read the aggregate through.
  *
  * `PRONUNCIATION_WORK_ROOT` and `PRONUNCIATION_EXCERPT_RETRY_DELAYS_OVERRIDE`
  * are provided here as `undefined` (the handler's own constructor defaults
@@ -25,12 +27,14 @@ import { PRONUNCIATION_EXCERPT_RETRY_DELAYS_OVERRIDE, PRONUNCIATION_WORK_ROOT } 
  */
 @Module({
   imports: [PipelineModule, SpeechModule, ExcerptSelectionModule, StorageModule],
+  controllers: [PronunciationController],
   providers: [
     ExcerptClipSlicer,
     ExcerptAssessmentStore,
     PronunciationResultWriter,
     PronunciationResultReader,
     PronunciationStageHandler,
+    PronunciationService,
     { provide: PRONUNCIATION_WORK_ROOT, useValue: undefined },
     { provide: PRONUNCIATION_EXCERPT_RETRY_DELAYS_OVERRIDE, useValue: undefined },
   ],

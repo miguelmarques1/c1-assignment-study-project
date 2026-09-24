@@ -53,6 +53,7 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     .addTag('recording', 'Per-participant lesson recording and its pipeline branch')
     .addTag('pipeline', "The caller's post-lesson pipeline: every stage's state, and retrying a failed one")
     .addTag('transcript', 'The merged lesson transcript')
+    .addTag('pronunciation', "The caller's pronunciation assessment: scores, worst phonemes and words, per-excerpt detail")
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

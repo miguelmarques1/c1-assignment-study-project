@@ -1,9 +1,26 @@
 import { Injectable } from '@nestjs/common';
+import type { ExcerptPronunciationStatus } from '@english-quest/shared';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { storedWordsSchema, type StoredWord } from './excerpt-assessment.store';
 
 export type StoredExcerptAssessmentStatus = 'pending' | 'assessed' | 'failed' | 'dropped' | 'abandoned';
+
+/**
+ * Collapses the store's five-way status to the three-way one both the
+ * transcript badge and the pronunciation route show — a caller never needs
+ * to know *why* an excerpt was not assessed, only whether it was. The one
+ * mapping both surfaces share, so they can never quietly disagree.
+ */
+export function excerptPronunciationStatusView(status: StoredExcerptAssessmentStatus): ExcerptPronunciationStatus {
+  if (status === 'assessed') {
+    return 'assessed';
+  }
+  if (status === 'pending') {
+    return 'pending';
+  }
+  return 'not_assessed';
+}
 
 export interface StoredPronunciationScores {
   pronunciation: number;
