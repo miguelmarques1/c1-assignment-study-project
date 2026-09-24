@@ -1,8 +1,10 @@
+import { readFile, writeFile } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 
 import {
   CreateBucketCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
   GetObjectCommand,
   HeadBucketCommand,
   HeadObjectCommand,
@@ -22,6 +24,29 @@ import { env } from '../config/env';
 export const STORAGE_PREFIXES = ['lessons/', 'content/', 'activities/'] as const;
 
 export type StoragePrefix = (typeof STORAGE_PREFIXES)[number];
+
+/**
+ * Thrown by `statObject` when the store itself could not be reached — a
+ * network failure, not "this key doesn't exist". F07's finalizer relies on
+ * telling the two apart: a missing object fails one participant's branch,
+ * while an unreachable store puts the whole lesson in `storage_unavailable`.
+ */
+export class StorageUnavailableError extends Error {
+  constructor(cause: unknown) {
+    super('The object store could not be reached.');
+    this.name = 'StorageUnavailableError';
+    this.cause = cause;
+  }
+}
+
+/** The S3 SDK's own shape for "no such key", across both AWS S3 and MinIO. */
+function isNotFoundError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+  const candidate = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+  return candidate.name === 'NotFound' || candidate.$metadata?.httpStatusCode === 404;
+}
 
 @Injectable()
 export class StorageService {
@@ -100,8 +125,64 @@ export class StorageService {
     }
   }
 
+  /**
+   * The byte size of an object, `null` when it does not exist, or a thrown
+   * `StorageUnavailableError` when the store itself could not be reached —
+   * the distinction `objectExists` above cannot make, because it treats
+   * every failure as "false".
+   */
+  async statObject(key: string): Promise<number | null> {
+    try {
+      const response = await this.client.send(
+        new HeadObjectCommand({ Bucket: this.bucket, Key: key }),
+      );
+      return response.ContentLength ?? 0;
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        return null;
+      }
+      throw new StorageUnavailableError(error);
+    }
+  }
+
   async deleteObject(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+  }
+
+  /**
+   * Deletes every key in one request. F07 uses this to clear a participant's
+   * egress segments once their assembled `audio.ogg` has been verified.
+   * A no-op for an empty list — S3's own `DeleteObjectsCommand` rejects a
+   * request with zero objects.
+   */
+  async deleteObjects(keys: string[]): Promise<void> {
+    if (keys.length === 0) {
+      return;
+    }
+    await this.client.send(
+      new DeleteObjectsCommand({
+        Bucket: this.bucket,
+        Delete: { Objects: keys.map((key) => ({ Key: key })) },
+      }),
+    );
+  }
+
+  /**
+   * Uploads a local file. Buffered rather than streamed — every current
+   * caller uploads an assembled lesson recording, bounded by the 120-minute
+   * lesson cap (well under 50 MB at F07's mono 48 kbps Opus), so this matches
+   * `getObject`/`putObject`'s own buffered style rather than adding chunked
+   * upload machinery for a file size that never needs it.
+   */
+  async uploadFile(key: string, filePath: string, contentType = 'application/octet-stream'): Promise<void> {
+    const body = await readFile(filePath);
+    await this.putObject(key, body, contentType);
+  }
+
+  /** Downloads an object to a local file. See `uploadFile` for why this buffers rather than streams. */
+  async downloadToFile(key: string, filePath: string): Promise<void> {
+    const body = await this.getObject(key);
+    await writeFile(filePath, body);
   }
 
   /** Liveness probe used by the health endpoint. */
