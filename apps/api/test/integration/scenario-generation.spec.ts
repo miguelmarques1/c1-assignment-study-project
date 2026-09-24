@@ -109,6 +109,27 @@ describe('scenario generation fan-out', () => {
     expect(gemini.callsOf('situation')[0]?.message).toContain('for 3 participants');
   });
 
+  it('three_participants_each_receive_exactly_one_card', async () => {
+    process.env.LESSON_MAX_PARTICIPANTS = '3';
+    resetEnvCache();
+    const people = [
+      await seedUser(ctx, 'alice@example.com', 'Alice'),
+      await seedUser(ctx, 'bob@example.com', 'Bob'),
+      await seedUser(ctx, 'carol@example.com', 'Carol'),
+    ];
+
+    await requestToken(people[0]!);
+    const scenario = await waitForReadyScenario();
+    await requestToken(people[1]!);
+    await requestToken(people[2]!);
+    const cards = await waitForCards(3);
+
+    expect(scenario.roles as unknown[]).toHaveLength(3);
+    expect(cards.map((card) => card.userId).sort()).toEqual(people.map((person) => person.id).sort());
+    expect(new Set(cards.map((card) => card.roleLabel)).size).toBe(3);
+    expect(cards.every((card) => card.status === 'ready')).toBe(true);
+  });
+
   it('each_card_is_generated_with_its_own_owners_key', async () => {
     const { alice, bob } = await pairReady();
 

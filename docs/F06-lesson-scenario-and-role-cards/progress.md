@@ -1,6 +1,6 @@
 # Implementation Progress: Lesson Scenario and Role Cards
 
-**Status:** in progress
+**Status:** success
 **Branch:** main
 **Started:** 2026-09-23
 **Last updated:** 2026-09-23
@@ -108,4 +108,48 @@
 - Known leftover: in the integration logs, card writes that land after a test's table reset log a caught `P2025`; the stale-generation race recorded in Stage 3 (back-to-back rerolls) is still open.
 
 **Validation:** `pnpm -r typecheck` ✅ · `pnpm lint` ✅ · `pnpm --filter @english-quest/web test` ✅ 116/116 · `pnpm --filter @english-quest/api test:unit` ✅ 101/101 · `scenario-generation.spec.ts` + `scenario.spec.ts` ✅ 31/31 against Testcontainers Postgres/Redis · **Soft-fail:** two-browser manual checklist not run (no second WebRTC-capable browser in this environment).
-**Commit:** _(recorded in the final-verification commit)_
+**Commit:** `81bab01` — F06 stage 5 - test suites and generation fixes
+
+## Final verification
+
+**Status: success** — full suite green, every Component Overview item present, every acceptance criterion that has a test passed on a fresh re-run, and every runtime check either passed or is recorded below as a soft-fail.
+
+**Full-suite validation (6.1):** `pnpm -r typecheck` ✅ · `pnpm lint` ✅ · `pnpm -r test` ✅ — API 235/235 across 25 files (every integration suite, each against its own Testcontainers Postgres/Redis), web 116/116, design-tokens 17/17. One test was then added for the three-participant criterion (`three_participants_each_receive_exactly_one_card`) and passed in the re-check below. No regressions; no pre-existing failures.
+
+**Component Overview walk-through (6.2):** every file the spec lists exists with its described role and contracts — the six shared schemas, `SCEN001`–`SCEN003`, the `AppError` factories, the three routes with OpenAPI decorators, `onParticipantRegistered`/`reroll`/`retry`, the web client's three calls, the scenario components, the dashboard card, `getScenarioView`, the `ScenarioView` component and `scenario` tag, migration `0005`, `scenario-situation` at v2, the regenerated document with the three paths, and the design-reference row flipped to `implemented`. **Missing from spec: none.** Additions beyond it are recorded as deviations in the stages above (`scenario.service.ts`, migration `0006`, `live-stage.tsx`, `pre-call-screen.tsx`, `remote-audio.tsx`, `level-bars.tsx`, `app-header.tsx`, the test helpers).
+
+**Acceptance criteria re-check (6.3)** — suites re-run fresh: API 47/47 (`scenario-generation.spec.ts`, `scenario.spec.ts`, `domain-rotation.service.spec.ts`, `prompt-file-loader.spec.ts`), web 32/32 (`scenario-panel`, `scenario-visibility`, `recommended-scenario-card`, `classroom-screen`, `design-reference`).
+
+| PRD criterion | Result | Covered by |
+|---|---|---|
+| Opening the classroom generates a situation with setting, premise, one role per participant with relationships, a domain and 3–5 hooks | ✓ | `opening_a_lesson_starts_the_situation`, `returns_the_situation_once_ready` |
+| With 3 participants, 3 related roles and exactly one card each, no prompt change | ✓ | `the_situation_has_one_role_per_seat`, `three_participants_each_receive_exactly_one_card` |
+| The situation request contains no profile data | ✓ | `the_situation_request_carries_no_profile_data` |
+| Each participant gets a card with background, one objective, one constraint, a register and 6–10 expressions | ✓ | `weakness_tags_are_absent_until_a_profile_exists`, `never_returns_another_participants_card` (shape enforced by the prompt's response schema) |
+| Each card is generated with its own owner's key | ✓ | `each_card_is_generated_with_its_own_owners_key`, `only_the_owners_gemini_key_is_used_for_their_own_card` |
+| A card is never rendered, returned or exported to anyone but its owner | ✓ | `never_returns_another_participants_card`, `renders_only_the_viewers_own_card`, `keeps_the_in_call_brief_to_the_viewers_own_card` |
+| The card prompt receives the other roles' labels only, never another card | ✓ | `the_role_card_prompt_receives_only_the_other_roles_labels` |
+| Every card references the same setting, premise and relationships, no contradictions | — | The input side is tested (`the_situation_role_labels_are_what_the_card_prompt_receives`); whether the model's output contradicts it is a property of generated text no stubbed test can assert |
+| No dialogue lines, sample sentences or stated outcome | — | Enforced by both prompts' constraint lines; a property of generated text, not testable with a stub |
+| Role assignment differs across consecutive lessons | ✓ | `role_assignment_varies_across_lessons` |
+| No domain repeats within a participant's last 5 lessons | ✓ | `excludes_domains_from_the_last_five_lessons`, `considers_every_registered_participants_history` |
+| Rerolling regenerates the situation and every card, blocked after 3 with the limit message | ✓ | `reroll_regenerates_the_situation_and_every_card`, `reroll_is_blocked_at_the_limit`, `disables_the_reroll_at_the_limit` |
+| A reroll after the lesson started is rejected server-side | ✓ | `reroll_is_rejected_after_the_lesson_started` |
+| With no profile yet, cards are still generated with general C1 expressions | ✓ | `weakness_tags_are_absent_until_a_profile_exists` |
+| Once a profile exists, expressions include a recurring weakness tag | — | Depends on F12; `ProfileTagsPort` returns an empty list until it lands |
+| During the lesson the panel shows the situation and only the viewer's card | ✓ | `opens_the_in_call_panel_with_the_situation_and_the_viewers_card`, `opens_the_in_call_scenario_panel_from_the_control_bar` |
+| With no valid Gemini key the lesson still starts, flagged `no_scenario` | ✓ | `a_missing_gemini_key_flags_no_scenario` (opener's key only — the spec's recorded deviation from the PRD's offer-to-another-participant prose) |
+
+Cross-feature (Section 9, F06's part): ✓ `the_scenario_attaches_to_the_open_classroom_session` · ✓ `the_situation_role_labels_are_what_the_card_prompt_receives` · ✓ `prompt_execution_stamps_its_id_and_version_on_both_artifacts`.
+
+**Environment smoke check (6.4):** exercised live — the three scenario routes over HTTP with real Gemini calls and both seeded accounts (Stage 3), and pre-call → join → waiting room in a browser with a real generation (Stages 4–5); at close, API health, the web app and `/docs-json` answer 200.
+
+**Soft-fails:**
+- **Two-browser manual checklist (plan step 17) not run** — needs two browsers with working WebRTC; the embedded preview gets LiveKit disconnect reason 14 (`CONNECTION_TIMEOUT`). Still to check by hand: the situation appearing in both waiting rooms; each participant seeing a different role and only their own card; a reroll from the opener visibly changing both cards; the live stage (remote video, "… is speaking", `Sound: On/Off`, the brief column opening over live video without interrupting it); and the second participant's card never appearing in the first participant's network responses.
+- The live stage is covered only by component tests with a seeded remote participant, not by a browser run.
+
+**Follow-up work:**
+- Close the stale-generation race on back-to-back rerolls (Stage 3): a generation from an earlier reroll can still write after a later one reset the row — a generation token or a `reroll_count`-conditioned write would make those writes conditional.
+- `createTestContext` never loads the prompt registry; suites other than the scenario ones generate nothing and log caught failures. Loading prompts in the shared harness would make that consistent.
+- Tell F11 and F19 that `lesson_scenarios.title` exists (nullable, set on every situation from 0006 on).
+- Local dev: the API and web dev servers inside Docker need polling to see host edits (`TSC_WATCHFILE=DynamicPriorityPolling`, `WATCHPACK_POLLING=true`) — worth baking into the compose `command`s.
