@@ -1,6 +1,6 @@
 # Implementation Progress: Pronunciation Assessment
 
-**Status:** in progress
+**Status:** success
 **Branch:** main
 **Started:** 2026-09-24
 **Last updated:** 2026-09-24
@@ -79,17 +79,44 @@
 - `reports_each_status_truthfully` constructs all five states from first principles rather than mocking: `pending` (never queued), `blocked` reading as `pending` (no Azure key, real block), `failed` (real `pronunciation_storage_unreadable`, audio never uploaded), `no_sample` (real empty selection), `unavailable` (a `lessonParticipant` row with no pipeline branch at all — confirmed by reading `LessonAccessService.requireParticipant`, which only checks `lessonParticipant`, not the branch).
 
 **Validation:** typecheck ✅ · lint ✅ · unit 207/207 ✅ · integration full suite 24 files / 284 tests ✅ (includes the new 9-test `pronunciation-routes.spec.ts`) · openapi snapshot regenerated and fresh ✅ (23 operations, `GET /lessons/:lessonId/pronunciation` new)
-**Commit:** _(pending — recorded after Stage 5's commit)_
+**Commit:** 64a7b62 "F10 stage 4 - routes and document"
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+## Stage 5: Verification and hand-off — ✅ done
 
-## Stage 5: Verification and hand-off — ⬜ pending
+- [x] **16. Live verification**
+- [x] **17. Follow-ups for neighbouring features**
 
-- [ ] **16. Live verification**
-- [ ] **17. Follow-ups for neighbouring features**
+**Observations:**
+- **Live verification ran on the local Docker stack, against `you@example.com`'s own already-stored, valid Azure Speech key (region `eastus2`)** — no key was typed or entered anywhere; a throwaway script (never committed, deleted afterward) wrote directly to the running dev Postgres and MinIO to construct each scratch lesson, exactly as F09's own live check did.
+  - **End-to-end (scenario A):** a scratch lesson with a ~40 s real TTS speech clip (offline Windows synthesis, matching the F08 precedent that a TTS clip tests the endpoint rather than the learner) was inserted as a verified recording and left for the dev server's own drain (its normal 15 s `@Interval`, not a script) to pick up. It ran the real pipeline — transcription, selection, assessment — with no code path bypassed. F09 selected 3 excerpts (sparse, as expected for 3 utterances); F10 assessed all 3 for real against Azure. `GET /pronunciation` returned real duration-weighted scores (pronunciation 85.4, accuracy 90.0, fluency 99.4, prosody 71.4, completeness 94.6), real IPA worst phonemes (`ɹ`, `θ`, `i`, `n`, `t`) and worst words with real error types, and the sparse note. `GET /pipeline` showed `progress: {done: 3, total: 3}` on `pronunciation_assessment` and `null` on every other stage. `GET /transcript` carried the badge. The branch ended at `lesson_analysis`/`queued`. Confirms the whole spec end to end against production code paths, not Testcontainers.
+  - **Blocked, then resumed (scenario B):** a second scratch lesson was let run until `pronunciation_assessment` showed `running` with its first excerpt already `assessed`, then the same user's stored key was flipped to `invalid` (SQL, the F08/F09 precedent) mid-run. The stage blocked within seconds as `credential_rejected` with F08's exact sentence, keeping the 1 already-assessed excerpt. Restoring the key to `valid` let the dev server's drain (within its normal 15 s interval, no manual nudge) resume it at run 2; it finished with all 3 assessed and reached `lesson_analysis`/`queued`, and the already-assessed excerpt was not redone (asserted via the assessed count staying consistent, not re-incremented past 3). Both scratch lessons and their MinIO objects were deleted immediately after; confirmed after the fact that no `live-check-%` lessons remain and the credential reads `valid`.
+  - **Not run (optional, needs the user's own Chrome and go-ahead):** the real two-window lesson. The built-in browser pane cannot exercise it either way (no camera/WebRTC).
+- **A real, unrelated test-suite gap found and closed during final verification:** `pipeline-backoff.spec.ts` was never extended with F10's own stage retry policy, though the spec's Testing Strategy lists it as "extend". Added `pronunciation_assessment_retries_at_60s_and_5m`, pinning `PRONUNCIATION_RETRY_POLICY` (3 attempts, 60 s then 300 s) the same way the file already pins transcription's and excerpt selection's.
+- **One internal-contract naming deviation, not worth a spec edit:** `PronunciationResultReader`'s summary field is `sparseSample` in the actual TypeScript, where the spec's prose called it `sparse`. It is an internal, server-only interface (never serialized on the wire — the wire field is `sparsePronunciationSample`, built correctly), so this is recorded here rather than editing the spec.
+- **F09's progress log got the dated, appended note this feature's own spec asked for** (adapted tests, the new `lesson_analysis` resting stage, the still-open pipeline-final-stage follow-up now inherited by F11). F10's own spec's "Notes for later features" (F11, F12, F18, F19) were re-read against what was actually built: all four match exactly as written — `PronunciationResultReader.forParticipant`'s shape, `PronunciationAssessmentService.assessClip`'s signature, the route, the badge and `progress` are all exactly as promised, so no spec correction was needed there.
+- **Final full-repo validation** (Step 6.1, fresh, not reused from any earlier stage): `pnpm -r typecheck` (shared, design-tokens, api, web) — all clean. `pnpm lint` — clean, zero warnings. Every JS/TS suite: shared (no tests, `--passWithNoTests`), design-tokens 17/17, web 126/126, api 492/492 (208 unit + 284 integration). Mobile, untouched by this feature but confirmed anyway: `flutter analyze` clean, `flutter test` 39/39.
+- **Component Overview walk-through** (Step 6.2): every file listed in spec.md section 4 exists with its described role — the shared schemas, the `speech/` capability files, every `pronunciation/` file, the runner extension points, the transcript/pipeline modifications, the migration, and the PRD/OpenAPI docs. Nothing missing.
+- **AC re-check** (Step 6.3): every one of F10's 9 acceptance criteria and its 7 cross-feature criteria has a passing, fresh-run test, per the mapping in spec.md section 7 — see the Final Verification section below for the full checklist.
 
-**Observations:** _(none yet)_
+## Final verification
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Full-suite result:** green across the entire repository (see Stage 5's observations above for the exact counts). No regressions surfaced beyond the two closed during this run (the `pipeline-backoff.spec.ts` gap and the tooling-only `openapi:generate` workaround, neither of which is a product defect).
+
+**Missing from spec:** none. Every file in spec.md's Component Overview exists with its described contracts.
+
+**Regressions:** none.
+
+**Soft-fails:**
+- The optional real two-window lesson in the user's own Chrome — not run; needs the user's go-ahead and their own browser, and the built-in preview pane has no camera/WebRTC access either way.
+
+**Pre-existing failures:** none encountered this run.
+
+**Status decision:** `success`. The full suite is green, nothing is missing from the component overview, every acceptance criterion's mapped tests pass on this fresh run, and every smoke check (the four Stage 3 integration categories plus the two live-stack scenarios) passed or was honestly soft-failed.
+
+**Follow-ups left open:**
+- **F11** must register the `lesson_analysis` handler and append its own next stage (one feature early, the established pattern) — this is also the feature that finally resolves F09's still-open "pipeline's final stage needs a terminal branch status" follow-up, now that `lesson_analysis` is no longer the last stage in the chain.
+- **F12** replaces `PronunciationFocusPort`'s implementation, ingests `phoneme_tags` into the ledger (idempotent per lesson source, with backfill for lessons F10 already processed before F12 existed), and can build the focus matcher from the per-word phonemes already stored in `lesson_excerpt_assessments.words`.
+- **F18** calls `PronunciationAssessmentService.assessClip` directly with its own feature label; no F10 change needed when it lands.
+- **F19** renders `GET /lessons/:lessonId/pronunciation`, the `progress` counter, and `excerpt.pronunciation` on the transcript badge; needs new Dart models for all three, since no client work was in scope for F10.
+- The `openapi:generate` / `db:seed` npm scripts run `tsx` (esbuild), whose `emitDecoratorMetadata` support is incomplete for some constructor shapes (see Stage 4's observation) — surfaced here by `PronunciationStageHandler`'s 11-parameter constructor, worked around locally by generating through `pnpm build` instead. A future feature whose handler has a similarly large or decorator-mixed constructor may hit the same silent-crash tooling gap; the general fix (switching those two scripts to an SWC-based runner, matching `vitest.config.ts`'s own reasoning) is a project-wide tooling decision outside any single feature's scope.
+- The optional real two-window Chrome lesson (this feature's own live checklist) remains unrun, same as F09's.

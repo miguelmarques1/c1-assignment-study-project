@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { EXCERPT_SELECTION_RETRY_POLICY } from '../../src/excerpts/excerpt-selection.constants';
 import { retryDelayFor, type PipelineStageHandler } from '../../src/pipeline/pipeline-stage.handler';
 import { PipelineStageRegistry } from '../../src/pipeline/pipeline-stage.registry';
+import { PRONUNCIATION_RETRY_POLICY } from '../../src/pronunciation/pronunciation.constants';
 import { TRANSCRIPTION_RETRY_POLICY } from '../../src/transcription/transcription.constants';
 
 function handler(stage: PipelineStageHandler['stage'], delaysMs: number[]): PipelineStageHandler {
@@ -26,6 +27,13 @@ describe('pipeline retry policy', () => {
     expect(retryDelayFor(EXCERPT_SELECTION_RETRY_POLICY, 1)).toBe(5_000);
     expect(retryDelayFor(EXCERPT_SELECTION_RETRY_POLICY, 2)).toBe(30_000);
     expect(retryDelayFor(EXCERPT_SELECTION_RETRY_POLICY, 3)).toBeNull();
+  });
+
+  it('pronunciation_assessment_retries_at_60s_and_5m', () => {
+    expect(PRONUNCIATION_RETRY_POLICY.attempts).toBe(3);
+    expect(retryDelayFor(PRONUNCIATION_RETRY_POLICY, 1)).toBe(60_000);
+    expect(retryDelayFor(PRONUNCIATION_RETRY_POLICY, 2)).toBe(300_000);
+    expect(retryDelayFor(PRONUNCIATION_RETRY_POLICY, 3)).toBeNull();
   });
 
   it('the_backoff_reads_the_policy_of_the_jobs_stage', () => {
