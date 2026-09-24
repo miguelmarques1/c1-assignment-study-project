@@ -31,6 +31,8 @@ model User {
   pipelineBranches     LessonPipelineBranch[]
   transcripts          LessonTranscript[]
   utterances           LessonUtterance[]
+  excerptSelections    LessonExcerptSelection[]
+  excerpts             LessonExcerpt[]
 
   @@map("users")
 }
@@ -157,6 +159,8 @@ model Lesson {
   pipelineBranches  LessonPipelineBranch[]
   transcripts       LessonTranscript[]
   utterances        LessonUtterance[]
+  excerptSelections LessonExcerptSelection[]
+  excerpts          LessonExcerpt[]
 
   @@index([status, openedAt(sort: Desc)], map: "ix_lessons_status_opened")
   @@map("lessons")
@@ -246,7 +250,8 @@ model LessonPipelineBranch {
   lessonId             String    @map("lesson_id") @db.Uuid
   userId               String    @map("user_id") @db.Uuid
   /// Where the branch is now. One of recording, transcription,
-  /// excerpt_selection (F08); later stages widen the check.
+  /// excerpt_selection (F08), pronunciation_assessment (F09); later stages
+  /// widen the check.
   stage                String    @default("recording") @db.VarChar(24)
   /// The current stage's status. One of verifying, queued, running,
   /// retrying, blocked_missing_key, failed, storage_unavailable.
@@ -280,7 +285,8 @@ model LessonPipelineBranch {
 model LessonPipelineStage {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   branchId        String    @map("branch_id") @db.Uuid
-  /// One of transcription, excerpt_selection; later stages widen the check.
+  /// One of transcription, excerpt_selection, pronunciation_assessment;
+  /// later stages widen the check.
   stage           String    @db.VarChar(24)
   /// One of queued, running, retrying, blocked_missing_key, failed, completed.
   status          String    @default("queued") @db.VarChar(24)
@@ -334,9 +340,10 @@ model LessonTranscript {
   wordCount       Int      @map("word_count")
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  lesson     Lesson            @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  utterances LessonUtterance[]
+  lesson            Lesson                   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user              User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  utterances        LessonUtterance[]
+  excerptSelections LessonExcerptSelection[]
 
   @@unique([lessonId, userId], map: "ux_transcripts_lesson_user")
   @@map("lesson_transcripts")
@@ -366,10 +373,84 @@ model LessonUtterance {
   transcript LessonTranscript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
   lesson     Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  excerpt    LessonExcerpt?
 
   @@unique([lessonId, userId, idx], map: "ux_utterances_lesson_user_idx")
   @@index([transcriptId], map: "ix_utterances_transcript")
   @@map("lesson_utterances")
+}
+
+/// F09: which of one participant's utterances pronunciation assessment
+/// (F10) will spend their Azure quota on, and under which rules. The rule
+/// version, fingerprint and snapshot, plus the pronunciation focus used as
+/// input, are what make a selection reproducible and comparable after the
+/// thresholds are retuned. Computed from one transcript, and deleted with it.
+model LessonExcerptSelection {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId         String   @map("lesson_id") @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  transcriptId     String   @map("transcript_id") @db.Uuid
+  /// `version` from rules/excerpt-selection.yaml.
+  ruleVersion      String   @map("rule_version") @db.VarChar(32)
+  /// sha256 hex of the thresholds and the sorted lexicon.
+  ruleFingerprint  String   @map("rule_fingerprint") @db.Char(64)
+  /// Snapshot of the rules in force.
+  rules            Json
+  /// `none` until F12 provides the ledger's pronunciation focus.
+  focusSource      String   @map("focus_source") @db.VarChar(40)
+  /// The unmastered pronunciation tags used as input; a JSON array.
+  focusTags        Json     @map("focus_tags")
+  utteranceCount   Int      @map("utterance_count")
+  eligibleCount    Int      @map("eligible_count")
+  selectedCount    Int      @map("selected_count")
+  selectedAudioMs  Int      @map("selected_audio_ms")
+  /// `sparse_pronunciation_sample`: fewer than the rules' `sparse_below` selected.
+  sparseSample     Boolean  @map("sparse_sample")
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  lesson     Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transcript LessonTranscript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+  excerpts   LessonExcerpt[]
+
+  @@unique([lessonId, userId], map: "ux_excerpt_selections_lesson_user")
+  @@index([transcriptId], map: "ix_excerpt_selections_transcript")
+  @@map("lesson_excerpt_selections")
+}
+
+/// F09: one selected utterance, self-contained for F10: its range in the
+/// participant's `audio.ogg` (file offsets, not lesson time) and its text as
+/// the reference, both copied from the utterance, plus the metrics it was
+/// ranked on and the badge sentence.
+model LessonExcerpt {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  selectionId          String   @map("selection_id") @db.Uuid
+  lessonId             String   @map("lesson_id") @db.Uuid
+  userId               String   @map("user_id") @db.Uuid
+  utteranceId          String   @map("utterance_id") @db.Uuid
+  /// 1-based order in which the selection accepted it.
+  rank                 Int      @db.SmallInt
+  startMs              Int      @map("start_ms")
+  endMs                Int      @map("end_ms")
+  referenceText        String   @map("reference_text")
+  selectionRuleVersion String   @map("selection_rule_version") @db.VarChar(32)
+  /// The confidence it was ranked on; null when unknown.
+  confidence           Float?   @db.Real
+  wordCount            Int      @map("word_count") @db.SmallInt
+  fillerShare          Float    @map("filler_share") @db.Real
+  focusWordCount       Int      @map("focus_word_count") @db.SmallInt
+  reason               String   @db.VarChar(200)
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  selection LessonExcerptSelection @relation(fields: [selectionId], references: [id], onDelete: Cascade)
+  lesson    Lesson                 @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  utterance LessonUtterance        @relation(fields: [utteranceId], references: [id], onDelete: Cascade)
+
+  @@unique([selectionId, rank], map: "ux_excerpts_selection_rank")
+  @@unique([utteranceId], map: "ux_excerpts_utterance")
+  @@index([lessonId, userId], map: "ix_excerpts_lesson_user")
+  @@map("lesson_excerpts")
 }
 
 /// The shared situation — every participant sees it. Created the moment the

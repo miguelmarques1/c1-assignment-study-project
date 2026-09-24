@@ -145,3 +145,10 @@ export {
   type TranscriptUtterance,
   type TranscriptWord,
 } from './schemas/transcript';
+
+export {
+  excerptSelectionSummarySchema,
+  transcriptExcerptSchema,
+  type ExcerptSelectionSummary,
+  type TranscriptExcerpt,
+} from './schemas/excerpt';

@@ -2462,7 +2462,8 @@
                         "enum": [
                           "recording",
                           "transcription",
-                          "excerpt_selection"
+                          "excerpt_selection",
+                          "pronunciation_assessment"
                         ]
                       },
                       "status": {
@@ -2576,7 +2577,8 @@
                     "enum": [
                       "recording",
                       "transcription",
-                      "excerpt_selection"
+                      "excerpt_selection",
+                      "pronunciation_assessment"
                     ]
                   },
                   "status": {
@@ -2601,7 +2603,8 @@
                           "enum": [
                             "recording",
                             "transcription",
-                            "excerpt_selection"
+                            "excerpt_selection",
+                            "pronunciation_assessment"
                           ]
                         },
                         "status": {
@@ -2817,6 +2820,53 @@
               "additionalProperties": false
             }
           },
+          "myExcerptSelection": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "ruleVersion": {
+                    "type": "string"
+                  },
+                  "utteranceCount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "eligibleCount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "selectedCount": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "selectedAudioMs": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "sparsePronunciationSample": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "ruleVersion",
+                  "utteranceCount",
+                  "eligibleCount",
+                  "selectedCount",
+                  "selectedAudioMs",
+                  "sparsePronunciationSample"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "utterances": {
             "type": "array",
             "items": {
@@ -2896,6 +2946,59 @@
                     ],
                     "additionalProperties": false
                   }
+                },
+                "excerpt": {
+                  "type": "object",
+                  "properties": {
+                    "rank": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "confidence": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "wordCount": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "durationMs": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "focusWordCount": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "ruleVersion": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "rank",
+                    "reason",
+                    "confidence",
+                    "wordCount",
+                    "durationMs",
+                    "focusWordCount",
+                    "ruleVersion"
+                  ],
+                  "additionalProperties": false
                 }
               },
               "required": [
@@ -2913,6 +3016,7 @@
           "lessonId",
           "lessonStartedAt",
           "speakers",
+          "myExcerptSelection",
           "utterances"
         ],
         "additionalProperties": false

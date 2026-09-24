@@ -1,0 +1,54 @@
+# Excerpt selection rules (F09).
+#
+# These decide which utterances pronunciation assessment (F10) spends each
+# participant's own Azure quota on. Changing any value below changes that
+# choice, so bump `version` with it: every excerpt records the version it was
+# chosen under, and test/unit/excerpt-rules.spec.ts pins the fingerprint of
+# each version, so a change without a bump fails CI.
+#
+# Read only when the API boots: restart it after editing this file.
+version: "1"
+
+eligibility:
+  # Utterance duration, inclusive on both ends.
+  min_duration_ms: 3000
+  max_duration_ms: 30000
+  # Normalized tokens, fillers included.
+  min_words: 8
+  # Share of tokens found in `fillers` below.
+  max_filler_share: 0.40
+  # Below this, recognition says the audio is unusable, not the pronunciation poor.
+  min_confidence: 0.40
+  # Applies only when every word carries its own confidence.
+  max_low_confidence_word_share: 0.25
+
+selection:
+  # max_excerpts × max_duration_ms may never exceed 6 minutes of audio.
+  max_excerpts: 12
+  spacing_window_ms: 300000
+  max_per_window: 3
+  # Fewer excerpts than this flags the lesson sparse_pronunciation_sample.
+  sparse_below: 4
+
+# Single normalized tokens: lowercase, no surrounding punctuation.
+fillers:
+  - uh
+  - um
+  - er
+  - erm
+  - ah
+  - eh
+  - hmm
+  - hm
+  - mm
+  - mhm
+  - mmm
+  - uh-huh
+  - huh
+  - oh
+  - yeah
+  - yep
+  - yup
+  - right
+  - okay
+  - ok

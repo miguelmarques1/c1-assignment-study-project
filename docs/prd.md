@@ -546,12 +546,12 @@ If the user has no valid Azure key, the stage renders as blocked rather than fai
 - Eligibility filters: utterance duration between 3 and 30 seconds; at least 8 words; at most 40% of tokens classified as filler or backchannel (`uh`, `um`, `yeah`, `right`, `okay`, `hmm` and equivalents); recognition confidence of at least 0.40, which below that indicates unusable audio rather than poor pronunciation — measured as no more than 25% of words below 0.40 where word confidence exists, and on the utterance's own confidence otherwise.
 - Ranking among eligible utterances, in order: lowest recognition confidence first (mean word confidence where it exists, otherwise the utterance's own), then highest count of words matching the participant's currently unmastered pronunciation tags, then longest duration.
 - Cap of 12 excerpts per participant per lesson, with a minimum spacing rule that no more than 3 excerpts may come from the same contiguous 5-minute window, so the sample spans the lesson rather than clustering in one passage.
-- If fewer than 4 eligible utterances exist, all eligible ones are selected and the lesson is flagged `sparse_pronunciation_sample` so the aggregate is displayed with lower confidence.
+- If fewer than 4 eligible utterances exist, all eligible ones are selected. Whenever fewer than 4 excerpts are selected — including when the spacing rule caps a short lesson — the lesson is flagged `sparse_pronunciation_sample` so the aggregate is displayed with lower confidence.
 - Every threshold is configuration, and every excerpt records the `selection_rule_version` in force when it was chosen, so results before and after tuning remain comparable.
 - Total selected audio per participant per lesson is bounded at 6 minutes by construction (12 × 30 seconds).
 
 **Experience:**
-This stage is invisible in normal use and completes in under 2 seconds. The processing view shows `Selecting excerpts` briefly between transcription and pronunciation assessment. Its output becomes visible later: in the lesson transcript, selected utterances are marked with a small badge, and hovering or tapping reveals why the excerpt was chosen — for example `Selected: low recognition confidence (0.62), 14 words`.
+This stage is invisible in normal use and completes in under 2 seconds. The processing view shows `Selecting excerpts` briefly between transcription and pronunciation assessment. Its output becomes visible later: in the lesson transcript, selected utterances are marked with a small badge, and hovering or tapping reveals why the excerpt was chosen — for example `Selected: recognition confidence 0.62, 14 words`.
 
 ### F10. Pronunciation Assessment
 

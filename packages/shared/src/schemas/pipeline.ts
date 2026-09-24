@@ -8,7 +8,12 @@ import { credentialProviderSchema } from './credentials';
  * `lesson_pipeline_stages` run by the generic pipeline runner. Later features
  * widen `pipelineStageSchema` as they add their stage.
  */
-export const pipelineStageSchema = z.enum(['recording', 'transcription', 'excerpt_selection']);
+export const pipelineStageSchema = z.enum([
+  'recording',
+  'transcription',
+  'excerpt_selection',
+  'pronunciation_assessment',
+]);
 export type PipelineStage = z.infer<typeof pipelineStageSchema>;
 
 /** A stage row's own lifecycle — see the state diagram in the F08 spec. */

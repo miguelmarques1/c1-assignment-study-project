@@ -76,6 +76,8 @@ export class TranscriptService {
       lessonId: lesson.id,
       lessonStartedAt: lesson.startedAt?.toISOString() ?? null,
       speakers,
+      // Filled from F09's reader once the selection stage exists (F09 stage 3).
+      myExcerptSelection: null,
       utterances: mergeTranscript(lesson.startedAt, callerId, tracks),
     };
   }

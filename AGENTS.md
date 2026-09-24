@@ -65,7 +65,7 @@ The host is Windows with Git Bash. Docker Desktop must be running, both for the 
 - In Git Bash, any container path in a `docker compose exec` command needs `MSYS_NO_PATHCONV=1`, or the path gets mangled.
 - Editing `.env` doesn't reach a running container. Apply it with `docker compose up -d --force-recreate api web`.
 - The containers have their own `node_modules` volumes. After adding a dependency, run `pnpm install` both on the host and in the container (`docker compose exec api pnpm install`).
-- Prompt YAML is only read when the API boots, so restart the API after editing a prompt.
+- Prompt and rule YAML (`apps/api/prompts`, `apps/api/rules`) is only read when the API boots, so restart the API after editing either.
 - The containers have no `ps`. To find a stale dev server's PID, look through `/proc/*/cmdline`.
 
 ## Definition of done
