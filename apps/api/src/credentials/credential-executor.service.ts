@@ -13,9 +13,10 @@ export interface KeyContext {
 /**
  * Detects that a provider refused the credential itself, as opposed to failing
  * for any other reason. Only this case invalidates the stored key — a timeout
- * or a rate limit must not.
+ * or a rate limit must not. Exported for F11's own outcome classifier, which
+ * needs the same test against Gemini's errors to decide when to block.
  */
-function isAuthenticationFailure(error: unknown): boolean {
+export function isAuthenticationFailure(error: unknown): boolean {
   const status = (error as { status?: number })?.status;
   if (status === 401 || status === 403) {
     return true;

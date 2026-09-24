@@ -1,0 +1,178 @@
+# Error taxonomy (F11).
+#
+# The fixed vocabulary every tagged error is drawn from. The lesson-analysis
+# prompt's error schema mirrors the `analysis: true` tags below as its own
+# `enum` (apps/api/prompts/lesson-analysis.yaml); a boot check refuses to
+# start when the two disagree. F12 adds the `pronunciation` family
+# (`analysis: false` — the model never tags pronunciation, F10 measures it)
+# and F14/F17 read tag labels from the same file.
+#
+# Changing any tag, label or family changes what the taxonomy means, so bump
+# `version` with it: every analysis and ledger record stores the version in
+# force when it was written, and test/unit/error-taxonomy.spec.ts pins the
+# fingerprint of each version, so a change without a bump fails CI.
+#
+# Read only when the API boots: restart it after editing this file.
+version: "1"
+
+families:
+  - id: grammar
+    label: Grammar
+    analysis: true
+  - id: vocab
+    label: Vocabulary
+    analysis: true
+  - id: discourse
+    label: Discourse
+    analysis: true
+
+tags:
+  # Grammar (22)
+  - tag: grammar:subject-verb-agreement
+    label: Subject-verb agreement
+    family: grammar
+    description: The verb does not agree in number or person with its subject.
+  - tag: grammar:present-simple-continuous
+    label: Present simple vs. continuous
+    family: grammar
+    description: Confuses habitual/general present with an action in progress.
+  - tag: grammar:present-perfect
+    label: Present perfect
+    family: grammar
+    description: Misuses the present perfect, or uses simple past where present perfect was needed.
+  - tag: grammar:past-simple
+    label: Past simple
+    family: grammar
+    description: Incorrect past simple form, or used where another past tense was needed.
+  - tag: grammar:past-perfect
+    label: Past perfect
+    family: grammar
+    description: Misuses the past perfect, including sequencing two past events.
+  - tag: grammar:future-forms
+    label: Future forms
+    family: grammar
+    description: Confuses will, going to, present continuous or present simple for future reference.
+  - tag: grammar:conditional-2
+    label: Second conditional
+    family: grammar
+    description: Malformed or misused hypothetical present/future conditional.
+  - tag: grammar:conditional-3
+    label: Third conditional
+    family: grammar
+    description: Malformed or misused hypothetical past conditional.
+  - tag: grammar:conditional-mixed
+    label: Mixed conditional
+    family: grammar
+    description: Malformed or misused conditional mixing past and present time reference.
+  - tag: grammar:modal-verb
+    label: Modal verbs
+    family: grammar
+    description: Wrong modal, wrong form after a modal, or a modal missing where meaning requires one.
+  - tag: grammar:passive-voice
+    label: Passive voice
+    family: grammar
+    description: Malformed passive, or active used where passive was called for (or vice versa).
+  - tag: grammar:reported-speech
+    label: Reported speech
+    family: grammar
+    description: Incorrect tense or pronoun shift when reporting what someone said.
+  - tag: grammar:relative-clause
+    label: Relative clauses
+    family: grammar
+    description: Wrong or missing relative pronoun, or a malformed relative clause.
+  - tag: grammar:article-definite
+    label: Definite article
+    family: grammar
+    description: Missing, extra or wrong use of "the".
+  - tag: grammar:article-indefinite
+    label: Indefinite article
+    family: grammar
+    description: Missing, extra or wrong use of "a"/"an".
+  - tag: grammar:preposition
+    label: Prepositions
+    family: grammar
+    description: Wrong or missing preposition.
+  - tag: grammar:word-order
+    label: Word order
+    family: grammar
+    description: Constituents in the wrong order for the intended meaning.
+  - tag: grammar:question-form
+    label: Question formation
+    family: grammar
+    description: Missing inversion or auxiliary, or a malformed question.
+  - tag: grammar:gerund-infinitive
+    label: Gerund vs. infinitive
+    family: grammar
+    description: Wrong choice between -ing and to-infinitive after a verb or adjective.
+  - tag: grammar:countable-uncountable
+    label: Countable vs. uncountable nouns
+    family: grammar
+    description: Treats an uncountable noun as countable, or the reverse.
+  - tag: grammar:comparison
+    label: Comparatives and superlatives
+    family: grammar
+    description: Malformed comparative or superlative.
+  - tag: grammar:pronoun
+    label: Pronouns
+    family: grammar
+    description: Wrong pronoun case, number or reference.
+
+  # Vocabulary (8)
+  - tag: vocab:collocation
+    label: Collocation
+    family: vocab
+    description: Words that do not naturally combine, even though each is correct alone.
+  - tag: vocab:phrasal-verb
+    label: Phrasal verbs
+    family: vocab
+    description: Wrong phrasal verb, wrong particle, or one avoided where natural.
+  - tag: vocab:idiom
+    label: Idioms
+    family: vocab
+    description: A fixed expression used incorrectly or garbled.
+  - tag: vocab:word-choice
+    label: Word choice
+    family: vocab
+    description: A word exists but is the wrong one for the intended meaning.
+  - tag: vocab:word-form
+    label: Word form
+    family: vocab
+    description: Wrong part of speech from the same root (noun for adjective, etc.).
+  - tag: vocab:false-friend
+    label: False friend
+    family: vocab
+    description: A word that resembles one in another language but means something else.
+  - tag: vocab:register
+    label: Register
+    family: vocab
+    description: Vocabulary too formal, too informal, or otherwise mismatched to the context.
+  - tag: vocab:domain-term
+    label: Domain terminology
+    family: vocab
+    description: A specialised or scenario-domain term used incorrectly or avoided.
+
+  # Discourse (6)
+  - tag: discourse:connector
+    label: Connectors
+    family: discourse
+    description: Wrong, missing or overused linking word between clauses or ideas.
+  - tag: discourse:cohesion
+    label: Cohesion
+    family: discourse
+    description: Ideas do not link clearly across sentences (reference, ellipsis, substitution).
+  - tag: discourse:turn-taking
+    label: Turn-taking
+    family: discourse
+    description: Interrupts, fails to yield, or does not pick up a turn appropriately.
+  - tag: discourse:hedging
+    label: Hedging
+    family: discourse
+    description: Missing or misused softening language where directness would be inappropriate.
+  - tag: discourse:clarification
+    label: Clarification
+    family: discourse
+    description: Fails to ask for or provide clarification when the conversation calls for it.
+  - tag: discourse:politeness
+    label: Politeness
+    family: discourse
+    description: A request, disagreement or refusal phrased less politely than the context calls for.

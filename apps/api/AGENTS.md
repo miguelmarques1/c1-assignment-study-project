@@ -6,7 +6,7 @@ NestJS 11 on Express 5, Prisma 6 on PostgreSQL 16, Redis (sessions, throttling, 
 
 - One folder per domain under `src/` (`auth`, `credentials`, `prompts`, `classroom`, `scenario`, …). Each has a `*.module.ts`, a thin `*.controller.ts` and services with one job each. For example, in `scenario/`: `scenario.service.ts` holds request policy, `scenario-orchestrator.service.ts` sequences the work, and `situation.service.ts` and `role-card.service.ts` do the generation.
 - `common/`: `AppError`, the exception filter and `ZodValidationPipe`. `config/env.ts`: the Zod environment contract, parsed at boot. `openapi/`: Swagger setup, shared components and the snapshot generator.
-- A port such as `scenario/profile-tags.port.ts` stands in for a feature that isn't built yet. It returns a neutral value in production code. Stubs and fakes belong only in tests.
+- A port such as `profile/profile-tags.port.ts` stands in for a feature that isn't built yet. It returns a neutral value in production code. Stubs and fakes belong only in tests.
 
 ## Requests and responses
 

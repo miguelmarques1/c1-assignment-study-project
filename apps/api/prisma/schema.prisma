@@ -35,6 +35,8 @@ model User {
   excerpts             LessonExcerpt[]
   excerptAssessments   LessonExcerptAssessment[]
   pronunciationResults LessonPronunciationResult[]
+  analyses             LessonAnalysis[]
+  analysisErrors       LessonAnalysisError[]
 
   @@map("users")
 }
@@ -165,6 +167,8 @@ model Lesson {
   excerpts          LessonExcerpt[]
   excerptAssessments   LessonExcerptAssessment[]
   pronunciationResults LessonPronunciationResult[]
+  analyses             LessonAnalysis[]
+  analysisErrors       LessonAnalysisError[]
 
   @@index([status, openedAt(sort: Desc)], map: "ix_lessons_status_opened")
   @@map("lessons")
@@ -382,6 +386,7 @@ model LessonUtterance {
   lesson     Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   excerpt    LessonExcerpt?
+  analysisErrors LessonAnalysisError[]
 
   @@unique([lessonId, userId, idx], map: "ux_utterances_lesson_user_idx")
   @@index([transcriptId], map: "ix_utterances_transcript")
@@ -548,6 +553,96 @@ model LessonPronunciationResult {
   @@unique([lessonId, userId], map: "ux_pronunciation_results_lesson_user")
   @@index([selectionId], map: "ix_pronunciation_results_selection")
   @@map("lesson_pronunciation_results")
+}
+
+/// F11: one analysis per participant per lesson, produced with that
+/// participant's own Gemini key. Replaced (with its errors, on cascade)
+/// whenever the stage re-runs, so a retry never leaves two analyses for the
+/// same participant. `scenarioFit` is set only for `scenario_context = full`.
+model LessonAnalysis {
+  id                         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId                   String   @map("lesson_id") @db.Uuid
+  userId                     String   @map("user_id") @db.Uuid
+  grammar                    Int      @db.SmallInt
+  vocabulary                 Int      @db.SmallInt
+  fluency                    Int      @db.SmallInt
+  interaction                Int      @db.SmallInt
+  comprehension              Int      @db.SmallInt
+  /// `{ grammar, vocabulary, fluency, interaction, comprehension }`: one sentence each.
+  justifications             Json
+  /// 3–5 strings.
+  strengths                  Json
+  /// Tags flagged as recurring, filtered against the kept errors and the profile's own weakness tags.
+  recurringTags              Json     @map("recurring_tags")
+  /// 3–6 strings.
+  topics                     Json
+  /// One of full, situation_only, none.
+  scenarioContext            String   @map("scenario_context") @db.VarChar(16)
+  /// `{ roleLabel, registerExpected, registerMatched, registerComment, expressionsUsed[], expressionsNotUsed[] }`, only for `full`.
+  scenarioFit                Json?    @map("scenario_fit")
+  /// assessed or no_sample (F10's result).
+  pronunciationContext       String   @map("pronunciation_context") @db.VarChar(16)
+  transcriptTokensEstimated  Int      @map("transcript_tokens_estimated")
+  transcriptTruncated        Boolean  @map("transcript_truncated")
+  /// `{ othersOmittedBeforeMs, ownOmittedBeforeMs, droppedOthers, droppedOwn }` when truncated.
+  truncation                 Json?
+  /// Weakness tags sent from the profile port.
+  profileTagCount            Int      @default(0) @map("profile_tag_count") @db.SmallInt
+  /// Errors whose quote was not found in the owner's own utterances.
+  discardedErrorCount        Int      @default(0) @map("discarded_error_count") @db.SmallInt
+  /// `no_errors_long_lesson`, `scenario_fit_missing`.
+  curatorFlags               Json     @default("[]") @map("curator_flags")
+  taxonomyVersion            String   @map("taxonomy_version") @db.VarChar(32)
+  promptId                   String   @map("prompt_id") @db.VarChar(64)
+  promptVersion              String   @map("prompt_version") @db.VarChar(16)
+  model                      String   @db.VarChar(64)
+  /// Gemini-reported, summed over both attempts.
+  inputTokens                Int?     @map("input_tokens")
+  outputTokens               Int?     @map("output_tokens")
+  latencyMs                  Int      @map("latency_ms")
+  /// Whether F04's library retry was needed.
+  schemaRetried              Boolean  @map("schema_retried")
+  createdAt                  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  lesson Lesson                @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  errors LessonAnalysisError[]
+
+  @@unique([lessonId, userId], map: "ux_lesson_analyses_lesson_user")
+  @@index([userId, createdAt(sort: Desc)], map: "ix_lesson_analyses_user_created")
+  @@map("lesson_analyses")
+}
+
+/// F11: one tagged error, quoted verbatim from the owner's own utterance and
+/// stored beside its analysis for F12's ledger and F20's counts to read by
+/// tag. `utteranceId` goes null (never the row) if the transcript is ever
+/// replaced — the re-run that would cause that also replaces the analysis.
+model LessonAnalysisError {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  analysisId   String   @map("analysis_id") @db.Uuid
+  lessonId     String   @map("lesson_id") @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  /// Order as returned, after discards.
+  idx          Int      @db.SmallInt
+  /// Verbatim, as the model returned it.
+  quote        String
+  /// A taxonomy tag, e.g. grammar:conditional-3.
+  tag          String   @db.VarChar(64)
+  correction   String
+  explanation  String
+  /// One of minor, moderate, major.
+  severity     String   @db.VarChar(8)
+  utteranceId  String?  @map("utterance_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  analysis  LessonAnalysis  @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  lesson    Lesson          @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  utterance LessonUtterance? @relation(fields: [utteranceId], references: [id], onDelete: SetNull)
+
+  @@unique([analysisId, idx], map: "ux_analysis_errors_analysis_idx")
+  @@index([userId, tag], map: "ix_analysis_errors_user_tag")
+  @@map("lesson_analysis_errors")
 }
 
 /// The shared situation — every participant sees it. Created the moment the

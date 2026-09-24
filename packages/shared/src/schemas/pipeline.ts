@@ -14,6 +14,7 @@ export const pipelineStageSchema = z.enum([
   'excerpt_selection',
   'pronunciation_assessment',
   'lesson_analysis',
+  'profile_update',
 ]);
 export type PipelineStage = z.infer<typeof pipelineStageSchema>;
 
@@ -79,10 +80,20 @@ export const pronunciationFailureCodeSchema = z.enum([
 ]);
 export type PronunciationFailureCode = z.infer<typeof pronunciationFailureCodeSchema>;
 
+export const analysisFailureCodeSchema = z.enum([
+  'analysis_quota_exceeded',
+  'analysis_timeout',
+  'analysis_service_error',
+  'analysis_invalid_output',
+  'analysis_request_rejected',
+]);
+export type AnalysisFailureCode = z.infer<typeof analysisFailureCodeSchema>;
+
 /** Every code a stage row can fail with. `internal_error` is the runner's own, for anything unclassified. */
 export const stageFailureCodeSchema = z.enum([
   ...transcriptionFailureCodeSchema.options,
   ...pronunciationFailureCodeSchema.options,
+  ...analysisFailureCodeSchema.options,
   'internal_error',
 ]);
 export type StageFailureCode = z.infer<typeof stageFailureCodeSchema>;

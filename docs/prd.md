@@ -620,9 +620,9 @@ If the user has no valid Gemini key, the stage renders as blocked with `Blocked 
 **Error Handling:**
 - Gemini key missing or rejected: the branch enters `blocked_missing_key`, the credential is marked invalid on explicit rejection, and the stage resumes automatically once a valid key is saved.
 - Model returns output failing schema validation twice: the stage is marked `failed` with reason `The analysis came back in an unexpected format.`, the raw response is retained for the curator, and a manual retry is offered.
-- Gemini quota or rate limit exceeded: the job retries with backoff at 1, 5 and 15 minutes; after the third failure the stage fails with `Gemini quota exceeded.` and a manual retry.
+- Gemini quota or rate limit exceeded: the job retries with backoff at 1, 5 and 15 minutes; the stage fails after the third retry with `Gemini quota exceeded.` and a manual retry.
 - Analysis returns zero errors for a lesson longer than 10 minutes: the result is stored but flagged for the curator, since an empty error list at B2–C1 almost always indicates a prompt regression rather than a flawless lesson.
-- Request exceeds the 90-second timeout: counted as a failure and retried on the standard backoff; three timeouts fail the stage with `The analysis request timed out.`
+- Request exceeds the 90-second timeout: counted as a failure and retried on the standard backoff; the stage fails after the third retry with `The analysis request timed out.`
 
 ### F12. Learning Profile and Error Ledger
 

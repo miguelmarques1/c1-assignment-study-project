@@ -104,7 +104,16 @@ export class PromptExecutionService {
         rawResponse: null,
       });
 
-      return { data, promptId: prompt.id, promptVersion: prompt.version, model: prompt.model, retried };
+      return {
+        data,
+        promptId: prompt.id,
+        promptVersion: prompt.version,
+        model: prompt.model,
+        retried,
+        inputTokens: inputTokens || null,
+        outputTokens: outputTokens || null,
+        latencyMs: Date.now() - startedAt,
+      };
     } catch (error) {
       if (!attempted) {
         // withKey blocked before our callback ever ran (missing/invalid

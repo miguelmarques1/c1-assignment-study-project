@@ -70,4 +70,9 @@ export interface PromptExecutionResult {
   promptVersion: string;
   model: string;
   retried: boolean;
+  /** Summed across the schema retry when one happened; null when the provider reported neither. */
+  inputTokens: number | null;
+  outputTokens: number | null;
+  /** The whole execution, both attempts included. */
+  latencyMs: number;
 }

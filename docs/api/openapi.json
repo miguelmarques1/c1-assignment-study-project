@@ -2547,7 +2547,8 @@
                           "transcription",
                           "excerpt_selection",
                           "pronunciation_assessment",
-                          "lesson_analysis"
+                          "lesson_analysis",
+                          "profile_update"
                         ]
                       },
                       "status": {
@@ -2582,6 +2583,11 @@
                               "pronunciation_audio_unprocessable",
                               "pronunciation_storage_unreadable",
                               "pronunciation_region_unsupported",
+                              "analysis_quota_exceeded",
+                              "analysis_timeout",
+                              "analysis_service_error",
+                              "analysis_invalid_output",
+                              "analysis_request_rejected",
                               "internal_error"
                             ]
                           },
@@ -2668,7 +2674,8 @@
                       "transcription",
                       "excerpt_selection",
                       "pronunciation_assessment",
-                      "lesson_analysis"
+                      "lesson_analysis",
+                      "profile_update"
                     ]
                   },
                   "status": {
@@ -2695,7 +2702,8 @@
                             "transcription",
                             "excerpt_selection",
                             "pronunciation_assessment",
-                            "lesson_analysis"
+                            "lesson_analysis",
+                            "profile_update"
                           ]
                         },
                         "status": {
@@ -2785,6 +2793,11 @@
                                 "pronunciation_audio_unprocessable",
                                 "pronunciation_storage_unreadable",
                                 "pronunciation_region_unsupported",
+                                "analysis_quota_exceeded",
+                                "analysis_timeout",
+                                "analysis_service_error",
+                                "analysis_invalid_output",
+                                "analysis_request_rejected",
                                 "internal_error",
                                 "storage_unavailable"
                               ]

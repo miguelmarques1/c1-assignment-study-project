@@ -4,8 +4,8 @@ import { roleSchema, type Register } from '@english-quest/shared';
 import { z } from 'zod';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { ProfileTagsPort } from '../profile/profile-tags.port';
 import { PromptExecutionService } from '../prompts/prompt-execution.service';
-import { ProfileTagsPort } from './profile-tags.port';
 
 const rolesArraySchema = z.array(roleSchema);
 

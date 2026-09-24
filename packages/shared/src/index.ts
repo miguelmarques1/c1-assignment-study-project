@@ -113,6 +113,7 @@ export {
 } from './schemas/scenario';
 
 export {
+  analysisFailureCodeSchema,
   blockedReasonCodeSchema,
   branchFailureCodeSchema,
   lessonPipelineViewSchema,
@@ -123,6 +124,7 @@ export {
   pronunciationFailureCodeSchema,
   stageFailureCodeSchema,
   transcriptionFailureCodeSchema,
+  type AnalysisFailureCode,
   type BlockedReasonCode,
   type BranchFailureCode,
   type LessonPipelineView,
@@ -175,3 +177,24 @@ export {
   type WorstPhoneme,
   type WorstWord,
 } from './schemas/pronunciation';
+
+export {
+  analysisCompetencySchema,
+  analysisCompetencyViewSchema,
+  analysisErrorViewSchema,
+  errorSeveritySchema,
+  lessonAnalysisResultSchema,
+  lessonAnalysisStatusSchema,
+  lessonAnalysisViewSchema,
+  scenarioContextSchema,
+  scenarioFitViewSchema,
+  type AnalysisCompetency,
+  type AnalysisCompetencyView,
+  type AnalysisErrorView,
+  type ErrorSeverity,
+  type LessonAnalysisResult,
+  type LessonAnalysisStatus,
+  type LessonAnalysisView,
+  type ScenarioContext,
+  type ScenarioFitView,
+} from './schemas/analysis';
