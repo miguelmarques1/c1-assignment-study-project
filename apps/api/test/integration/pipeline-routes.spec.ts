@@ -51,7 +51,9 @@ describe('GET /lessons/:lessonId/pipeline', () => {
     const ana = await seedSpeaker(pipeline.ctx, 'Ana');
     const lesson = await makeRecordedLesson(pipeline, [{ speaker: ana }]);
     await launchAll(pipeline, lesson);
-    await waitForStage(pipeline.ctx, lesson.branches.get(ana.id)!, 'excerpt_selection', ['completed']);
+    // The fake speech client's default phrases are under F09's word-count
+    // floor, so nothing is selected and F10 completes at once as no_sample.
+    await waitForStage(pipeline.ctx, lesson.branches.get(ana.id)!, 'pronunciation_assessment', ['completed']);
 
     const response = await readPipeline(lesson.lessonId, ana);
 
@@ -59,12 +61,13 @@ describe('GET /lessons/:lessonId/pipeline', () => {
     const view = response.body.data;
     expect(view.lessonId).toBe(lesson.lessonId);
     expect(Date.parse(view.serverTime)).not.toBeNaN();
-    expect(view.branch).toMatchObject({ stage: 'pronunciation_assessment', status: 'queued' });
+    expect(view.branch).toMatchObject({ stage: 'lesson_analysis', status: 'queued' });
     expect(view.branch.stages.map((stage: { stage: string; status: string }) => [stage.stage, stage.status])).toEqual([
       ['recording', 'completed'],
       ['transcription', 'completed'],
       ['excerpt_selection', 'completed'],
-      ['pronunciation_assessment', 'queued'],
+      ['pronunciation_assessment', 'completed'],
+      ['lesson_analysis', 'queued'],
     ]);
     const transcription = view.branch.stages[1];
     expect(transcription.startedAt).not.toBeNull();
@@ -164,8 +167,11 @@ describe('POST /lessons/:lessonId/pipeline/retry', () => {
     const lesson = await makeRecordedLesson(pipeline, [{ speaker: ana }]);
     const branchId = lesson.branches.get(ana.id)!;
     await launchAll(pipeline, lesson);
-    // Let selection's first run settle, so it cannot move the pointer after the hand-made failure below.
-    await waitForStage(pipeline.ctx, branchId, 'excerpt_selection', ['completed']);
+    // Let every downstream stage's first run settle, so none of them can
+    // move the pointer after the hand-made failure below. The fake speech
+    // client's default phrases are under F09's word-count floor, so F10
+    // completes at once as no_sample.
+    await waitForStage(pipeline.ctx, branchId, 'pronunciation_assessment', ['completed']);
     // A later stage that had already been reached once, and a transcription failed by hand after it.
     await pipeline.ctx.prisma.lessonPipelineStage.update({
       where: { branchId_stage: { branchId, stage: 'transcription' } },
@@ -198,13 +204,15 @@ describe('POST /lessons/:lessonId/pipeline/retry', () => {
     const bruno = await seedSpeaker(pipeline.ctx, 'Bruno', { withKey: false });
     const lesson = await makeRecordedLesson(pipeline, [{ speaker: ana }, { speaker: bruno }]);
     await launchAll(pipeline, lesson);
-    await waitForStage(pipeline.ctx, lesson.branches.get(ana.id)!, 'excerpt_selection', ['completed']);
+    // The fake speech client's default phrases are under F09's word-count
+    // floor, so nothing is selected and F10 completes at once as no_sample.
+    await waitForStage(pipeline.ctx, lesson.branches.get(ana.id)!, 'pronunciation_assessment', ['completed']);
     await waitForStage(pipeline.ctx, lesson.branches.get(bruno.id)!, 'transcription', ['blocked_missing_key']);
 
     const completed = await retry(lesson.lessonId, ana);
     expect(completed.status).toBe(409);
     expect(completed.body.error.code).toBe('PIPE001');
-    expect(completed.body.error.details).toEqual({ stage: 'pronunciation_assessment', status: 'queued' });
+    expect(completed.body.error.details).toEqual({ stage: 'lesson_analysis', status: 'queued' });
 
     const blocked = await retry(lesson.lessonId, bruno);
     expect(blocked.status).toBe(409);

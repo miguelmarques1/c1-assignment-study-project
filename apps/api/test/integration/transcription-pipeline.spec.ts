@@ -161,8 +161,12 @@ describe('transcription stage', () => {
     // runs straight away; the branch comes to rest at the stage after it.
     const next = await waitForStage(pipeline.ctx, branchId, 'excerpt_selection', ['completed']);
     expect(next.run).toBe(1);
+    // The fake speech client's default phrases are under F09's word-count
+    // floor, so nothing is selected and F10 completes at once as no_sample;
+    // the branch comes to rest one stage further still, at lesson analysis.
+    await waitForStage(pipeline.ctx, branchId, 'pronunciation_assessment', ['completed']);
     const branch = await pipeline.ctx.prisma.lessonPipelineBranch.findUniqueOrThrow({ where: { id: branchId } });
-    expect(branch).toMatchObject({ stage: 'pronunciation_assessment', status: 'queued', failureCode: null });
+    expect(branch).toMatchObject({ stage: 'lesson_analysis', status: 'queued', failureCode: null });
   }, 60_000);
 
   it('a_missing_key_blocks_rather_than_fails', async () => {

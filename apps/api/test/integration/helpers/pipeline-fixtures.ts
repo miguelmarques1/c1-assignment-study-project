@@ -16,6 +16,10 @@ import { PIPELINE_RETRY_OVERRIDES } from '../../../src/pipeline/pipeline-stage.r
 import { PIPELINE_QUEUE } from '../../../src/pipeline/pipeline.constants';
 import { PipelineQueueService } from '../../../src/pipeline/pipeline-queue.service';
 import { PipelineService } from '../../../src/pipeline/pipeline.service';
+import {
+  PRONUNCIATION_EXCERPT_RETRY_DELAYS_OVERRIDE,
+  PRONUNCIATION_WORK_ROOT,
+} from '../../../src/pronunciation/pronunciation.constants';
 import { audioObjectKey } from '../../../src/recording/recording.constants';
 import { FastTranscriptionClient } from '../../../src/speech/fast-transcription.client';
 import { PronunciationAssessmentClient } from '../../../src/speech/pronunciation-assessment.client';
@@ -36,12 +40,20 @@ export const FAST_RETRY_POLICY = { attempts: 4, delaysMs: [40, 40, 40] };
 /** Excerpt selection's two retries (5 s and 30 s in production), shortened the same way. */
 export const FAST_SELECTION_RETRY_POLICY = { attempts: 3, delaysMs: [40, 40] };
 
+/** Pronunciation assessment's own stage retries (60 s and 5 min in production), shortened the same way. */
+export const FAST_PRONUNCIATION_RETRY_POLICY = { attempts: 3, delaysMs: [40, 40] };
+
+/** The inline per-excerpt retries (2 s and 8 s in production), shortened to milliseconds. */
+export const FAST_EXCERPT_RETRY_DELAYS = [10, 10];
+
 export interface PipelineTestContext {
   ctx: TestContext;
   minio: StartedMinio;
   storage: StorageService;
   speech: FakeFastTranscriptionClient;
   pronunciation: FakePronunciationAssessmentClient;
+  /** F10's per-run work directory root — a test can assert it is empty once a run settles. */
+  pronunciationWorkRoot: string;
   close: () => Promise<void>;
 }
 
@@ -87,15 +99,22 @@ export async function createPipelineTestContext(
 
   const speech = new FakeFastTranscriptionClient();
   const pronunciation = new FakePronunciationAssessmentClient();
+  const pronunciationWorkRoot = await mkdtemp(join(tmpdir(), 'f10-work-root-'));
   const ctx = await createTestContext({
     extraEnv: { ...storageEnv, ...extra.extraEnv },
     overrides: [
       { token: StorageService, useValue: storage },
       { token: FastTranscriptionClient, useValue: speech },
       { token: PronunciationAssessmentClient, useValue: pronunciation },
+      { token: PRONUNCIATION_WORK_ROOT, useValue: pronunciationWorkRoot },
+      { token: PRONUNCIATION_EXCERPT_RETRY_DELAYS_OVERRIDE, useValue: FAST_EXCERPT_RETRY_DELAYS },
       {
         token: PIPELINE_RETRY_OVERRIDES,
-        useValue: { transcription: FAST_RETRY_POLICY, excerpt_selection: FAST_SELECTION_RETRY_POLICY },
+        useValue: {
+          transcription: FAST_RETRY_POLICY,
+          excerpt_selection: FAST_SELECTION_RETRY_POLICY,
+          pronunciation_assessment: FAST_PRONUNCIATION_RETRY_POLICY,
+        },
       },
       ...(typeof extra.overrides === 'function' ? extra.overrides() : (extra.overrides ?? [])),
     ],
@@ -107,9 +126,11 @@ export async function createPipelineTestContext(
     storage,
     speech,
     pronunciation,
+    pronunciationWorkRoot,
     close: async () => {
       await ctx.close();
       await minio.stop();
+      await rm(pronunciationWorkRoot, { recursive: true, force: true }).catch(() => undefined);
     },
   };
 }

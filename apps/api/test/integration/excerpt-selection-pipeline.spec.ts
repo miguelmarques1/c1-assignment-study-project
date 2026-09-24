@@ -14,6 +14,7 @@ import {
 import { PIPELINE_QUEUE, pipelineJobId } from '../../src/pipeline/pipeline.constants';
 import { PipelineDrainJob } from '../../src/pipeline/pipeline-drain.job';
 import { PipelineStateService } from '../../src/pipeline/pipeline-state.service';
+import { audioObjectKey } from '../../src/recording/recording.constants';
 import type { FakePhrase } from './helpers/fake-speech';
 import {
   createPipelineTestContext,
@@ -23,6 +24,7 @@ import {
   resetPipelineTables,
   seedSpeaker,
   startSelection,
+  uploadAudio,
   waitForStage,
   type PipelineTestContext,
   type SeedUtterance,
@@ -147,25 +149,42 @@ describe('excerpt selection stage', () => {
     expect(pipeline.speech.calls).toHaveLength(2);
   }, 60_000);
 
-  it('completion_advances_the_branch_to_pronunciation_assessment', async () => {
+  it('completion_advances_the_branch_to_lesson_analysis', async () => {
+    // Short, closely-spaced utterances (rather than said()'s minute-scale
+    // offsets) so a short, real uploaded clip covers every excerpt's range:
+    // F10 now has a handler and actually slices and assesses them.
     const ana = await seedSpeaker(pipeline.ctx, 'Ana');
     const lesson = await makeTranscribedLesson(pipeline, [
-      { speaker: ana, utterances: [said(1, 0.8), said(8, 0.7), said(15, 0.6), said(22, 0.9)] },
+      {
+        speaker: ana,
+        utterances: [
+          { startMs: 0, endMs: 5_000, text: 'At minute one we should really move the whole meeting', confidence: 0.8 },
+          { startMs: 6_000, endMs: 11_000, text: 'At minute two we should really move the whole meeting', confidence: 0.7 },
+          { startMs: 12_000, endMs: 17_000, text: 'At minute three we should really move the whole meeting', confidence: 0.6 },
+          { startMs: 18_000, endMs: 23_000, text: 'At minute four we should really move the whole meeting', confidence: 0.9 },
+        ],
+      },
     ]);
     const branchId = lesson.branches.get(ana.id)!;
+    await uploadAudio(pipeline.storage, audioObjectKey(lesson.lessonId, ana.id), 25);
 
     await startSelection(pipeline, branchId);
     const done = await waitForStage(pipeline.ctx, branchId, 'excerpt_selection', ['completed']);
 
     expect(done.attempts).toBe(1);
     expect(done.finishedAt!.getTime() - done.startedAt!.getTime()).toBeLessThan(2_000);
+
+    // F10's handler now runs the selected excerpts straight away (against
+    // the fake Azure client's default scores); the branch comes to rest one
+    // stage further, at lesson analysis, which has no handler yet.
+    await waitForStage(pipeline.ctx, branchId, 'pronunciation_assessment', ['completed']);
     const next = await pipeline.ctx.prisma.lessonPipelineStage.findUniqueOrThrow({
-      where: { branchId_stage: { branchId, stage: 'pronunciation_assessment' } },
+      where: { branchId_stage: { branchId, stage: 'lesson_analysis' } },
     });
     expect(next).toMatchObject({ status: 'queued', run: 1 });
     const branch = await pipeline.ctx.prisma.lessonPipelineBranch.findUniqueOrThrow({ where: { id: branchId } });
-    expect(branch).toMatchObject({ stage: 'pronunciation_assessment', status: 'queued', failureCode: null });
-    expect(await queue().getJob(pipelineJobId('pronunciation_assessment', branchId, 1))).toBeUndefined();
+    expect(branch).toMatchObject({ stage: 'lesson_analysis', status: 'queued', failureCode: null });
+    expect(await queue().getJob(pipelineJobId('lesson_analysis', branchId, 1))).toBeUndefined();
   }, 60_000);
 
   it('every_excerpt_stores_its_selection_rule_version', async () => {
@@ -240,8 +259,12 @@ describe('excerpt selection stage', () => {
     });
     expect(selection).toMatchObject({ eligibleCount: 0, selectedCount: 0, selectedAudioMs: 0, sparseSample: true });
     expect(selection.excerpts).toEqual([]);
+
+    // An empty selection completes F10 at once, as no_sample, with no audio
+    // access — the branch comes to rest one stage further, at lesson analysis.
+    await waitForStage(pipeline.ctx, branchId, 'pronunciation_assessment', ['completed']);
     const branch = await pipeline.ctx.prisma.lessonPipelineBranch.findUniqueOrThrow({ where: { id: branchId } });
-    expect(branch).toMatchObject({ stage: 'pronunciation_assessment', status: 'queued' });
+    expect(branch).toMatchObject({ stage: 'lesson_analysis', status: 'queued' });
   }, 60_000);
 
   it('participants_select_independently', async () => {

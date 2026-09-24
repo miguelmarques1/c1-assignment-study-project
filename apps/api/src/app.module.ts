@@ -12,6 +12,7 @@ import { ExcerptSelectionModule } from './excerpts/excerpt-selection.module';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PromptsModule } from './prompts/prompts.module';
+import { PronunciationModule } from './pronunciation/pronunciation.module';
 import { RedisModule } from './redis/redis.module';
 import { ScenarioModule } from './scenario/scenario.module';
 import { StorageModule } from './storage/storage.module';
@@ -36,6 +37,7 @@ import { TranscriptionModule } from './transcription/transcription.module';
     ScenarioModule,
     TranscriptionModule,
     ExcerptSelectionModule,
+    PronunciationModule,
   ],
   providers: [
     // Authentication is global: a route is protected unless it opts out with
