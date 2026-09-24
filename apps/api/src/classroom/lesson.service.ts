@@ -1,6 +1,11 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, type Lesson } from '@prisma/client';
-import type { ClassroomSession, LessonEndReason, LessonStatus } from '@english-quest/shared';
+import type {
+  ClassroomSession,
+  LessonEndReason,
+  LessonStatus,
+  LiveRecordingStatus,
+} from '@english-quest/shared';
 
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -230,6 +235,16 @@ export class LessonService {
         joinedAt: row.joinedAt.toISOString(),
       })),
       awaiting: others.map((user) => ({ userId: user.id, displayName: user.displayName })),
+      // F07: `status`/`since` already read the real (currently always-default)
+      // lesson-wide recording columns. `mine` is a placeholder until Stage 3
+      // wires a caller-scoped projection over that participant's own
+      // segments — nothing populates a segment before then, so `not_started`
+      // and 0 are correct for every session read today, not just a stub.
+      recording: {
+        status: lesson.recordingStatus as LiveRecordingStatus,
+        since: lesson.recordingStartedAt?.toISOString() ?? null,
+        mine: { status: 'not_started', capturedSeconds: 0 },
+      },
     };
   }
 }

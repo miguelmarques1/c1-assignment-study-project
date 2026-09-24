@@ -11,6 +11,11 @@ const OPEN_SESSION = {
   maxParticipants: 2,
   participants: [],
   awaiting: [],
+  recording: {
+    status: 'recording' as const,
+    since: '2026-09-15T14:10:04.000Z',
+    mine: { status: 'recording' as const, capturedSeconds: 60 },
+  },
 };
 
 afterEach(() => {

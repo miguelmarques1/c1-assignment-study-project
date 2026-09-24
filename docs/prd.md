@@ -219,6 +219,7 @@ Both profiles belong to a pair of motivated adults running an experiment on them
 - As a user, I want errors that are due for review to reappear in my plan so that old mistakes are actually revisited
 - As a user, I want unfinished activities that still matter to carry into my next plan so that a busy week does not erase them
 - As a user, I want to see how much of my plan I have completed so that I know where I stand before the next lesson
+- As a user, I want a new plan even when my lesson's recording failed so that a broken recording never leaves me with nothing to study
 
 ### F16. Objective Activity Execution
 - As a user, I want to answer multiple choice and fill-in-the-blank questions so that practice is quick on a phone
@@ -477,6 +478,7 @@ Once the lesson starts, the scenario collapses into a side panel toggled from th
 
 **Provides:**
 - Per-participant lesson audio object key, lesson id, participant ids, lesson duration, and start and end timestamps (used by F08, F10)
+- Per-participant recording outcome: a branch that ended without usable audio because of an error, with its failure reason (used by F15)
 
 **Capabilities:**
 - When the lesson starts, the API starts one LiveKit track egress per published audio track, writing directly to MinIO at `lessons/{lessonId}/{userId}/audio.ogg`. Video tracks are not recorded.
@@ -485,6 +487,7 @@ Once the lesson starts, the scenario collapses into a side panel toggled from th
 - Minimum processable duration is 3 minutes. Shorter lessons are stored with status `too_short` and no pipeline is enqueued.
 - On lesson end, egress is stopped, then every participant's object is verified to exist and exceed 10 KB before the pipeline is enqueued — one independent job branch per participant.
 - If one participant's track is missing or empty, the other participants' branches still proceed. Each branch is independent from selection through study plan.
+- A participant whose recording is unusable because of an error — egress never started for their track, their object is missing or empty, or they captured less than 3 minutes of audio — has their branch set to `failed` with a reason, and a fallback study plan is requested for them (F15), so a broken recording never leaves anyone without study activities. A lesson that is simply shorter than 3 minutes is not an error and requests no plan.
 - Recordings are retained indefinitely in the MVP; storage usage is reported on the lesson list.
 
 **Experience:**
@@ -493,7 +496,7 @@ A red recording indicator with the word `Recording` appears in the classroom hea
 After the lesson ends, the user is returned to the dashboard where the lesson appears at the top of the history list with status `Processing` and a stage indicator. If the recording is under 3 minutes, the status instead reads `Too short to analyze (minimum 3 minutes)` and no processing is attempted.
 
 **Error Handling:**
-- Egress fails to start for one or more tracks: the lesson continues live, the `Not recording` state is shown immediately to every participant, and the lesson is finalized with status `recording_failed` and no pipeline.
+- Egress fails to start for one or more tracks: the lesson continues live and the `Not recording` state is shown immediately to every participant. At finalization, only the affected participant's branch fails, with reason `Recording failed to start.`, while the other participants' branches proceed. The lesson is finalized with status `recording_failed` and no pipeline only when no participant has usable audio.
 - Egress stops unexpectedly mid-lesson: the partial object is kept and the lesson is marked `recording_partial` with the captured duration shown; the pipeline runs on the partial audio if it exceeds 3 minutes.
 - Object missing or under 10 KB at verification: that participant's branch is set to `failed` with reason `Recording is empty or missing.` and a retry action that re-verifies storage; the other participants' branches proceed normally.
 - MinIO unreachable at lesson end: verification retries for 2 minutes, then the lesson is marked `storage_unavailable` with a manual retry that re-runs verification and enqueues the pipeline if the objects are found.
@@ -747,6 +750,7 @@ For the curator, generation is fully traceable. Each generated item carries its 
 **Consumes:**
 - F02: decrypted Gemini API key with validity status
 - F04: rendered prompt execution with structured, schema-validated model output and the prompt id and version used
+- F07: per-participant recording outcome — a branch that ended without usable audio because of an error, with its failure reason
 - F12: profile snapshot — competency scores, recurring weaknesses and compact summary — and error ledger records due for review
 - F13: content item candidate metadata — id, type, CEFR level, topic, accent, skills, difficulty, target tags and duration
 - F14: generated content items with target tags and prompt id and version
@@ -764,6 +768,7 @@ For the curator, generation is fully traceable. Each generated item carries its 
 
 **Capabilities:**
 - A plan is generated automatically for a participant once their lesson analysis and profile update complete. Generation for one participant does not wait on the other.
+- A participant whose lesson recording failed (F07) still gets a new plan. It is composed from their existing profile with no new diagnosis, or, on a first lesson with no profile yet, from the bank's general C1-range material, since the unmastered-tag guardrail has nothing to check against. It replaces the active plan with the normal carry-over. If a later retry recovers that recording, the plan produced by the full pipeline replaces the fallback, as any newer lesson's plan would. A lesson that was only too short to analyze produces no plan.
 - Structure: 7 daily sessions, each targeting 15–20 minutes and containing 2 to 4 activities. Estimated minutes per activity are computed from item metadata (listening duration, reading word count at 180 words per minute, fixed estimates for the rest), not from the model.
 - Type quotas per plan: at least 1 listening, at least 1 reading, at least 1 speaking or pronunciation, at least 1 writing; remaining slots filled with grammar and vocabulary. Review activities drawn from tags due in the ledger occupy up to 30% of the plan's activities.
 - Selection uses the `study-plan-compose` prompt with the user's own Gemini key. The model receives the compact profile summary, the list of due review tags, and a candidate list of bank items as metadata only — id, type, level, topic, skills, target tags, duration — never full bodies, so the call stays small. It returns an ordered plan with a one-sentence rationale per activity.
@@ -783,6 +788,8 @@ Each activity card can be expanded to reveal its rationale: `Chosen because thir
 Completing a session shows a brief summary — activities completed, correct answers, time spent — and, if it was the day's last session, the current plan completion percentage.
 
 When a new plan replaces the old one, carried-over activities are marked with a `Carried over` chip so the user recognizes the unfinished work rather than seeing it as new.
+
+A plan composed after a failed recording opens with the note `Built from your existing profile because this lesson's recording failed.`, so the user knows it carries no new diagnosis rather than mistaking it for one.
 
 **Error Handling:**
 - Gemini key missing: the plan is composed by the deterministic guardrails alone — quotas filled from the bank ranked by tag match — and shown with `Built from existing material because your Gemini key is missing.` A plan is always produced; the loop never stalls on a missing key.
@@ -1127,7 +1134,7 @@ For a developer the second half of this feature is the part that lasts. Before b
 | F12 | Learning Profile and Error Ledger | 1 | F10, F11 |
 | F13 | Content Bank and Curated Import | 1 | F01 |
 | F14 | AI Content Generation with Difficulty Gate | 1 | F02, F04, F12, F13 |
-| F15 | Study Plan Generation | 1 | F02, F04, F12, F13, F14, F21 |
+| F15 | Study Plan Generation | 1 | F02, F04, F07, F12, F13, F14, F21 |
 | F16 | Objective Activity Execution | 1 | F03, F12, F13, F15, F21 |
 | F17 | Writing Activity with AI Correction | 2 | F02, F03, F04, F12, F15, F21 |
 | F18 | Speaking and Pronunciation Activities | 2 | F02, F03, F08, F10, F12, F15, F21 |
@@ -1197,6 +1204,7 @@ graph TD
   F13 --> F14
   F02 --> F15[F15 Study Plan]
   F04 --> F15
+  F07 --> F15
   F12 --> F15
   F13 --> F15
   F14 --> F15
@@ -1319,11 +1327,12 @@ graph TD
 - [ ] Starting a lesson produces exactly one audio object per participant at `lessons/{lessonId}/{userId}/audio.ogg`
 - [ ] No video object is created for any lesson
 - [ ] The recording indicator appears within 3 seconds of the lesson starting and stays visible to every participant
-- [ ] Egress failing to start shows the `Not recording` state immediately and the lesson is finalized with status `recording_failed`
+- [ ] Egress failing to start shows the `Not recording` state immediately; only the affected participant's branch fails with `Recording failed to start.`, and the lesson is finalized with status `recording_failed` when no participant has usable audio
 - [ ] A lesson under 3 minutes is stored with status `too_short` and enqueues no pipeline job
 - [ ] Every participant's object is verified to exist and exceed 10 KB before the pipeline is enqueued
 - [ ] One participant's missing track marks only that branch failed while the other branches proceed to completion
 - [ ] MinIO being unreachable at lesson end retries verification for 2 minutes and then offers a manual retry
+- [ ] A participant whose recording fails because of an error has a fallback study plan requested for them only, and a lesson under 3 minutes requests none
 
 ### F08. Speech-to-Text Transcription
 - [ ] Each participant's track is transcribed with that participant's own Azure key and region
@@ -1425,6 +1434,7 @@ graph TD
 - [ ] Exactly one plan is active per user, and archived plans remain readable with their statistics
 - [ ] A missing Gemini key still produces a deterministically composed plan with the explanatory note
 - [ ] Plan generation failing leaves the previous plan active rather than clearing it
+- [ ] A participant whose lesson recording failed receives a new plan composed from their existing profile, carrying the failed-recording note, and a lesson that was only too short produces no plan
 
 ### F16. Objective Activity Execution
 - [ ] Multiple choice, fill-in-the-blank, sentence ordering and matching all render and correct automatically
@@ -1532,6 +1542,7 @@ graph TD
 - [ ] A lesson started in the classroom (F05) produces a lesson record whose start timestamp and participant identities match what recording (F07) uses to name and attribute its audio objects
 - [ ] The per-participant audio object keys written by recording (F07) are read by transcription (F08) and each track is transcribed with that same participant's Azure key from the vault (F02)
 - [ ] The same audio object keys from recording (F07) are used by pronunciation assessment (F10) to slice excerpt audio, and each slice's time range matches the excerpt's timestamps
+- [ ] A participant whose recording branch fails with an error in recording (F07) receives a plan from plan composition (F15) built from their existing profile, while the other participants' branches and plans are unaffected
 - [ ] Utterances produced by transcription (F08) with their confidence values and word timings are the exact input excerpt selection (F09) filters and ranks over
 - [ ] Excerpts selected by F09, with their reference text and time ranges, are the exact set submitted by pronunciation assessment (F10), with no excerpt added or dropped between the stages
 - [ ] Transcript utterances (F08), pronunciation aggregates (F10) and the scenario with the participant's own role card (F06) all appear in the analysis input (F11), and the analysis quotes errors verbatim from those utterances

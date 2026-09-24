@@ -10,7 +10,7 @@ import { ERROR_CODES } from '../errors/codes';
  */
 
 export const dependencyHealthSchema = z.object({
-  name: z.enum(['postgres', 'redis', 'minio', 'livekit']),
+  name: z.enum(['postgres', 'redis', 'minio', 'livekit', 'egress']),
   status: z.enum(['up', 'down']),
   latencyMs: z.number().int().nullable(),
   error: z.string().nullable(),

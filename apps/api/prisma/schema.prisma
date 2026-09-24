@@ -27,6 +27,8 @@ model User {
   lessonParticipations LessonParticipant[]
   scenariosGenerated   LessonScenario[]
   roleCards            LessonRoleCard[]
+  recordingSegments    LessonRecordingSegment[]
+  pipelineBranches     LessonPipelineBranch[]
 
   @@map("users")
 }
@@ -104,6 +106,10 @@ model PromptExecution {
 /// has no partial-index syntax. A future `prisma migrate dev` run will not
 /// see it as part of the desired state and may propose dropping it; reject
 /// that part of any generated migration by hand.
+///
+/// F07 (0007_lesson_recording) adds a second partial index the same way:
+/// `ix_lessons_recording_pending` on `recording_status`, scoped to the
+/// non-terminal values the finalization job scans. Also not declared here.
 model Lesson {
   id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   room                   String    @db.VarChar(64)
@@ -122,6 +128,21 @@ model Lesson {
   /// The cap in force when this lesson opened, so a later configuration
   /// change never rewrites history.
   maxParticipants        Int       @map("max_participants") @db.SmallInt
+  /// F07: the whole-lesson recording lifecycle. One of idle, starting,
+  /// recording, not_recording, finalizing, recorded, recording_partial,
+  /// recording_failed, too_short, storage_unavailable.
+  recordingStatus           String    @default("idle") @map("recording_status") @db.VarChar(24)
+  /// First egress of the lesson active — the live indicator's `since`.
+  recordingStartedAt        DateTime? @map("recording_started_at") @db.Timestamptz(6)
+  /// When finalization began; the 120-second egress settle window counts from here.
+  recordingFinalizingSince  DateTime? @map("recording_finalizing_since") @db.Timestamptz(6)
+  /// First storage transport error of the current finalization pass; the
+  /// 2-minute window counts from here, cleared on success or a retry.
+  storageUnavailableSince   DateTime? @map("storage_unavailable_since") @db.Timestamptz(6)
+  /// When the lesson reached a final recording status.
+  recordingFinalizedAt      DateTime? @map("recording_finalized_at") @db.Timestamptz(6)
+  /// Finalization lease — a pass claims this row only when null or past.
+  recordingLeaseUntil       DateTime? @map("recording_lease_until") @db.Timestamptz(6)
   createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -130,6 +151,8 @@ model Lesson {
   participants LessonParticipant[]
   scenario     LessonScenario?
   roleCards    LessonRoleCard[]
+  recordingSegments LessonRecordingSegment[]
+  pipelineBranches  LessonPipelineBranch[]
 
   @@index([status, openedAt(sort: Desc)], map: "ix_lessons_status_opened")
   @@map("lessons")
@@ -150,6 +173,19 @@ model LessonParticipant {
   lastConnectedAt    DateTime? @map("last_connected_at") @db.Timestamptz(6)
   lastDisconnectedAt DateTime? @map("last_disconnected_at") @db.Timestamptz(6)
   connected          Boolean   @default(false)
+  /// F07: this participant's own recording outcome. One of not_started,
+  /// recording, stopped, failed_to_start, complete, partial, missing.
+  recordingStatus    String    @default("not_started") @map("recording_status") @db.VarChar(24)
+  /// `lessons/{lessonId}/{userId}/audio.ogg` once verified — what F08 and F10 read.
+  audioObjectKey     String?   @map("audio_object_key") @db.VarChar(255)
+  /// Verified size; a check constraint pairs it with the key and floors it above 10 KB.
+  audioBytes         BigInt?   @map("audio_bytes")
+  /// Second 0 of this participant's `audio.ogg`.
+  recordingStartedAt DateTime? @map("recording_started_at") @db.Timestamptz(6)
+  /// Assembled file length, filled gaps included.
+  audioDurationMs    Int?      @map("audio_duration_ms")
+  /// Sum of segment durations; the per-participant 3-minute rule reads this.
+  capturedMs         Int?      @map("captured_ms")
   createdAt          DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt          DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -159,6 +195,75 @@ model LessonParticipant {
   @@unique([lessonId, userId], map: "ux_lesson_participants_lesson_user")
   @@index([userId, joinedAt(sort: Desc)], map: "ix_lesson_participants_user_joined")
   @@map("lesson_participants")
+}
+
+/// One row per egress (one per published microphone track, plus a restart
+/// row on an unexpected end or a reconnect). Finalization assembles a
+/// participant's segments, in `fileStartedAt` order, into one continuous
+/// `audio.ogg` and deletes them once that object is verified.
+model LessonRecordingSegment {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId      String    @map("lesson_id") @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  trackSid      String    @map("track_sid") @db.VarChar(64)
+  /// Null until LiveKit accepted the request; stays null for a start that never succeeded.
+  egressId      String?   @unique(map: "ux_segments_egress") @map("egress_id") @db.VarChar(64)
+  objectKey     String    @map("object_key") @db.VarChar(255)
+  /// One of requested, starting, active, ending, complete, failed.
+  status        String    @default("requested") @db.VarChar(16)
+  attempt       Int       @default(1) @db.SmallInt
+  /// Ended abnormally while the lesson was still live — triggers the single restart.
+  unexpected    Boolean   @default(false)
+  /// LiveKit's error for a failed start or end; never shown to users.
+  error         String?   @db.VarChar(500)
+  fileStartedAt DateTime? @map("file_started_at") @db.Timestamptz(6)
+  fileEndedAt   DateTime? @map("file_ended_at") @db.Timestamptz(6)
+  durationMs    Int?      @map("duration_ms")
+  sizeBytes     BigInt?   @map("size_bytes")
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// `ux_segments_open_track`, the partial unique index that keeps at most
+  /// one open egress per track (requested/starting/active/ending), is
+  /// created by raw SQL in this model's migration and deliberately NOT
+  /// declared as a Prisma `@@unique` — same reasoning as `ux_lessons_open_room`.
+  @@index([lessonId, userId, fileStartedAt], map: "ix_segments_lesson_user_started")
+  @@map("lesson_recording_segments")
+}
+
+/// One row per participant per lesson, extended by later features as the
+/// pipeline grows past recording. `stage`/`status`/`failureCode` are widened
+/// by each feature's own migration rather than replaced.
+model LessonPipelineBranch {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId             String    @map("lesson_id") @db.Uuid
+  userId               String    @map("user_id") @db.Uuid
+  /// One of recording, transcription (widened by F08 onward).
+  stage                String    @default("recording") @db.VarChar(24)
+  /// One of verifying, queued, failed, storage_unavailable (widened by F08 onward).
+  status               String    @default("verifying") @db.VarChar(24)
+  /// Set exactly when status = failed. One of recording_failed_to_start,
+  /// recording_missing, recording_too_short, recording_assembly_failed.
+  failureCode          String?   @map("failure_code") @db.VarChar(40)
+  failureReason        String?   @map("failure_reason") @db.VarChar(200)
+  attempts             Int       @default(1) @db.SmallInt
+  /// When PipelineLaunchPort.launch was called; guards against a second call.
+  launchedAt           DateTime? @map("launched_at") @db.Timestamptz(6)
+  /// When StudyPlanFallbackPort.requestFallbackPlan was called (F15); guards against a second call.
+  fallbackRequestedAt  DateTime? @map("fallback_requested_at") @db.Timestamptz(6)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, userId], map: "ux_branches_lesson_user")
+  @@index([stage, status], map: "ix_branches_stage_status")
+  @@index([userId, createdAt(sort: Desc)], map: "ix_branches_user_created")
+  @@map("lesson_pipeline_branches")
 }
 
 /// The shared situation — every participant sees it. Created the moment the

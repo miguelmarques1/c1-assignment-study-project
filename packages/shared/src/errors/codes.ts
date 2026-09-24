@@ -41,6 +41,10 @@ export const ERROR_CODES = {
   SCENARIO_LOCKED: 'SCEN002',
   /** Only the participant who opened the room may reroll or retry the situation. */
   SCENARIO_NOT_THE_OPENER: 'SCEN003',
+  /** Nothing in this lesson's recording is retryable. */
+  RECORDING_NOT_RETRYABLE: 'REC001',
+  /** The recording is still being captured or finalized. */
+  RECORDING_NOT_FINALIZED: 'REC002',
   /** At least one infrastructure dependency is unreachable. */
   HEALTH_DEPENDENCY_DOWN: 'HEALTH001',
   /** Unhandled server-side failure. */
@@ -70,6 +74,8 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   [ERROR_CODES.SCENARIO_REROLL_LIMIT]: 409,
   [ERROR_CODES.SCENARIO_LOCKED]: 409,
   [ERROR_CODES.SCENARIO_NOT_THE_OPENER]: 403,
+  [ERROR_CODES.RECORDING_NOT_RETRYABLE]: 409,
+  [ERROR_CODES.RECORDING_NOT_FINALIZED]: 409,
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 503,
   [ERROR_CODES.INTERNAL_ERROR]: 500,
 };
@@ -103,6 +109,8 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ERROR_CODES.SCENARIO_LOCKED]: 'The lesson has started, so the scenario can no longer change.',
   [ERROR_CODES.SCENARIO_NOT_THE_OPENER]:
     'Only the participant who opened the room can change the situation.',
+  [ERROR_CODES.RECORDING_NOT_RETRYABLE]: 'There is nothing to retry for this lesson.',
+  [ERROR_CODES.RECORDING_NOT_FINALIZED]: 'This lesson is still being processed.',
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 'One or more dependencies are unavailable.',
   [ERROR_CODES.INTERNAL_ERROR]: 'Something went wrong on our side.',
 };

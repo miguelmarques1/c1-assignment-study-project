@@ -1160,7 +1160,8 @@
                     "postgres",
                     "redis",
                     "minio",
-                    "livekit"
+                    "livekit",
+                    "egress"
                   ]
                 },
                 "status": {
@@ -1384,6 +1385,8 @@
                   "SCEN001",
                   "SCEN002",
                   "SCEN003",
+                  "REC001",
+                  "REC002",
                   "HEALTH001",
                   "ERR500"
                 ]
@@ -1559,6 +1562,62 @@
                   ],
                   "additionalProperties": false
                 }
+              },
+              "recording": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "idle",
+                      "starting",
+                      "recording",
+                      "not_recording"
+                    ]
+                  },
+                  "since": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "mine": {
+                    "type": "object",
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "not_started",
+                          "recording",
+                          "stopped",
+                          "failed_to_start"
+                        ]
+                      },
+                      "capturedSeconds": {
+                        "type": "integer",
+                        "minimum": -9007199254740991,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "status",
+                      "capturedSeconds"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "status",
+                  "since",
+                  "mine"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [
@@ -1568,7 +1627,8 @@
               "startedAt",
               "maxParticipants",
               "participants",
-              "awaiting"
+              "awaiting",
+              "recording"
             ],
             "additionalProperties": false
           },

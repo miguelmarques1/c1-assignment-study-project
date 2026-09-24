@@ -124,6 +124,18 @@ export const envSchema = z.object({
     .max(4, { error: 'LESSON_MAX_PARTICIPANTS must be at most 4.' })
     .default(2),
 
+  /**
+   * The egress container uploads segments through its own S3 client, which
+   * needs the same endpoint the API uses unless overridden — S3_ENDPOINT is
+   * container-internal (`http://minio:9000`) and egress runs in the same
+   * network, so the default is almost always right.
+   */
+  EGRESS_S3_ENDPOINT: z.url({ error: 'EGRESS_S3_ENDPOINT must be a URL.' }).optional(),
+  /** The egress container's health port, probed by /health (F07). */
+  LIVEKIT_EGRESS_HEALTH_URL: z
+    .url({ error: 'LIVEKIT_EGRESS_HEALTH_URL must be a URL.' })
+    .default('http://localhost:8080'),
+
   SEED_USERS: seedUsersField,
 });
 

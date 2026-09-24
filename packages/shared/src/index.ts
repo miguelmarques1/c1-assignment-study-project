@@ -71,6 +71,29 @@ export {
 } from './schemas/classroom';
 
 export {
+  lessonRecordingStatusSchema,
+  lessonRecordingViewSchema,
+  liveParticipantRecordingStatusSchema,
+  liveRecordingSchema,
+  liveRecordingStatusSchema,
+  participantRecordingStatusSchema,
+  pipelineBranchStageSchema,
+  pipelineBranchStatusSchema,
+  pipelineBranchViewSchema,
+  recordingFailureCodeSchema,
+  type LessonRecordingStatus,
+  type LessonRecordingView,
+  type LiveParticipantRecordingStatus,
+  type LiveRecording,
+  type LiveRecordingStatus,
+  type ParticipantRecordingStatus,
+  type PipelineBranchStage,
+  type PipelineBranchStatus,
+  type PipelineBranchView,
+  type RecordingFailureCode,
+} from './schemas/recording';
+
+export {
   registerSchema,
   roleCardSchema,
   roleCardStatusSchema,

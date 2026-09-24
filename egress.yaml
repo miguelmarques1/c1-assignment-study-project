@@ -1,0 +1,27 @@
+# Development-only egress configuration. The key pair matches livekit.yaml's.
+#
+# No storage block: the API passes S3 upload credentials per egress request
+# (its own S3_* / EGRESS_S3_ENDPOINT variables), so there is exactly one place
+# object-store credentials are configured. See F07's spec, "Where egress
+# uploads".
+api_key: devkey
+api_secret: devsecret_local_only_change_me_32chars
+ws_url: ws://livekit:7880
+
+# Must be the same Redis the LiveKit server uses to dispatch egress requests,
+# on a database index separate from the application's (db 0 — sessions and
+# login throttling).
+redis:
+  address: redis:6379
+  db: 1
+
+health_port: 8080
+
+logging:
+  level: info
+  json: false
+
+# Safety ceiling well above the classroom's 120-minute lesson cap (F05) —
+# the cap, not this limit, is what ends a long lesson.
+session_limits:
+  file_output_max_duration: 150m

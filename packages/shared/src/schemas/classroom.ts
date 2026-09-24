@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { liveRecordingSchema } from './recording';
+
 /**
  * The live-session lifecycle only. A lesson whose recording failed is a
  * separate fact recorded by F07 on its own column — `ended` here says
@@ -59,6 +61,8 @@ export const classroomSessionSchema = z
     maxParticipants: z.number().int(),
     participants: z.array(classroomParticipantSchema),
     awaiting: z.array(classroomAwaitingSchema),
+    /** F07: lesson-wide recording state plus the caller's own captured audio. */
+    recording: liveRecordingSchema,
   })
   .nullable();
 export type ClassroomSession = z.infer<typeof classroomSessionSchema>;

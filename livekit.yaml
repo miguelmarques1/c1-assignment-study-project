@@ -13,6 +13,12 @@ rtc:
 keys:
   devkey: devsecret_local_only_change_me_32chars
 
+# The egress container (F07) dispatches recording requests to this server
+# through Redis. A database index separate from the application's (db 0).
+redis:
+  address: redis:6379
+  db: 1
+
 logging:
   level: info
   json: false

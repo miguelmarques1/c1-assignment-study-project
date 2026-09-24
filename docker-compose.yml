@@ -73,6 +73,33 @@ services:
       timeout: 3s
       retries: 12
       start_period: 5s
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # Per-track audio egress for lesson recording (F07). Dispatches recording
+  # requests over the same Redis livekit.yaml now points at.
+  egress:
+    image: livekit/egress:latest
+    restart: unless-stopped
+    environment:
+      EGRESS_CONFIG_FILE: /etc/egress.yaml
+    volumes:
+      - ./egress.yaml:/etc/egress.yaml:ro
+      - egress-tmp:/home/egress/tmp
+    ports:
+      - "${LIVEKIT_EGRESS_HEALTH_PORT:-8080}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+      start_period: 10s
+    depends_on:
+      redis:
+        condition: service_healthy
+      livekit:
+        condition: service_healthy
 
   # Application containers start idle on purpose. Bring the stack up, then start
   # only what a given task needs:
@@ -92,6 +119,9 @@ services:
       REDIS_URL: redis://redis:6379
       S3_ENDPOINT: http://minio:9000
       LIVEKIT_URL: http://livekit:7880
+      # EGRESS_S3_ENDPOINT is left unset: its fallback (S3_ENDPOINT above) is
+      # already the address the egress container can reach on this network.
+      LIVEKIT_EGRESS_HEALTH_URL: http://egress:8080
     ports:
       - "${API_PORT:-3001}:3001"
     volumes:
@@ -164,3 +194,4 @@ volumes:
   web-node-modules:
   shared-node-modules:
   design-tokens-node-modules:
+  egress-tmp:

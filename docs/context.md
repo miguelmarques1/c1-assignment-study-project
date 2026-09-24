@@ -345,6 +345,8 @@ Consequências:
 * O pronunciation assessment roda sobre áudio limpo, sem contaminação da voz do outro participante;
 * O histórico de aulas não terá replay de vídeo.
 
+Falha de gravação é **por participante**, como o resto do pipeline. Se o egress da faixa de um participante não inicia, todos veem `Not recording` na hora, para decidir se reiniciam a aula. Mas, ao final, só o ramo desse participante falha; os demais seguem normalmente. A aula só termina como `recording_failed`, sem pipeline, quando ninguém tem áudio utilizável.
+
 ## BYOK — roteamento das chaves
 
 **A chave de cada usuário processa somente os dados daquele usuário.** A chave Azure Speech do usuário A transcreve e avalia a pronúncia do track de A; a chave Gemini de A gera a análise, a atualização de perfil e o plano de estudos de A. Não há fallback para a chave do parceiro.
@@ -435,6 +437,8 @@ O plano é entregue **dividido em sessões diárias curtas**, com meta de tempo 
 Como não existe agendamento de aulas, o plano **não tem data de término**: permanece ativo até ser substituído pelo plano gerado após a próxima aula.
 
 Na virada de ciclo, os itens não concluídos que **ainda correspondem a uma fraqueza atual do perfil migram** para o plano novo; os demais são arquivados junto do plano anterior.
+
+**Gravação com erro não deixa ninguém sem atividades.** Um participante pode ter a gravação inutilizada por erro: o egress não iniciou, o áudio ficou ausente ou vazio, ou ele capturou menos de 3 minutos. Nesse caso, um plano novo é montado a partir do perfil que ele já tem, ou, na primeira aula, do material geral de nível C1 do banco, sem diagnóstico novo. Esse plano substitui o ativo com o carry-over normal e avisa que foi montado sem a aula. Se um retry recuperar a gravação depois, o plano do pipeline completo substitui esse. Aula curta demais não é erro e não gera plano.
 
 ## Origem dos scores do Learning Profile
 
