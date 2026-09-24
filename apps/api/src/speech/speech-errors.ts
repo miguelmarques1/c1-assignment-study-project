@@ -37,3 +37,8 @@ export class SpeechAudioRejectedError extends SpeechError {
 export class SpeechRegionUnsupportedError extends SpeechError {
   override readonly name = 'SpeechRegionUnsupportedError';
 }
+
+/** 200, but `RecognitionStatus` is not `Success` (e.g. `NoMatch`): nothing usable to assess. Worth a retry. */
+export class SpeechNoRecognitionError extends SpeechError {
+  override readonly name = 'SpeechNoRecognitionError';
+}

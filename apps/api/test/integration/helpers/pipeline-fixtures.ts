@@ -18,8 +18,10 @@ import { PipelineQueueService } from '../../../src/pipeline/pipeline-queue.servi
 import { PipelineService } from '../../../src/pipeline/pipeline.service';
 import { audioObjectKey } from '../../../src/recording/recording.constants';
 import { FastTranscriptionClient } from '../../../src/speech/fast-transcription.client';
+import { PronunciationAssessmentClient } from '../../../src/speech/pronunciation-assessment.client';
 import { StorageService } from '../../../src/storage/storage.service';
 import { FakeFastTranscriptionClient } from './fake-speech';
+import { FakePronunciationAssessmentClient } from './fake-pronunciation';
 import { startMinio, TEST_MINIO_ACCESS_KEY, TEST_MINIO_BUCKET, TEST_MINIO_SECRET_KEY, type StartedMinio } from './minio';
 import { createTestContext, type TestContext } from './test-app';
 
@@ -39,6 +41,7 @@ export interface PipelineTestContext {
   minio: StartedMinio;
   storage: StorageService;
   speech: FakeFastTranscriptionClient;
+  pronunciation: FakePronunciationAssessmentClient;
   close: () => Promise<void>;
 }
 
@@ -83,11 +86,13 @@ export async function createPipelineTestContext(
   await storage.ensureBucket();
 
   const speech = new FakeFastTranscriptionClient();
+  const pronunciation = new FakePronunciationAssessmentClient();
   const ctx = await createTestContext({
     extraEnv: { ...storageEnv, ...extra.extraEnv },
     overrides: [
       { token: StorageService, useValue: storage },
       { token: FastTranscriptionClient, useValue: speech },
+      { token: PronunciationAssessmentClient, useValue: pronunciation },
       {
         token: PIPELINE_RETRY_OVERRIDES,
         useValue: { transcription: FAST_RETRY_POLICY, excerpt_selection: FAST_SELECTION_RETRY_POLICY },
@@ -101,6 +106,7 @@ export async function createPipelineTestContext(
     minio,
     storage,
     speech,
+    pronunciation,
     close: async () => {
       await ctx.close();
       await minio.stop();

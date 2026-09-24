@@ -7,6 +7,7 @@ import { promisify } from 'node:util';
 import ffmpegPath from 'ffmpeg-static';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import { PronunciationAssessmentService } from '../../src/speech/pronunciation-assessment.service';
 import { SpeechToTextService } from '../../src/speech/speech-to-text.service';
 import {
   createPipelineTestContext,
@@ -41,11 +42,16 @@ afterAll(async () => {
 
 beforeEach(async () => {
   pipeline.speech.reset();
+  pipeline.pronunciation.reset();
   await resetPipelineTables(pipeline.ctx);
 });
 
 function speech(): SpeechToTextService {
   return pipeline.ctx.app.get(SpeechToTextService);
+}
+
+function pronunciation(): PronunciationAssessmentService {
+  return pipeline.ctx.app.get(PronunciationAssessmentService);
 }
 
 describe('SpeechToTextService.transcribeClip', () => {
@@ -81,6 +87,39 @@ describe('SpeechToTextService.transcribeClip', () => {
     const usage = await pipeline.ctx.prisma.credentialUsage.findMany();
     expect(usage).toEqual([
       expect.objectContaining({ userId: ana.id, provider: 'azure_speech', feature: 'F18_open_response', outcome: 'ok' }),
+    ]);
+  }, 60_000);
+});
+
+describe('PronunciationAssessmentService.assessClip', () => {
+  it('assesses_a_clip_with_the_callers_key', async () => {
+    const ana = await seedSpeaker(pipeline.ctx, 'Ana', { region: 'westeurope' });
+    const referenceText = 'This is a short speaking response.';
+
+    const result = await pronunciation().assessClip(ana.id, clipPath, referenceText, 'F18_speaking');
+
+    expect(pipeline.pronunciation.calls).toEqual([
+      expect.objectContaining({
+        key: ana.azureKey,
+        region: 'westeurope',
+        locale: 'en-US',
+        referenceText,
+        contentType: 'audio/wav',
+      }),
+    ]);
+    expect(result.scores).toEqual({ pronunciation: 85, accuracy: 88, fluency: 82, prosody: 80, completeness: 100 });
+    expect(result.locale).toBe('en-US');
+    expect(result.phonemeAlphabet).toBe('IPA');
+  }, 60_000);
+
+  it('audits_the_callers_feature_label_for_a_clip', async () => {
+    const ana = await seedSpeaker(pipeline.ctx, 'Ana');
+
+    await pronunciation().assessClip(ana.id, clipPath, 'A reference text.', 'F18_speaking');
+
+    const usage = await pipeline.ctx.prisma.credentialUsage.findMany();
+    expect(usage).toEqual([
+      expect.objectContaining({ userId: ana.id, provider: 'azure_speech', feature: 'F18_speaking', outcome: 'ok' }),
     ]);
   }, 60_000);
 });

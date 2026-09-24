@@ -22,18 +22,26 @@
 - Regenerated `docs/api/openapi.json` now (not deferred to Stage 4 step 15) because the pipeline and transcript contracts already changed (`progress`, badge `pronunciation`) and `test/unit/openapi.spec.ts` guards staleness on every run. Stage 4 step 15 will regenerate again once the pronunciation route and component exist.
 
 **Validation:** typecheck (api, web) ✅ · lint ✅ · unit 177/177 ✅ · integration (pipeline-routes 12/12, pipeline-drain 8/8, transcript-routes 11/11, excerpt-selection-pipeline 14/14, transcription-pipeline 15/15, recording-to-transcription 3/3) ✅
-**Commit:** _(pending — recorded after Stage 2 commits, per the skill's convention)_
+**Commit:** d975049 "F10 spec/plan and stage 1 - contracts, runner extension and data model"
 
-## Stage 2: Azure pronunciation capability — ⬜ pending
+## Stage 2: Azure pronunciation capability — ✅ done
 
-- [ ] **5. Pronunciation client**
-- [ ] **6. Response mapping and clip capability**
-- [ ] **7. Live endpoint check**
+- [x] **5. Pronunciation client**
+- [x] **6. Response mapping and clip capability**
+- [x] **7. Live endpoint check**
 
-**Observations:** _(none yet)_
+**Observations:**
+- `speech.constants.ts` gained `PRONUNCIATION_PROVIDER`, `pronunciationAssessmentUrl(region, locale)`, `PRONUNCIATION_ASSESSMENT_TIMEOUT_MS` (60 s) and `pronunciationAssessmentParams(referenceText)`. `pronunciation-assessment.client.ts` posts the WAV clip's raw bytes (not multipart, unlike fast transcription) with the base64 `Pronunciation-Assessment` header; `pronunciation-assessment.response.ts` validates and maps the detailed result; `pronunciation-assessment.service.ts` exposes `assessClip` through `CredentialExecutorService.withKey(userId, 'azure_speech', feature, …)`, matching `SpeechToTextService.transcribeFile`'s shape. `speech-errors.ts` gained `SpeechNoRecognitionError`. `speech.module.ts` provides and exports both new classes.
+- **Live check finding (step 7), significant deviation from the spec's assumed shape:** the spec assumed Azure's detailed REST response nests every score under a `PronunciationAssessment` child object at the `NBest[i]` and `Words[i]` levels (the shape the SDK's config docs imply). The real response is flat: `NBest[i].AccuracyScore/FluencyScore/ProsodyScore/CompletenessScore/PronScore` and `Words[i].AccuracyScore/ErrorType` sit directly on their parent object, same for `Phonemes[i].AccuracyScore`. Verified with a real call against `TEST_AZURE_SPEECH_REGION=eastus2` using a local offline TTS clip (Windows `System.Speech.Synthesis`, 16 kHz mono PCM WAV, no extra dependency) as the source audio, and a throwaway script (deleted after the check, per the standing constraint) that called `PronunciationAssessmentClient` directly. Rewrote `pronunciation-assessment.response.ts`'s schema and mapper to the flat shape, and fixed `helpers/fake-pronunciation.ts` and the two unit test files to match, before they were ever run against the wrong shape in CI.
+- **`PhonemeAlphabet: IPA` returns real IPA over REST** (`w`, `i`, `ʊ`, `ɹ`, `æ`, `ð`, `ɚ`, `θ`, `ŋ`, `tʃ`, …, confirmed in the live call's phoneme list). No SAPI→IPA fallback table was needed; the spec's contingency is unused and not built.
+- **Prosody is reported for `en-US`** (`ProsodyScore` present, e.g. 68.7), and `Feedback.Prosody.Break.ErrorTypes` / `Intonation.ErrorTypes` are present per word (mostly `["None"]` / `["Monotone"]` on a flat-affect TTS clip), confirming the merge-into-`errorTypes`-dropping-`None` design.
+- **An `Omission` word carries `Offset: 0`, `Duration: 0`, `AccuracyScore: 0.0`** rather than omitting those fields — confirmed live (the reference word "I" was never recognized because the TTS clip's phrasing shifted it into an inserted "we"). The response mapper treats all three as always-present-but-optional with safe fallbacks, which already covered this case correctly without further change.
+- **Ticks confirmed as 100 ns units** (10,000 ticks = 1 ms) — the mapped `offsetMs`/`durationMs` values lined up with the clip's own ~7 s duration.
+- Wired `helpers/fake-pronunciation.ts` (scripted per key **and** per reference text, since F10 assesses several excerpts with different reference texts per branch) into `helpers/pipeline-fixtures.ts`'s `createPipelineTestContext` now — `PipelineTestContext` gained a `pronunciation` fake — since it is needed both by this stage's `speech-to-text.spec.ts` extension and by Stage 3's pipeline suite; building it once now avoided a rework later. `PRONUNCIATION_EXCERPT_RETRY_DELAYS` and `PRONUNCIATION_WORK_ROOT` overrides are deferred to Stage 3 (step 12), once `pronunciation.constants.ts` exists.
+- Extended `speech-to-text.spec.ts` with `PronunciationAssessmentService.assessClip`'s two tests (`assesses_a_clip_with_the_callers_key`, `audits_the_callers_feature_label_for_a_clip`), reusing the same 16 kHz WAV fixture F18's shape needs.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** typecheck ✅ · lint ✅ · unit 194/194 (17 new) ✅ · integration `speech-to-text.spec.ts` 5/5 ✅ · openapi snapshot fresh (no route change this stage) ✅ · live check against the real Azure endpoint ✅ (latency ~2.5 s for an 8 s clip; scratch script and TTS clip deleted afterward, nothing committed)
+**Commit:** _(pending — recorded after Stage 3's commit)_
 
 ## Stage 3: Pronunciation stage — ⬜ pending
 

@@ -19,3 +19,34 @@ export const FAST_TRANSCRIPTION_TIMEOUT_MS = 10 * 60 * 1000;
 export function fastTranscriptionUrl(region: string): string {
   return `https://${region}.api.cognitive.microsoft.com/speechtotext/transcriptions:transcribe?api-version=${FAST_TRANSCRIPTION_API_VERSION}`;
 }
+
+export const PRONUNCIATION_PROVIDER = 'azure_pronunciation_assessment';
+
+/**
+ * F10: capped at 30 s of audio per request — exactly F09's `max_duration_ms`,
+ * so every selected excerpt fits one call.
+ */
+export const PRONUNCIATION_ASSESSMENT_TIMEOUT_MS = 60 * 1000;
+
+/** The REST API for short audio, with the pronunciation assessment header. No Speech SDK. */
+export function pronunciationAssessmentUrl(region: string, locale: string): string {
+  return `https://${region}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${locale}&format=detailed`;
+}
+
+/**
+ * The `Pronunciation-Assessment` header's JSON, base64-encoded, with the
+ * reference text filled in per request. Phoneme granularity, prosody and
+ * miscue detection cover every error type the PRD lists; `PhonemeAlphabet:
+ * IPA` is the ledger's own alphabet (`phoneme:/θ/`), verified live in stage 2.
+ */
+export function pronunciationAssessmentParams(referenceText: string): Record<string, unknown> {
+  return {
+    ReferenceText: referenceText,
+    GradingSystem: 'HundredMark',
+    Granularity: 'Phoneme',
+    Dimension: 'Comprehensive',
+    EnableMiscue: true,
+    EnableProsodyAssessment: true,
+    PhonemeAlphabet: 'IPA',
+  };
+}
