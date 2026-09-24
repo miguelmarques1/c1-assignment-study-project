@@ -621,4 +621,42 @@ describe('recording finalization', () => {
     const updated = await ctx.prisma.lesson.findUniqueOrThrow({ where: { id: lesson.id } });
     expect(updated.recordingStatus).toBe('recorded');
   }, 30_000);
+
+  it('the_lesson_record_names_and_attributes_the_audio_objects', async () => {
+    const alice = await seedUser('alice@example.com');
+    const lesson = await makeEndedLesson(alice.id, { durationSeconds: 300 });
+    await addConnectedParticipant(lesson.id, alice.id);
+    const now = new Date();
+    await addCompleteSegment({ lessonId: lesson.id, userId: alice.id, fileStartedAt: now, fileEndedAt: new Date(now.getTime() + 200_000), audioSeconds: 5 });
+
+    await runFinalizationOnce();
+
+    // The object key is built from the lesson and the participant's own user
+    // id — the same identifiers F08 will resolve the egress track back to.
+    expect(await objectExistsInMinio(`lessons/${lesson.id}/${alice.id}/audio.ogg`)).toBe(true);
+    const participant = await ctx.prisma.lessonParticipant.findFirstOrThrow({ where: { lessonId: lesson.id, userId: alice.id } });
+    const startedLesson = await ctx.prisma.lesson.findUniqueOrThrow({ where: { id: lesson.id } });
+    expect(participant.recordingStartedAt).not.toBeNull();
+    expect(participant.recordingStartedAt!.getTime()).toBeGreaterThanOrEqual(startedLesson.startedAt!.getTime());
+  }, 30_000);
+
+  it('the_launch_port_receives_the_verified_object_key_per_participant', async () => {
+    const alice = await seedUser('alice@example.com');
+    const lesson = await makeEndedLesson(alice.id, { durationSeconds: 300 });
+    await addConnectedParticipant(lesson.id, alice.id);
+    const now = new Date();
+    await addCompleteSegment({ lessonId: lesson.id, userId: alice.id, fileStartedAt: now, fileEndedAt: new Date(now.getTime() + 200_000), audioSeconds: 5 });
+
+    await runFinalizationOnce();
+
+    const participant = await ctx.prisma.lessonParticipant.findFirstOrThrow({ where: { lessonId: lesson.id, userId: alice.id } });
+    expect(launchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        lessonId: lesson.id,
+        userId: alice.id,
+        audioObjectKey: `lessons/${lesson.id}/${alice.id}/audio.ogg`,
+        recordingStartedAt: participant.recordingStartedAt,
+      }),
+    );
+  }, 30_000);
 });
