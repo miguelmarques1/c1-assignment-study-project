@@ -46,24 +46,27 @@ export class PipelineService {
 
   /**
    * F07's hand-off: a participant's recording is verified, so their branch
-   * enters transcription. The stage row is written first and is durable; if
-   * adding its job then fails, the drain adds it on its next tick, so a
-   * Redis hiccup at lesson end costs seconds, not the branch. A Postgres
-   * failure still throws, and F07's finalizer retries on its next tick.
+   * enters transcription. It never throws. By the time it runs, F07 has
+   * already deleted that participant's segment objects and put the branch
+   * at `transcription`/`queued` — a throw here would make F07's next pass
+   * re-assemble from segments that no longer exist and turn a good
+   * recording into `recording_missing`. Whatever fails is recovered by the
+   * drain instead: a missing stage row by its backfill of queued branches,
+   * a missing job by its job check. The cost is one tick, never the branch.
    */
   async launch(input: { lessonId: string; userId: string }, now: Date = new Date()): Promise<void> {
-    const branch = await this.prisma.lessonPipelineBranch.findUniqueOrThrow({
-      where: { lessonId_userId: { lessonId: input.lessonId, userId: input.userId } },
-      select: { id: true },
-    });
-
-    const row = await this.state.ensureStage(branch.id, 'transcription', now);
-
-    await this.queue.enqueue(branch.id, 'transcription', row.run).catch((error: unknown) => {
+    try {
+      const branch = await this.prisma.lessonPipelineBranch.findUniqueOrThrow({
+        where: { lessonId_userId: { lessonId: input.lessonId, userId: input.userId } },
+        select: { id: true },
+      });
+      const row = await this.state.ensureStage(branch.id, 'transcription', now);
+      await this.queue.enqueue(branch.id, 'transcription', row.run);
+    } catch (error) {
       this.logger.warn(
-        `Could not queue transcription for lesson ${input.lessonId}, user ${input.userId}: ${errorMessage(error)} — the drain will retry.`,
+        `Could not launch transcription for lesson ${input.lessonId}, user ${input.userId}: ${errorMessage(error)} — the drain will pick it up.`,
       );
-    });
+    }
   }
 
   async getView(lessonId: string, callerId: string): Promise<LessonPipelineView> {
@@ -154,7 +157,9 @@ export class PipelineService {
       retryable: false,
     };
 
-    if (branch.stage !== 'recording') {
+    // F07 leaves a verified branch at `recording`/`queued` with `launched_at`
+    // set until the pipeline moves it on; either way its recording is done.
+    if (branch.stage !== 'recording' || branch.launchedAt) {
       return { ...base, status: 'completed', reasonCode: null, reason: null };
     }
     if (branch.status === 'failed') {

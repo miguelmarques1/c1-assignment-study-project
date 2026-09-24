@@ -94,15 +94,33 @@
 - The two route suites (`pipeline-routes.spec.ts` 12, `transcript-routes.spec.ts` 8) were already written, and are what validated this stage. They're committed with stage 5.
 
 **Validation:** `pnpm --filter @english-quest/api typecheck` ✅ · `pnpm lint` ✅ · `openapi:generate` (22 operations) ✅ · `vitest run test/unit` ✅ 145/145 (includes the committed-snapshot test on the regenerated document) · `vitest run test/integration` ✅ 231/231 across 20 files · real-stack route check (see above).
-**Commit:** _(pending — recorded in the next stage)_
+**Commit:** `9271884` — F08 stage 4 - routes and document
 
-## Stage 5: Closing the loop — ⬜ pending
+## Stage 5: Closing the loop — ✅ done
 
-- [ ] **18. Test suites**
-- [ ] **19. Live verification**
-- [ ] **20. Follow-ups for neighbouring features**
+- [x] **18. Test suites**
+- [ ] **19. Live verification** — everything done except the 60-minute throughput check and the optional two-window lesson (see below). Left unticked on purpose.
+- [x] **20. Follow-ups for neighbouring features**
 
-**Observations:** _(none yet)_
+**Observations:**
+- **Test suites, as committed:**
+  - unit: `fast-transcription.client.spec.ts` (10), `fast-transcription.response.spec.ts` (6), `pipeline-backoff.spec.ts` (5) and `transcript-merge.spec.ts` (4), plus stage 1's env cases;
+  - integration: `transcription-pipeline.spec.ts` (15), `pipeline-drain.spec.ts` (8), `pipeline-routes.spec.ts` (12), `transcript-routes.spec.ts` (8), `speech-to-text.spec.ts` (3) and `recording-to-transcription.spec.ts` (3);
+  - helpers: `helpers/fake-speech.ts` (Azure faked at `FastTranscriptionClient`, recording the key, region and uploaded bytes of every call) and `helpers/pipeline-fixtures.ts`.
+- **Deviation (where the hand-off tests live):** the spec put them in F07's `recording-finalization.spec.ts`, but that suite replaces `PipelineLaunchPort` with a mock by design. So they are a new file, `recording-to-transcription.spec.ts`, which runs F07's real finalizer, the real launch, the real worker and MinIO, with only Azure faked.
+- **A third real defect, found by writing that file — the most serious of the run.** F07's finalizer deletes a participant's segment objects *before* calling the launch seam. My stage-2 launch could throw (a failed Postgres write), and when it did, the next finalization pass re-assembled from segments that no longer existed. It classified a good recording as `recording_missing`, requested a fallback plan, and F07's retry could not bring the recording back. Before F08 the seam only logged, so this path was unreachable; F08 opened it. **Fixed:** `PipelineService.launch` never throws. Anything it cannot do is recovered by the drain (the backfill for a missing stage row, the job check for a missing job). Test: `a_failed_launch_never_costs_the_recording`. The remaining window (a crash between F07's segment deletion and `markBranchLaunched`) is F07's own code and is recorded in F07's follow-ups.
+- **F07's code and spec disagree about the branch F08 inherits.** A verified branch is written as `recording`/`queued` (with `launched_at` set after the launch), not the `transcription`/`queued` in F07's spec. The same test file exposed it. My fixtures had copied F07's spec, which is why stages 3–4 never noticed. Only a failed launch leaves a branch in that state, because a normal launch moves the pointer on at once. **Fixed:** the drain's backfill now keys on `launched_at` set, status `queued`, and no transcription stage row, which also keeps it off a launch still in flight. The pipeline view's derived `recording` entry reads a launched branch as `completed`. The fixtures now mirror F07's real state.
+- **A test-harness race, fixed and reported to F07.** `RecordingFinalizationJob` ticks on its own every 5 s inside the test app. A fixture that creates the lesson already `ended`/`finalizing`, *then* adds participants and segments, can be finalized half-built. This is the first run's `a_failed_launch…` failure, and very likely the intermittent failures F07's own final verification logged. The fixture now creates the lesson `live` and ends it once its segments exist; it passed 3 runs in a row afterwards.
+- **Live verification on the real local stack.** Stage 3's live checks are in its own observations: the endpoint and response shape, end to end with the user's real key, and the blocked-to-resumed timing of 12 s. Added in this stage:
+  - **Storage outage, then retry:** with `docker compose stop minio`, a launched branch failed at once with `transcription_storage_unreadable` / "Recording could not be read from storage." after 1 attempt. 20 s later it still had not retried, and no `credential_usage` row had been written (a storage fault is not the user's key failing). With MinIO back, `POST /lessons/:id/pipeline/retry` as `you` returned 202 (run 2), the stage completed 3 s later, and the transcript read back 4 utterances.
+  - **Soft-fail — the 60-minute throughput criterion ("A 60-minute track completes transcription within 10 minutes") was not exercised.** The plan runs it only with the user's go-ahead, because it spends about an hour of their Azure quota, so this autonomous run did not start it. The evidence so far is 17 s of audio in about 3 s (`latency_ms` 2931 to 3267 across the live runs), with Ogg/Opus accepted directly. To run it: loop a real speech recording into a 60-minute Ogg with ffmpeg, then time the stage.
+  - **Soft-fail — the optional two-window real lesson in the user's Chrome** was not run. It needs two live participants, which the embedded browser cannot provide (F05/F07 precedent).
+  - Every scratch lesson this run created on the real stack (`f08-scratch`, `f08-live-check`, `f08-live-resume`, `f08-live-storage`) was deleted with its MinIO objects. The `credential_usage` rows from the live calls remain: that log is append-only and records real uses of the user's key. `you`'s Azure credential is back to `valid`.
+- **Follow-ups for neighbouring features (step 20):**
+  - F07's `progress.md` gained an appended, dated follow-up block: the seam is now real and never throws; the pre-existing segment-deletion hazard; the branch-state spec/code mismatch; and the fixture race behind its flakiness.
+  - This spec was corrected in place wherever the implementation differs, each change marked "corrected during implementation": the job id format, retry scheduling, the launch that never throws, the drain's backfill key and its abandon rule, the hand-off test file, and the F09 note, which now carries the live confidence finding.
+  - The notes for F10, F11, F18 and F19 still match what was built.
+- The mobile Dart models for the pipeline and transcript views are deferred to F19, their first consumer, as the spec records. No client code changed.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** `pnpm -r typecheck` ✅ · `pnpm lint` ✅ · `pnpm --filter @english-quest/api test:unit` ✅ 145/145 · `pnpm --filter @english-quest/api test:integration` ✅ 234/234 across 21 files (the 15 pre-existing plus the six F08 suites) · `pnpm --filter @english-quest/web test` ✅ 126/126 · `recording-to-transcription.spec.ts` also run 3× in a row after the fixture fix, green each time · live storage-outage and retry check on the real stack ✅ · 60-minute throughput and the two-window lesson are soft-fails (above).
+**Commit:** _(pending — recorded in the final verification)_

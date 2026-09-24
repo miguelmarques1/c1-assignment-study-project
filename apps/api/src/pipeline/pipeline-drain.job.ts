@@ -33,8 +33,10 @@ function errorMessage(error: unknown): string {
 /**
  * Keeps Postgres and the queue in agreement, whatever happened in between:
  *
- * - a branch F07 left at `transcription`/`queued` before this feature
- *   existed gets its stage row;
+ * - a branch F07 launched without a transcription stage row gets one —
+ *   branches recorded before this feature existed, and any launch whose
+ *   own write failed (F07 leaves a launched branch at `recording`/`queued`
+ *   with `launched_at` set; the launch is what moves it on);
  * - a blocked stage whose owner now has a usable key for its provider goes
  *   back to `queued` with the next run — saving a key in settings, from
  *   either client, or the nightly revalidation re-enabling one, needs no
@@ -67,8 +69,15 @@ export class PipelineDrainJob {
   }
 
   private async backfill(now: Date): Promise<number> {
+    // `launched_at` is set only after F07's launch call returns, so a branch
+    // whose launch is still in flight is never picked up twice.
     const orphans = await this.prisma.lessonPipelineBranch.findMany({
-      where: { stage: 'transcription', status: 'queued', stages: { none: { stage: 'transcription' } } },
+      where: {
+        launchedAt: { not: null },
+        status: 'queued',
+        stage: { in: ['recording', 'transcription'] },
+        stages: { none: { stage: 'transcription' } },
+      },
       select: { id: true },
     });
 
