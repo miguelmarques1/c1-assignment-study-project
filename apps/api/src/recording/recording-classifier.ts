@@ -89,7 +89,14 @@ export function classifyParticipant(input: ParticipantClassificationInput): Part
   }
 
   if (input.capturedMs < MIN_PARTICIPANT_CAPTURED_SECONDS * 1000) {
-    return failed(input, 'recording_too_short', false);
+    // The object itself is real and verified — a too-short recording is a
+    // failure of *duration*, not of the file's own existence, so its actual
+    // size and length are still worth reporting rather than nulling out.
+    return {
+      ...failed(input, 'recording_too_short', false),
+      audioBytes: input.verifiedAudio.bytes,
+      audioDurationMs: input.verifiedAudio.durationMs,
+    };
   }
 
   return {

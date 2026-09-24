@@ -85,6 +85,14 @@ export interface UseClassroomRoom {
   reconnectSecondsLeft: number | null;
   /** The device each kind is currently running on inside the call. */
   activeDeviceIds: Partial<Record<RoomDeviceKind, string>>;
+  /**
+   * Bumped on every `RoomEvent.RecordingStatusChanged` (F07). The event's own
+   * boolean payload is room-wide (true while *any* egress runs, blind to one
+   * participant's failed start) and is deliberately not exposed here — this
+   * counter exists only to trigger an immediate `GET /classroom/session`
+   * refetch, whose `recording` block is the real, per-caller source of truth.
+   */
+  recordingSignal: number;
   connect: (params: ConnectParams) => Promise<void>;
   disconnect: () => Promise<void>;
   toggleMicrophone: () => Promise<void>;
@@ -107,6 +115,7 @@ export function useClassroomRoom(): UseClassroomRoom {
   const [participants, setParticipants] = useState<ParticipantView[]>([]);
   const [reconnectSecondsLeft, setReconnectSecondsLeft] = useState<number | null>(null);
   const [activeDeviceIds, setActiveDeviceIds] = useState<Partial<Record<RoomDeviceKind, string>>>({});
+  const [recordingSignal, setRecordingSignal] = useState(0);
 
   const refreshParticipants = useCallback((room: Room) => {
     setParticipants([
@@ -177,6 +186,9 @@ export function useClassroomRoom(): UseClassroomRoom {
         .on(RoomEvent.LocalTrackUnpublished, onChanged)
         .on(RoomEvent.ConnectionQualityChanged, onChanged)
         .on(RoomEvent.ActiveSpeakersChanged, onChanged)
+        .on(RoomEvent.RecordingStatusChanged, () => {
+          setRecordingSignal((count) => count + 1);
+        })
         .on(RoomEvent.Reconnecting, () => {
           if (refreshing.current) return;
           setPhase('reconnecting');
@@ -284,6 +296,7 @@ export function useClassroomRoom(): UseClassroomRoom {
     participants,
     reconnectSecondsLeft,
     activeDeviceIds,
+    recordingSignal,
     connect,
     disconnect,
     toggleMicrophone,

@@ -174,4 +174,28 @@ describe('loadEnv', () => {
       expect((error as EnvValidationError).issues.length).toBeGreaterThanOrEqual(3);
     }
   });
+
+  it('defaults_the_egress_health_url_to_localhost_8080', () => {
+    const config = loadEnv(validEnv({ LIVEKIT_EGRESS_HEALTH_URL: undefined }));
+    expect(config.LIVEKIT_EGRESS_HEALTH_URL).toBe('http://localhost:8080');
+  });
+
+  it('leaves_egress_s3_endpoint_undefined_when_absent', () => {
+    const config = loadEnv(validEnv({ EGRESS_S3_ENDPOINT: undefined }));
+    expect(config.EGRESS_S3_ENDPOINT).toBeUndefined();
+  });
+
+  it('accepts_an_explicit_egress_s3_endpoint', () => {
+    const config = loadEnv(validEnv({ EGRESS_S3_ENDPOINT: 'http://egress-minio:9000' }));
+    expect(config.EGRESS_S3_ENDPOINT).toBe('http://egress-minio:9000');
+  });
+
+  it('rejects_a_malformed_egress_health_url', () => {
+    try {
+      loadEnv(validEnv({ LIVEKIT_EGRESS_HEALTH_URL: 'not-a-url' }));
+      expect.unreachable('should have thrown');
+    } catch (error) {
+      expect((error as EnvValidationError).issues.join('\n')).toContain('LIVEKIT_EGRESS_HEALTH_URL');
+    }
+  });
 });

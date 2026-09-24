@@ -1,13 +1,22 @@
 'use client';
 
+import type { LiveRecording } from '@english-quest/shared';
 import { useState } from 'react';
 
-import { Button, ChartIcon, CloseIcon, HangUpIcon, WarningIcon } from '@/components/ui';
+import { Button, ChartIcon, CloseIcon, CloudCheckIcon, HangUpIcon, WarningIcon } from '@/components/ui';
 
 export interface EndLessonDialogProps {
   open: boolean;
   onCancel: () => void;
   onConfirm: () => Promise<void>;
+  /** F07: the mockup's "24m 18s audio recorded safely" line, from the caller's own captured audio. */
+  recording: LiveRecording;
+}
+
+function formatCaptured(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}m ${seconds}s`;
 }
 
 /**
@@ -15,7 +24,7 @@ export interface EndLessonDialogProps {
  * in flight. The wording is the PRD's, split across the heading and the
  * information box the mockup lays it out in.
  */
-export function EndLessonDialog({ open, onCancel, onConfirm }: EndLessonDialogProps) {
+export function EndLessonDialog({ open, onCancel, onConfirm, recording }: EndLessonDialogProps) {
   const [submitting, setSubmitting] = useState(false);
 
   if (!open) {
@@ -91,6 +100,19 @@ export function EndLessonDialog({ open, onCancel, onConfirm }: EndLessonDialogPr
             </span>
           </Button>
         </div>
+
+        {recording.status === 'idle' ? null : (
+          <p className="mt-md w-full border-t-2 border-outline-strong pt-sm text-body-sm text-on-surface-variant">
+            {recording.status === 'not_recording' ? (
+              'This lesson is not being recorded.'
+            ) : (
+              <span className="inline-flex items-center gap-xs">
+                <CloudCheckIcon size={14} className="text-tertiary" />
+                {formatCaptured(recording.mine.capturedSeconds)} audio recorded safely
+              </span>
+            )}
+          </p>
+        )}
       </div>
     </div>
   );

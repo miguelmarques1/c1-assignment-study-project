@@ -1,9 +1,12 @@
 import { ConnectionQuality } from 'livekit-client';
+import type { LiveRecording } from '@english-quest/shared';
 
 import { SignalIcon, VolumeIcon, VolumeOffIcon } from '@/components/ui';
 import { ElapsedTimer } from './classroom-header';
 import { UnstableConnectionBanner } from './connection-quality';
+import { NotRecordingBanner } from './not-recording-banner';
 import { ParticipantGrid } from './participant-grid';
+import { RecordingIndicator } from './recording-indicator';
 import { ScenarioPanel } from './scenario-panel';
 import type { ParticipantView } from './use-classroom-room';
 import type { UseScenarioResult } from './use-scenario';
@@ -24,6 +27,8 @@ export interface LiveStageProps {
   onCloseBrief: () => void;
   soundOn: boolean;
   onToggleSound: () => void;
+  /** F07's lesson-wide recording state. */
+  recording: LiveRecording;
 }
 
 /**
@@ -41,6 +46,7 @@ export function LiveStage({
   onCloseBrief,
   soundOn,
   onToggleSound,
+  recording,
 }: LiveStageProps) {
   const local = participants.find((participant) => participant.isLocal);
   const unstable = participants.some(
@@ -66,8 +72,7 @@ export function LiveStage({
           </div>
         </div>
         <div className="flex items-center gap-sm">
-          {/* F07's recording indicator mounts here once egress lands. */}
-          <div data-slot="recording-indicator" />
+          <RecordingIndicator status={recording.status} />
           <button
             type="button"
             onClick={onToggleSound}
@@ -80,6 +85,7 @@ export function LiveStage({
         </div>
       </div>
 
+      {recording.status === 'not_recording' ? <NotRecordingBanner /> : null}
       {unstable ? <UnstableConnectionBanner /> : null}
 
       <div className="grid grid-cols-1 items-start gap-lg lg:grid-cols-12">

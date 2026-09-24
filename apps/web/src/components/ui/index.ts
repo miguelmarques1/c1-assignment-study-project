@@ -47,6 +47,7 @@ export {
   CloseIcon,
   UsersIcon,
   ChartIcon,
+  CloudCheckIcon,
   type IconProps,
 } from './icons';
 export { cn } from './cn';

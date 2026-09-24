@@ -2,6 +2,7 @@ import {
   AzureSpeechIcon,
   CameraIcon,
   CameraOffIcon,
+  CloudCheckIcon,
   EyeIcon,
   EyeOffIcon,
   GeminiIcon,
@@ -37,6 +38,7 @@ const ICONS: { name: string; Icon: (props: IconProps) => React.JSX.Element }[] =
   { name: 'HangUp', Icon: HangUpIcon },
   { name: 'Signal', Icon: SignalIcon },
   { name: 'Verified', Icon: VerifiedIcon },
+  { name: 'CloudCheck', Icon: CloudCheckIcon },
 ];
 
 export function IconSection() {

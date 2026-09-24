@@ -28,4 +28,5 @@ export { VolumeOffIcon } from './volume-off-icon';
 export { CloseIcon } from './close-icon';
 export { UsersIcon } from './users-icon';
 export { ChartIcon } from './chart-icon';
+export { CloudCheckIcon } from './cloud-check-icon';
 export type { IconProps } from './icon-props';

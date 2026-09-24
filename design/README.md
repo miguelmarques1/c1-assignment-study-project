@@ -146,7 +146,7 @@ The four classroom mockups arrived during F06 and were built in the same pass, a
 | Top bar: "AI Native Coach: Sarah J." | — | dropped | Section 7, Scenarios: "Role-play with the AI as one of the participants" |
 | Top bar: "Live CC" | — | dropped | Section 6, F08: transcription runs on the audio object F07 records — there is no live transcript to caption from |
 | Top bar: "Sound: On" | F05 | implemented | Mutes remote playback without unsubscribing |
-| Top bar: recording indicator | F07 | deferred | Lesson Recording mounts it in the top bar's reserved slot |
+| Top bar: recording indicator | F07 | implemented | `RecordingIndicator`, mounted in the top bar's reserved slot; `Not recording` shows the dismissible `NotRecordingBanner` beneath the bar |
 | Main stage: remote video with the name pill | F05 | implemented | `ParticipantGrid`, 16:9 |
 | "Partner is speaking…" pill | F05 | implemented | LiveKit's active-speaker flag |
 | "Audio AI Active" chip | — | dropped | Section 7, AI and providers: "live voice conversation with the AI" |
@@ -174,5 +174,5 @@ The four classroom mockups arrived during F06 and were built in the same pass, a
 | Bilingual title | F05 | implemented | "End the lesson for everyone?", English only |
 | Information box | F05 | implemented | The PRD's "Processing will start and results will be ready in about 30 minutes."; the "Tutor Emma" line becomes "Everyone in the room is disconnected when the lesson ends." |
 | Cancel and End lesson actions, close control | F05 | implemented | English labels only |
-| "24m 18s audio recorded safely" | F07 | deferred | Lesson Recording owns what was captured |
+| "24m 18s audio recorded safely" | F07 | implemented | `EndLessonDialog`'s footer line, from the caller's own captured seconds; reads "This lesson is not being recorded." instead when the recording failed, and is omitted before the lesson starts |
 | "+120 XP earned" | — | dropped | Section 7, Social and comparison |

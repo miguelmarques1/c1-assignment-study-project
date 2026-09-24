@@ -1,6 +1,6 @@
 'use client';
 
-import { ERROR_CODES, type ClassroomAwaiting, type ClassroomSession } from '@english-quest/shared';
+import { ERROR_CODES, type ClassroomAwaiting, type ClassroomSession, type LiveRecording } from '@english-quest/shared';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 
@@ -11,9 +11,11 @@ import {
   fetchClassroomSession,
   requestClassroomToken,
 } from '@/lib/classroom';
+import { fetchLessonRecording } from '@/lib/recording';
 import { ControlBar } from './control-bar';
 import { DeviceSelect } from './device-select';
 import { EndLessonDialog } from './end-lesson-dialog';
+import { LessonEndedNotice } from './lesson-ended-notice';
 import { LiveStage } from './live-stage';
 import { PreCallScreen } from './pre-call-screen';
 import { ReconnectingOverlay } from './reconnecting-overlay';
@@ -22,6 +24,13 @@ import { useClassroomRoom } from './use-classroom-room';
 import { useMediaPreview } from './use-media-preview';
 import { useScenario } from './use-scenario';
 import { WaitingPanel } from './waiting-panel';
+
+/** The lesson-wide default before the first `GET /classroom/session` response arrives. */
+const IDLE_RECORDING: LiveRecording = {
+  status: 'idle',
+  since: null,
+  mine: { status: 'not_started', capturedSeconds: 0 },
+};
 
 const SESSION_POLL_MS = 3000;
 
@@ -74,6 +83,7 @@ export function ClassroomScreen({ userId }: ClassroomScreenProps) {
   const [soundOn, setSoundOn] = useState(true);
   const [mediaStalled, setMediaStalled] = useState(false);
   const [withoutMedia, setWithoutMedia] = useState(false);
+  const [capEndedNotice, setCapEndedNotice] = useState(false);
   // Development only: the no-media path also tolerates a media server the
   // browser cannot reach (the embedded preview has no working WebRTC), so
   // the waiting room — scenario, reroll, role card — stays testable there.
@@ -107,12 +117,49 @@ export function ClassroomScreen({ userId }: ClassroomScreenProps) {
     return () => clearInterval(timer);
   }, [phase, pollSession]);
 
+  // LiveKit's own recording-status flag flipping is the trigger, but the
+  // session read is the source of truth — this is what keeps the indicator
+  // within the 3-second criterion without shortening the regular poll.
   useEffect(() => {
-    if (phase === 'call' && room.phase === 'left' && !mediaOffline) {
-      setPhase('ended');
-      router.push('/dashboard');
+    if (phase !== 'call' || room.recordingSignal === 0) {
+      return;
     }
-  }, [room.phase, phase, router, mediaOffline]);
+    void pollSession();
+  }, [room.recordingSignal, phase, pollSession]);
+
+  useEffect(() => {
+    if (phase !== 'call' || room.phase !== 'left' || mediaOffline) {
+      return;
+    }
+    let cancelled = false;
+
+    void (async () => {
+      // The classroom's own session is already gone once the room is left —
+      // the recording view is what still carries *why* the lesson ended.
+      let endedByCap = false;
+      if (session?.lessonId) {
+        try {
+          const view = await fetchLessonRecording(session.lessonId);
+          endedByCap = view.endReason === 'max_duration';
+        } catch {
+          // Transient — falls through to the normal redirect.
+        }
+      }
+      if (cancelled) {
+        return;
+      }
+      setPhase('ended');
+      if (endedByCap) {
+        setCapEndedNotice(true);
+      } else {
+        router.push('/dashboard');
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [room.phase, phase, router, mediaOffline, session?.lessonId]);
 
   useEffect(() => {
     if (!MEDIA_BYPASS_AVAILABLE || preview.status !== 'requesting') {
@@ -225,6 +272,10 @@ export function ClassroomScreen({ userId }: ClassroomScreenProps) {
     );
   }
 
+  if (phase === 'ended' && capEndedNotice) {
+    return <LessonEndedNotice onReturnToDashboard={() => router.push('/dashboard')} />;
+  }
+
   if (phase === 'preview') {
     if (preview.status === 'requesting' && !withoutMedia) {
       return <LoadingState variant="card-grid" label="Requesting camera and microphone access" />;
@@ -267,6 +318,7 @@ export function ClassroomScreen({ userId }: ClassroomScreenProps) {
           onCloseBrief={() => setScenarioPanelOpen(false)}
           soundOn={soundOn}
           onToggleSound={() => setSoundOn((on) => !on)}
+          recording={session?.recording ?? IDLE_RECORDING}
         />
       ) : (
         <WaitingPanel
@@ -317,6 +369,7 @@ export function ClassroomScreen({ userId }: ClassroomScreenProps) {
         open={endDialogOpen}
         onCancel={() => setEndDialogOpen(false)}
         onConfirm={handleEndLesson}
+        recording={session?.recording ?? IDLE_RECORDING}
       />
     </div>
   );

@@ -1,6 +1,8 @@
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { RoomEvent } from 'livekit-client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { LiveRecording } from '@english-quest/shared';
 
 import { ClassroomScreen } from '@/components/classroom/classroom-screen';
 import { ApiRequestError } from '@/lib/api-client';
@@ -14,8 +16,10 @@ interface FakeParticipant {
 
 const {
   RoomMock,
+  getLastRoom,
   requestClassroomTokenMock,
   fetchClassroomSessionMock,
+  fetchLessonRecordingMock,
   endLessonMock,
   fetchScenarioMock,
   rerollSituationMock,
@@ -96,17 +100,29 @@ const {
       this.listeners.set(event, handlers);
       return this;
     }
+
+    emit(event: string, ...args: unknown[]): void {
+      for (const handler of this.listeners.get(event) ?? []) {
+        handler(...args);
+      }
+    }
   }
 
-  const roomMock = vi.fn().mockImplementation(() => new FakeRoom());
+  let lastRoom: FakeRoom | undefined;
+  const roomMock = vi.fn().mockImplementation(() => {
+    lastRoom = new FakeRoom();
+    return lastRoom;
+  });
   (roomMock as unknown as { getLocalDevices: ReturnType<typeof vi.fn> }).getLocalDevices = vi
     .fn()
     .mockResolvedValue([]);
 
   return {
     RoomMock: roomMock,
+    getLastRoom: () => lastRoom,
     requestClassroomTokenMock: vi.fn(),
     fetchClassroomSessionMock: vi.fn(),
+    fetchLessonRecordingMock: vi.fn(),
     endLessonMock: vi.fn(),
     fetchScenarioMock: vi.fn(),
     rerollSituationMock: vi.fn(),
@@ -147,6 +163,10 @@ vi.mock('@/lib/classroom', () => ({
   endLesson: endLessonMock,
 }));
 
+vi.mock('@/lib/recording', () => ({
+  fetchLessonRecording: fetchLessonRecordingMock,
+}));
+
 vi.mock('@/lib/scenario', () => ({
   fetchScenario: fetchScenarioMock,
   rerollSituation: rerollSituationMock,
@@ -168,6 +188,8 @@ const TOKEN_RESPONSE = {
   status: 'waiting' as const,
 };
 
+const IDLE_RECORDING: LiveRecording = { status: 'idle', since: null, mine: { status: 'not_started', capturedSeconds: 0 } };
+
 const SESSION_RESPONSE = {
   lessonId: TOKEN_RESPONSE.lessonId,
   status: 'waiting' as const,
@@ -176,7 +198,12 @@ const SESSION_RESPONSE = {
   maxParticipants: 2,
   participants: [],
   awaiting: [{ userId: 'bob-id', displayName: 'Bob' }],
+  recording: IDLE_RECORDING,
 };
+
+function sessionWithRecording(recording: LiveRecording) {
+  return { ...SESSION_RESPONSE, recording };
+}
 
 async function joinClassroom() {
   render(<ClassroomScreen userId="local-user" />);
@@ -200,6 +227,7 @@ beforeEach(() => {
     endedAt: new Date().toISOString(),
     durationSeconds: 42,
   });
+  fetchLessonRecordingMock.mockReset().mockResolvedValue({ endReason: 'ended_by_participant' });
   routerPushMock.mockClear();
   createLocalTracksMock.mockClear();
   RoomMock.mockClear();
@@ -333,5 +361,79 @@ describe('ClassroomScreen', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Close scenario panel' }));
     expect(screen.queryByRole('complementary', { name: 'Scenario panel' })).not.toBeInTheDocument();
+  });
+
+  it('refetches_the_session_when_the_room_recording_status_changes', async () => {
+    setRemotePresent(true);
+    await joinClassroom();
+    await waitFor(() => expect(screen.getByLabelText('Elapsed time')).toBeInTheDocument());
+
+    const callsBefore = fetchClassroomSessionMock.mock.calls.length;
+    fetchClassroomSessionMock.mockResolvedValue(
+      sessionWithRecording({ status: 'recording', since: new Date().toISOString(), mine: { status: 'recording', capturedSeconds: 5 } }),
+    );
+
+    act(() => {
+      getLastRoom()!.emit(RoomEvent.RecordingStatusChanged);
+    });
+
+    // The default waitFor timeout (1s) is well under the regular 3s poll
+    // interval, so this only passes if the refetch fired immediately.
+    await waitFor(() => expect(fetchClassroomSessionMock.mock.calls.length).toBeGreaterThan(callsBefore));
+    await waitFor(() => expect(screen.getByText('Recording')).toBeInTheDocument());
+  });
+
+  it('shows_the_cap_notice_when_the_lesson_ended_at_two_hours', async () => {
+    await joinClassroom();
+    await waitFor(() => expect(screen.getByLabelText('Elapsed time')).toBeInTheDocument());
+    fetchLessonRecordingMock.mockResolvedValue({ endReason: 'max_duration' });
+
+    act(() => {
+      getLastRoom()!.emit(RoomEvent.Disconnected);
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText('Lesson ended automatically after 2 hours.')).toBeInTheDocument(),
+    );
+    expect(routerPushMock).not.toHaveBeenCalledWith('/dashboard');
+  });
+
+  it('returns_to_the_dashboard_for_any_other_ending', async () => {
+    await joinClassroom();
+    await waitFor(() => expect(screen.getByLabelText('Elapsed time')).toBeInTheDocument());
+    fetchLessonRecordingMock.mockResolvedValue({ endReason: 'ended_by_participant' });
+
+    act(() => {
+      getLastRoom()!.emit(RoomEvent.Disconnected);
+    });
+
+    await waitFor(() => expect(routerPushMock).toHaveBeenCalledWith('/dashboard'));
+    expect(screen.queryByText('Lesson ended automatically after 2 hours.')).not.toBeInTheDocument();
+  });
+
+  it('the_end_dialog_states_the_callers_captured_audio', async () => {
+    fetchClassroomSessionMock.mockResolvedValue(
+      sessionWithRecording({ status: 'recording', since: new Date().toISOString(), mine: { status: 'recording', capturedSeconds: 1458 } }),
+    );
+    await joinClassroom();
+    await waitFor(() => expect(screen.getByLabelText('Elapsed time')).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole('button', { name: 'End lesson' }));
+
+    const dialog = screen.getByRole('alertdialog');
+    expect(within(dialog).getByText('24m 18s audio recorded safely')).toBeInTheDocument();
+  });
+
+  it('the_end_dialog_states_when_nothing_is_recorded', async () => {
+    fetchClassroomSessionMock.mockResolvedValue(
+      sessionWithRecording({ status: 'not_recording', since: new Date().toISOString(), mine: { status: 'failed_to_start', capturedSeconds: 0 } }),
+    );
+    await joinClassroom();
+    await waitFor(() => expect(screen.getByLabelText('Elapsed time')).toBeInTheDocument());
+
+    await userEvent.click(screen.getByRole('button', { name: 'End lesson' }));
+
+    const dialog = screen.getByRole('alertdialog');
+    expect(within(dialog).getByText('This lesson is not being recorded.')).toBeInTheDocument();
   });
 });
