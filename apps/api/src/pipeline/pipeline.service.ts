@@ -155,6 +155,7 @@ export class PipelineService {
       providerMessage: null,
       blockedProvider: null,
       retryable: false,
+      progress: null,
     };
 
     // F07 leaves a verified branch at `recording`/`queued` with `launched_at`
@@ -190,6 +191,10 @@ export class PipelineService {
       providerMessage: row.providerMessage,
       blockedProvider: row.blockedProvider as CredentialProvider | null,
       retryable: row.status === 'failed' && this.registry.has(row.stage),
+      progress:
+        row.progressDone !== null && row.progressTotal !== null
+          ? { done: row.progressDone, total: row.progressTotal }
+          : null,
     };
   }
 }

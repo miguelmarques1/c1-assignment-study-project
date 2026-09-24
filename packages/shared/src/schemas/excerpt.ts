@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { excerptPronunciationSchema } from './pronunciation';
+
 /**
  * Why one of the caller's own utterances was chosen for pronunciation
  * assessment (F09). It rides on the transcript line the badge sits on, and
@@ -19,6 +21,8 @@ export const transcriptExcerptSchema = z.object({
   focusWordCount: z.number().int().nonnegative(),
   /** The `selection_rule_version` in force when it was chosen. */
   ruleVersion: z.string(),
+  /** This excerpt's pronunciation assessment (F10). Identical shape and values to the pronunciation route's own entry. */
+  pronunciation: excerptPronunciationSchema,
 });
 export type TranscriptExcerpt = z.infer<typeof transcriptExcerptSchema>;
 

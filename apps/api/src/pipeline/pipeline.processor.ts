@@ -112,6 +112,8 @@ export class PipelineProcessor extends WorkerHost implements OnApplicationBootst
             });
           }
         },
+        withinRun: (write) => this.state.withinRun(claimed, write),
+        reportProgress: (done, total) => this.state.setProgress(claimed, done, total),
       });
       if (!completed) {
         throw new Error(`The ${stage} handler returned without completing the stage.`);

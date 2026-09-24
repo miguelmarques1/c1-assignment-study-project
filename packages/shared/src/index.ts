@@ -120,6 +120,7 @@ export {
   pipelineStageSchema,
   pipelineStageStatusSchema,
   pipelineStageViewSchema,
+  pronunciationFailureCodeSchema,
   stageFailureCodeSchema,
   transcriptionFailureCodeSchema,
   type BlockedReasonCode,
@@ -129,6 +130,7 @@ export {
   type PipelineStage,
   type PipelineStageStatus,
   type PipelineStageView,
+  type PronunciationFailureCode,
   type StageFailureCode,
   type TranscriptionFailureCode,
 } from './schemas/pipeline';
@@ -152,3 +154,24 @@ export {
   type ExcerptSelectionSummary,
   type TranscriptExcerpt,
 } from './schemas/excerpt';
+
+export {
+  excerptPronunciationSchema,
+  excerptPronunciationStatusSchema,
+  lessonPronunciationResultSchema,
+  lessonPronunciationStatusSchema,
+  lessonPronunciationViewSchema,
+  pronunciationExcerptViewSchema,
+  pronunciationScoresSchema,
+  worstPhonemeSchema,
+  worstWordSchema,
+  type ExcerptPronunciation,
+  type ExcerptPronunciationStatus,
+  type LessonPronunciationResult,
+  type LessonPronunciationStatus,
+  type LessonPronunciationView,
+  type PronunciationExcerptView,
+  type PronunciationScores,
+  type WorstPhoneme,
+  type WorstWord,
+} from './schemas/pronunciation';

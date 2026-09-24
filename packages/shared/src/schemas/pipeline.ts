@@ -13,6 +13,7 @@ export const pipelineStageSchema = z.enum([
   'transcription',
   'excerpt_selection',
   'pronunciation_assessment',
+  'lesson_analysis',
 ]);
 export type PipelineStage = z.infer<typeof pipelineStageSchema>;
 
@@ -69,8 +70,21 @@ export const transcriptionFailureCodeSchema = z.enum([
 ]);
 export type TranscriptionFailureCode = z.infer<typeof transcriptionFailureCodeSchema>;
 
+export const pronunciationFailureCodeSchema = z.enum([
+  'pronunciation_too_few_assessed',
+  'pronunciation_quota_exhausted',
+  'pronunciation_audio_unprocessable',
+  'pronunciation_storage_unreadable',
+  'pronunciation_region_unsupported',
+]);
+export type PronunciationFailureCode = z.infer<typeof pronunciationFailureCodeSchema>;
+
 /** Every code a stage row can fail with. `internal_error` is the runner's own, for anything unclassified. */
-export const stageFailureCodeSchema = z.enum([...transcriptionFailureCodeSchema.options, 'internal_error']);
+export const stageFailureCodeSchema = z.enum([
+  ...transcriptionFailureCodeSchema.options,
+  ...pronunciationFailureCodeSchema.options,
+  'internal_error',
+]);
 export type StageFailureCode = z.infer<typeof stageFailureCodeSchema>;
 
 /** Every code a branch pointer can carry while `failed`, whichever stage it failed at. */
@@ -111,6 +125,13 @@ export const pipelineStageViewSchema = z.object({
   blockedProvider: credentialProviderSchema.nullable(),
   /** Whether `POST /lessons/:lessonId/pipeline/retry` would re-run it. */
   retryable: z.boolean(),
+  /** Settled units of work vs. the run's total. `null` for stages that never report progress. */
+  progress: z
+    .object({
+      done: z.number().int().nonnegative(),
+      total: z.number().int().nonnegative(),
+    })
+    .nullable(),
 });
 export type PipelineStageView = z.infer<typeof pipelineStageViewSchema>;
 

@@ -33,6 +33,8 @@ model User {
   utterances           LessonUtterance[]
   excerptSelections    LessonExcerptSelection[]
   excerpts             LessonExcerpt[]
+  excerptAssessments   LessonExcerptAssessment[]
+  pronunciationResults LessonPronunciationResult[]
 
   @@map("users")
 }
@@ -161,6 +163,8 @@ model Lesson {
   utterances        LessonUtterance[]
   excerptSelections LessonExcerptSelection[]
   excerpts          LessonExcerpt[]
+  excerptAssessments   LessonExcerptAssessment[]
+  pronunciationResults LessonPronunciationResult[]
 
   @@index([status, openedAt(sort: Desc)], map: "ix_lessons_status_opened")
   @@map("lessons")
@@ -308,6 +312,10 @@ model LessonPipelineStage {
   providerMessage String?   @map("provider_message") @db.VarChar(500)
   /// azure_speech or gemini — set exactly while blocked, so the drain knows which key to look for.
   blockedProvider String?   @map("blocked_provider") @db.VarChar(32)
+  /// F10: settled units of work in the current run; null for stages that never report progress.
+  progressDone    Int?      @map("progress_done") @db.SmallInt
+  /// F10: units of work in the current run; null for stages that never report progress.
+  progressTotal   Int?      @map("progress_total") @db.SmallInt
   createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
@@ -412,6 +420,7 @@ model LessonExcerptSelection {
   user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   transcript LessonTranscript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
   excerpts   LessonExcerpt[]
+  pronunciationResults LessonPronunciationResult[]
 
   @@unique([lessonId, userId], map: "ux_excerpt_selections_lesson_user")
   @@index([transcriptId], map: "ix_excerpt_selections_transcript")
@@ -442,15 +451,103 @@ model LessonExcerpt {
   reason               String   @db.VarChar(200)
   createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  selection LessonExcerptSelection @relation(fields: [selectionId], references: [id], onDelete: Cascade)
-  lesson    Lesson                 @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  utterance LessonUtterance        @relation(fields: [utteranceId], references: [id], onDelete: Cascade)
+  selection  LessonExcerptSelection    @relation(fields: [selectionId], references: [id], onDelete: Cascade)
+  lesson     Lesson                    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user       User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  utterance  LessonUtterance           @relation(fields: [utteranceId], references: [id], onDelete: Cascade)
+  assessment LessonExcerptAssessment?
 
   @@unique([selectionId, rank], map: "ux_excerpts_selection_rank")
   @@unique([utteranceId], map: "ux_excerpts_utterance")
   @@index([lessonId, userId], map: "ix_excerpts_lesson_user")
   @@map("lesson_excerpts")
+}
+
+/// F10: one row per excerpt, written as it settles rather than only inside the
+/// stage's completing transaction — the state a per-excerpt retry, a resume
+/// from blocked, and the `N of M` counter all need to survive between runs.
+model LessonExcerptAssessment {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  excerptId      String    @unique(map: "ux_excerpt_assessments_excerpt") @map("excerpt_id") @db.Uuid
+  lessonId       String    @map("lesson_id") @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  /// One of pending, assessed, failed, dropped, abandoned.
+  status         String    @default("pending") @db.VarChar(16)
+  /// Requests sent, across every run.
+  attempts       Int       @default(0) @db.SmallInt
+  /// One of service_error, audio_rejected, no_speech_recognized, slice_failed, quota_exhausted.
+  failureCode    String?   @map("failure_code") @db.VarChar(32)
+  /// Provider or ffmpeg wording, scrubbed.
+  failureMessage String?   @map("failure_message") @db.VarChar(500)
+  /// Range actually cut (file offsets); equals the excerpt's.
+  clipStartMs    Int?      @map("clip_start_ms")
+  clipEndMs      Int?      @map("clip_end_ms")
+  pronunciation  Float?    @db.Real
+  accuracy       Float?    @db.Real
+  fluency        Float?    @db.Real
+  /// Null where the locale has no prosody.
+  prosody        Float?    @db.Real
+  completeness   Float?    @db.Real
+  /// `[{ word, accuracy, errorTypes[], offsetMs, durationMs, phonemes[{ phoneme, accuracy, offsetMs, durationMs }] }]`, offsets relative to the clip.
+  words          Json?
+  /// Azure's `Display`.
+  recognizedText String?   @map("recognized_text")
+  latencyMs      Int?      @map("latency_ms")
+  assessedAt     DateTime? @map("assessed_at") @db.Timestamptz(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  excerpt LessonExcerpt @relation(fields: [excerptId], references: [id], onDelete: Cascade)
+  lesson  Lesson        @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([lessonId, userId], map: "ix_excerpt_assessments_lesson_user")
+  @@map("lesson_excerpt_assessments")
+}
+
+/// F10: the per-lesson aggregate F11, F12 and F19 read, written once in the
+/// stage's completing transaction, replacing any earlier attempt for the
+/// same participant.
+model LessonPronunciationResult {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId          String   @map("lesson_id") @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  /// F09's selection it was computed from.
+  selectionId       String   @map("selection_id") @db.Uuid
+  /// assessed or no_sample.
+  status            String   @db.VarChar(16)
+  excerptCount      Int      @map("excerpt_count") @db.SmallInt
+  assessedCount     Int      @map("assessed_count") @db.SmallInt
+  partialAssessment Boolean  @map("partial_assessment")
+  /// Copied from the selection.
+  sparseSample      Boolean  @map("sparse_sample")
+  quotaExhausted    Boolean  @map("quota_exhausted")
+  /// Duration-weighted mean; null for no_sample.
+  pronunciation     Float?   @db.Real
+  accuracy          Float?   @db.Real
+  fluency           Float?   @db.Real
+  /// Null when no excerpt reported prosody.
+  prosody           Float?   @db.Real
+  completeness      Float?   @db.Real
+  assessedAudioMs   Int      @map("assessed_audio_ms")
+  /// `[{ phoneme, meanAccuracy, occurrences, exampleWord, exampleExcerptId, exampleUtteranceId }]`.
+  worstPhonemes     Json     @map("worst_phonemes")
+  /// `[{ word, meanAccuracy, occurrences, errorTypes[], exampleExcerptId, exampleUtteranceId }]`.
+  worstWords        Json     @map("worst_words")
+  /// `[{ tag: "phoneme:/θ/", phoneme, occurrences, meanAccuracy, exampleWords[] }]`, what F12 ingests.
+  phonemeTags       Json     @map("phoneme_tags")
+  provider          String   @db.VarChar(40)
+  locale            String   @db.VarChar(16)
+  phonemeAlphabet   String   @map("phoneme_alphabet") @db.VarChar(8)
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  lesson    Lesson                 @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  selection LessonExcerptSelection @relation(fields: [selectionId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, userId], map: "ux_pronunciation_results_lesson_user")
+  @@index([selectionId], map: "ix_pronunciation_results_selection")
+  @@map("lesson_pronunciation_results")
 }
 
 /// The shared situation — every participant sees it. Created the moment the

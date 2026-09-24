@@ -30,6 +30,15 @@ export interface StageRunContext {
    * this run still owns the stage, so a stalled duplicate commits nothing.
    */
   complete(write: (tx: Prisma.TransactionClient) => Promise<void>): Promise<void>;
+  /**
+   * Runs `write` in a transaction that commits only while this run still
+   * owns the stage, throwing `StaleRunError` otherwise. For state that has
+   * to survive between attempts and between runs — outside `complete`'s own
+   * transaction, but under the same ownership guard.
+   */
+  withinRun<T>(write: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T>;
+  /** Reports progress on the current run, under the same guard as `withinRun`. Reset to `null` when the stage is re-queued. */
+  reportProgress(done: number, total: number): Promise<void>;
 }
 
 /**

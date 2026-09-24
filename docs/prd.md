@@ -570,7 +570,7 @@ This stage is invisible in normal use and completes in under 2 seconds. The proc
 - Per-lesson aggregates per participant are computed as duration-weighted means across successful excerpts, plus the 5 lowest-scoring phonemes and the 10 lowest-scoring words, each with occurrence counts and an example excerpt reference.
 - Cost is bounded by construction: at most 12 excerpts of at most 30 seconds per participant per lesson, so at most 6 minutes of assessed audio regardless of lesson length.
 - Partial success is acceptable: if at least 60% of a participant's excerpts succeed, the aggregate is computed from those and flagged `partial_assessment` with the count. Below 60%, the stage is marked failed.
-- Phoneme-level failures are written to the error ledger as pronunciation tags (for example `phoneme:/θ/`) so they participate in the same recurrence and mastery tracking as grammar errors.
+- Phoneme-level failures (below 60) are recorded as pronunciation tags (for example `phoneme:/θ/`) on the lesson's result, which the error ledger (F12) ingests so they participate in the same recurrence and mastery tracking as grammar errors.
 - Audio slicing runs locally with ffmpeg; sliced clips are temporary and deleted after assessment.
 
 **Experience:**

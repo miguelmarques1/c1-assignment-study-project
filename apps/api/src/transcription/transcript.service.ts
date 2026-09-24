@@ -98,7 +98,11 @@ export class TranscriptService {
     };
   }
 
-  /** The caller's badges, by utterance id. */
+  /**
+   * The caller's badges, by utterance id. `pronunciation` is wired to the
+   * real per-excerpt status and scores once F10's reader exists (see its
+   * spec, Stage 4); until then every excerpt reads as not yet assessed.
+   */
   private badges(mine: StoredExcerptSelection | null): Map<string, TranscriptExcerpt> {
     return new Map(
       (mine?.excerpts ?? []).map((excerpt) => [
@@ -111,6 +115,7 @@ export class TranscriptService {
           durationMs: excerpt.endMs - excerpt.startMs,
           focusWordCount: excerpt.focusWordCount,
           ruleVersion: excerpt.selectionRuleVersion,
+          pronunciation: { status: 'pending', scores: null },
         },
       ]),
     );

@@ -175,6 +175,8 @@ describe('GET /lessons/:lessonId/transcript', () => {
       durationMs: 5_000,
       focusWordCount: 0,
       ruleVersion: '1',
+      // F10 has not assessed anything yet in this suite.
+      pronunciation: { status: 'pending', scores: null },
     });
     expect(byText.get(said(1, 0.83).text)!.excerpt).toMatchObject({ rank: 2 });
     expect(byText.get('Yeah, right.')).not.toHaveProperty('excerpt');

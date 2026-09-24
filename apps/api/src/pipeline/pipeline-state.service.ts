@@ -92,7 +92,15 @@ export class PipelineStateService {
     const row = await client.lessonPipelineStage.upsert({
       where: { branchId_stage: { branchId, stage } },
       create: { branchId, stage, status: 'queued', queuedAt: now },
-      update: { ...CLEARED, status: 'queued', run: { increment: 1 }, queuedAt: now, startedAt: null },
+      update: {
+        ...CLEARED,
+        status: 'queued',
+        run: { increment: 1 },
+        queuedAt: now,
+        startedAt: null,
+        progressDone: null,
+        progressTotal: null,
+      },
     });
     await this.movePointer(client, branchId, stage, 'queued');
     return row;
@@ -216,7 +224,15 @@ export class PipelineStateService {
     return this.prisma.$transaction(async (tx) => {
       const moved = await tx.lessonPipelineStage.updateMany({
         where: { id: row.id, run: row.run, status: from },
-        data: { ...CLEARED, status: 'queued', run: { increment: 1 }, queuedAt: now, startedAt: null },
+        data: {
+          ...CLEARED,
+          status: 'queued',
+          run: { increment: 1 },
+          queuedAt: now,
+          startedAt: null,
+          progressDone: null,
+          progressTotal: null,
+        },
       });
       if (moved.count === 0) {
         return null;
@@ -224,6 +240,39 @@ export class PipelineStateService {
       await this.movePointer(tx, row.branchId, row.stage, 'queued');
       return tx.lessonPipelineStage.findUniqueOrThrow({ where: { id: row.id } });
     });
+  }
+
+  /**
+   * Runs `write` in a transaction, but only while `row`'s run still owns the
+   * stage and it is still `running` — locked `FOR UPDATE` so a concurrent
+   * completion or requeue cannot slip in between the check and the write.
+   * F10 uses this to persist one excerpt's outcome as it lands, outside the
+   * stage's own completing transaction, without losing the run guard that
+   * makes a stale duplicate harmless.
+   */
+  async withinRun<T>(
+    row: Pick<LessonPipelineStage, 'id' | 'run'>,
+    write: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    return this.prisma.$transaction(async (tx) => {
+      const [current] = await tx.$queryRaw<
+        Array<{ run: number; status: string }>
+      >`SELECT run, status FROM lesson_pipeline_stages WHERE id = ${row.id}::uuid FOR UPDATE`;
+      if (!current || current.run !== row.run || current.status !== 'running') {
+        throw new StaleRunError();
+      }
+      return write(tx);
+    });
+  }
+
+  /** Sets the run's progress counter under the same guard as `withinRun`. Reset to null when the stage is re-queued. */
+  async setProgress(row: Pick<LessonPipelineStage, 'id' | 'run'>, done: number, total: number): Promise<void> {
+    await this.withinRun(row, (tx) =>
+      tx.lessonPipelineStage.update({
+        where: { id: row.id },
+        data: { progressDone: done, progressTotal: total },
+      }),
+    );
   }
 
   private async transition(

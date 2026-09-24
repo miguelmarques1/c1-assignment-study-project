@@ -2463,7 +2463,8 @@
                           "recording",
                           "transcription",
                           "excerpt_selection",
-                          "pronunciation_assessment"
+                          "pronunciation_assessment",
+                          "lesson_analysis"
                         ]
                       },
                       "status": {
@@ -2493,6 +2494,11 @@
                               "transcription_no_speech",
                               "transcription_audio_rejected",
                               "transcription_region_unsupported",
+                              "pronunciation_too_few_assessed",
+                              "pronunciation_quota_exhausted",
+                              "pronunciation_audio_unprocessable",
+                              "pronunciation_storage_unreadable",
+                              "pronunciation_region_unsupported",
                               "internal_error"
                             ]
                           },
@@ -2578,7 +2584,8 @@
                       "recording",
                       "transcription",
                       "excerpt_selection",
-                      "pronunciation_assessment"
+                      "pronunciation_assessment",
+                      "lesson_analysis"
                     ]
                   },
                   "status": {
@@ -2604,7 +2611,8 @@
                             "recording",
                             "transcription",
                             "excerpt_selection",
-                            "pronunciation_assessment"
+                            "pronunciation_assessment",
+                            "lesson_analysis"
                           ]
                         },
                         "status": {
@@ -2689,6 +2697,11 @@
                                 "transcription_no_speech",
                                 "transcription_audio_rejected",
                                 "transcription_region_unsupported",
+                                "pronunciation_too_few_assessed",
+                                "pronunciation_quota_exhausted",
+                                "pronunciation_audio_unprocessable",
+                                "pronunciation_storage_unreadable",
+                                "pronunciation_region_unsupported",
                                 "internal_error",
                                 "storage_unavailable"
                               ]
@@ -2726,6 +2739,33 @@
                         },
                         "retryable": {
                           "type": "boolean"
+                        },
+                        "progress": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "done": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                },
+                                "total": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 9007199254740991
+                                }
+                              },
+                              "required": [
+                                "done",
+                                "total"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
                         }
                       },
                       "required": [
@@ -2740,7 +2780,8 @@
                         "reason",
                         "providerMessage",
                         "blockedProvider",
-                        "retryable"
+                        "retryable",
+                        "progress"
                       ],
                       "additionalProperties": false
                     }
@@ -2987,6 +3028,76 @@
                     },
                     "ruleVersion": {
                       "type": "string"
+                    },
+                    "pronunciation": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "pending",
+                            "assessed",
+                            "not_assessed"
+                          ]
+                        },
+                        "scores": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "pronunciation": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 100
+                                },
+                                "accuracy": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 100
+                                },
+                                "fluency": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 100
+                                },
+                                "prosody": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number",
+                                      "minimum": 0,
+                                      "maximum": 100
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                },
+                                "completeness": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 100
+                                }
+                              },
+                              "required": [
+                                "pronunciation",
+                                "accuracy",
+                                "fluency",
+                                "prosody",
+                                "completeness"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "scores"
+                      ],
+                      "additionalProperties": false
                     }
                   },
                   "required": [
@@ -2996,7 +3107,8 @@
                     "wordCount",
                     "durationMs",
                     "focusWordCount",
-                    "ruleVersion"
+                    "ruleVersion",
+                    "pronunciation"
                   ],
                   "additionalProperties": false
                 }
