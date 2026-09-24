@@ -1,6 +1,6 @@
 # Implementation Progress: Speech-to-Text Transcription
 
-**Status:** in progress
+**Status:** success
 **Branch:** main
 **Started:** 2026-09-24
 **Last updated:** 2026-09-24
@@ -123,4 +123,34 @@
 - The mobile Dart models for the pipeline and transcript views are deferred to F19, their first consumer, as the spec records. No client code changed.
 
 **Validation:** `pnpm -r typecheck` ✅ · `pnpm lint` ✅ · `pnpm --filter @english-quest/api test:unit` ✅ 145/145 · `pnpm --filter @english-quest/api test:integration` ✅ 234/234 across 21 files (the 15 pre-existing plus the six F08 suites) · `pnpm --filter @english-quest/web test` ✅ 126/126 · `recording-to-transcription.spec.ts` also run 3× in a row after the fixture fix, green each time · live storage-outage and retry check on the real stack ✅ · 60-minute throughput and the two-window lesson are soft-fails (above).
-**Commit:** _(pending — recorded in the final verification)_
+**Commit:** `7157b3e` — F08 stage 5 - test suites and closing the loop
+
+## Final verification
+
+- **Full suite, whole repo, run fresh after the last stage commit:** `pnpm -r typecheck` ✅ · `pnpm lint` ✅ (zero warnings) · `pnpm --filter @english-quest/api test:unit` ✅ 145/145 across 21 files · `pnpm --filter @english-quest/api test:integration` ✅ 234/234 across 21 files · `pnpm --filter @english-quest/web test` ✅ 126/126 across 19 files. No regressions and no pre-existing failures.
+- **Component Overview walk-through (spec section 4):** all 44 listed files exist (shared, pipeline, speech, transcription, the modified recording, config, error and OpenAPI files, schema, migration, `.env.example`, `docs/prd.md`, `docs/api/openapi.json`). Their exports and contracts were spot-checked. The adaptations are all recorded in the stage observations and corrected in the spec: `PipelineQueueService` exposes `jobState`/`replaceJob` instead of `ensureJob`; the processor schedules retries itself rather than through BullMQ backoff or `UnrecoverableError`; job ids use `-`; `PipelineStateService` gains `ensureStage` and `abandon`. **Missing from spec: none.**
+- **AC re-check (PRD section 9, F08), mapped tests re-run in the fresh pass above:**
+  - ✓ Own key and region: `each_track_is_transcribed_with_its_owners_key_and_region`, `records_credential_usage_per_owner`
+  - ✓ Timestamps, text, recognition confidence and per-word timings stored: `stores_ordered_utterances_with_timings_confidence_and_words`, `words_carry_timing_and_null_confidence`
+  - ✓ One participant per utterance, no diarization: `every_utterance_belongs_to_the_track_owner_without_diarization`, `sends_a_verbatim_single_speaker_definition`
+  - ✓ Merged chronological transcript: `merges_all_participants_chronologically_by_wall_clock`, `offsets_each_track_by_its_recording_start`
+  - ✓ No valid key shows as blocked, not failed, with a link to settings: `a_missing_key_blocks_rather_than_fails` (the API half: `blocked_missing_key` plus `blockedProvider` for the link; rendering is F19's)
+  - ✓ Saving a valid key resumes within 60 s: `saving_a_valid_key_resumes_the_blocked_stage`, plus 12 s measured live on the real stack
+  - ✓ Retries at 30 s, 2 min and 8 min before failing: `transcription_backoff_is_30s_2m_8m`, `a_transient_error_retries_three_times_then_fails`
+  - ✓ An authentication error marks the key invalid and does not retry: `an_authentication_error_marks_the_key_invalid_and_does_not_retry`, plus the real 401 mapping observed live
+  - ✓ No speech detected: `a_track_with_no_speech_fails_with_no_speech_detected`
+  - — **A 60-minute track within 10 minutes:** no automated test, and not exercised live (soft-fail below)
+- **Cross-feature (F08's halves):** F07→F08 exact object and owner key (`a_finalized_recording_is_transcribed_from_that_exact_object`) ✓; vault credentials used only on their owner's data (`each_track_…`, `records_credential_usage_per_owner`, `transcribes_a_clip_with_the_callers_key`) ✓; utterances stored and the branch waiting for F09 (`completion_advances_the_branch_to_excerpt_selection`) ✓; the clip capability for F18 (`transcribes_a_clip_with_the_callers_key`) ✓; a transcript readable for F19 before later stages finish (`a_transcript_is_readable_before_later_stages_finish`) ✓.
+- **Environment smoke check, after the last commit:** on the running dev server, `/health` is ok, `/docs-json` publishes the three new routes and both new components, and the pipeline worker is connected (`bull:lesson-pipeline:stalled-check`). The deeper real-stack exercises from stages 2–5 are in their observations: the live Azure call with the user's key, end-to-end transcription, blocked then resumed in 12 s, storage outage then retry, and all three routes as both seeded users.
+- **Soft-fails:**
+  - The 60-minute throughput check was not run. It spends about an hour of the user's Azure quota and the plan requires their go-ahead. The live evidence so far is about 3 s for 17 s of audio.
+  - The two-window real lesson (optional in the spec) needs the user's own Chrome.
+- **Correction to an earlier observation (append-only, so it is corrected here rather than edited):** stage 2's note on `ensureStage` says F07 "moves a branch to `transcription`/`queued` a moment before it calls the launch". Stage 5 found that F07's code actually writes a verified branch as `recording`/`queued`, with `launched_at` set after the launch. The race that note describes is still real and still handled. The drain's backfill now keys on `launched_at`, which also keeps it off a launch still in flight.
+- **Status decision:** `success`. The full suite is green, nothing is missing from the component overview, and every AC with a mapped test passes on the fresh pass. The one AC without a test (60-minute throughput) is an honest soft-fail awaiting the user's go-ahead, not a gap in the build.
+
+**Follow-ups left open:**
+- **F09 (important):** Azure fast transcription repeats the same confidence value across phrases (one value per internal chunk; 0.826 for every phrase of the live sample). F09's confidence-based eligibility and ranking will barely discriminate between utterances. F09's spec has to choose another selection signal or accept a coarse one. Recorded in this spec's notes for F09.
+- **The 60-minute throughput check**, once the user agrees to spend the quota: loop a real speech recording into a 60-minute Ogg/Opus with ffmpeg, place it as a seeded participant's `audio.ogg` with a launched branch, and confirm `finished_at − started_at` is at most 10 minutes.
+- **F07 (its own code, recorded in F07's progress):** a crash between the finalizer's segment deletion and `markBranchLaunched` can still turn a good recording into `recording_missing`. F07's spec says `transcription`/`queued` where its code writes `recording`/`queued`. F07's finalization suite has the fixture race that explains its observed flakiness.
+- **F19:** render `GET /lessons/:lessonId/pipeline` and `GET /lessons/:lessonId/transcript` on both clients and add their Dart models. The `recording` entry's `storage_unavailable` sentence ("Storage was unavailable when this recording was verified.") is F08's wording and open to change.
+
