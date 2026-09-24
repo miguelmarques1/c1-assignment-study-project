@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import type { WebhookEvent } from 'livekit-server-sdk';
 
+import { RecordingOrchestrator } from '../recording/recording-orchestrator.service';
 import { LessonService } from './lesson.service';
 
 /** LiveKit's own event timestamp — never the API's receipt time. */
@@ -15,7 +16,12 @@ function eventTime(event: WebhookEvent): Date {
  */
 @Injectable()
 export class LessonLifecycleService {
-  constructor(private readonly lessons: LessonService) {}
+  private readonly logger = new Logger(LessonLifecycleService.name);
+
+  constructor(
+    private readonly lessons: LessonService,
+    private readonly recording: RecordingOrchestrator,
+  ) {}
 
   async applyParticipantJoined(event: WebhookEvent): Promise<void> {
     const room = event.room?.name;
@@ -36,7 +42,14 @@ export class LessonLifecycleService {
     if (!lesson.startedAt) {
       const connected = await this.lessons.countConnected(lesson.id);
       if (connected >= 2) {
-        await this.lessons.startLesson(lesson.id, at);
+        // Only the join that actually performs the transition starts
+        // recording (F07) — a replayed event must never start it twice.
+        const started = await this.lessons.startLesson(lesson.id, at);
+        if (started) {
+          await this.recording.onLessonStarted(lesson.id).catch((error: unknown) => {
+            this.logger.error(`Recording orchestration failed to start for lesson ${lesson.id}`, error);
+          });
+        }
       }
     }
   }

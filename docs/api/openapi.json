@@ -756,7 +756,7 @@
     },
     "/classroom/livekit-webhook": {
       "post": {
-        "description": "Receives participant_joined, participant_left and room_finished. Every other event type is acknowledged and ignored. Authenticated by the Authorization header signature over a SHA-256 checksum of the raw body, verified with WebhookReceiver — never by session.",
+        "description": "Receives participant_joined, participant_left, room_finished, track_published and the egress_started / egress_updated / egress_ended events F07 uses to drive recording. Every other event type is acknowledged and ignored. Authenticated by the Authorization header signature over a SHA-256 checksum of the raw body, verified with WebhookReceiver — never by session.",
         "operationId": "ClassroomWebhookController_handle",
         "parameters": [],
         "responses": {

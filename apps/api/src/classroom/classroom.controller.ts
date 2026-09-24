@@ -60,8 +60,8 @@ export class ClassroomController {
     schema: dataEnvelope('ClassroomSession'),
   })
   @ApiResponse({ status: 401, description: 'AUTH003: no valid session.', ...ERROR_RESPONSE })
-  async session(): Promise<ApiSuccess<ClassroomSession>> {
-    return { data: await this.classroom.session() };
+  async session(@CurrentUser() user: AuthenticatedUser): Promise<ApiSuccess<ClassroomSession>> {
+    return { data: await this.classroom.session(user.id) };
   }
 
   @Post(':lessonId/end')

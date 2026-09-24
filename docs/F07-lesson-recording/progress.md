@@ -46,19 +46,36 @@
 - No new automated test files in this stage — `storage.spec.ts`, `egress.service.spec.ts` and `audio-assembler.spec.ts` are explicitly Stage 5's own step (21) per the plan, matching F05/F06's precedent of a dedicated late test-suite stage. Stage 2's manual exercises above are a substitute for "actually run it" now, not for the formal suites later.
 
 **Validation:** `pnpm -r typecheck` ✅ · `pnpm lint` ✅ · `pnpm --filter @english-quest/api test:unit` ✅ 101/101 (no regressions; no new tests yet) · manual exercise of `StorageService`'s new methods against real MinIO (round trip, stat hit/miss, unavailable-store distinction, upload/download, bulk delete, idempotent `ensureBucket`) ✅ · manual exercise of `AudioAssembler` against real `ffmpeg-static` and synthetic Opus fixtures (gap, intra-segment shortfall, single segment), verified by decoded duration and per-window volume, not just the reported value ✅ · manual exercise of `EgressService`'s request shape against the real `egress`/`livekit` containers ✅.
+**Commit:** `a8bbbb6` — F07 stage 2 - storage, egress and assembly adapters
+
+## Stage 3: Recording during the lesson — ✅ done
+
+- [x] **8. Recording state service**
+- [x] **9. Egress orchestration**
+- [x] **10. Webhook and lifecycle wiring**
+- [x] **11. Live recording in the session read**
+
+**Observations:**
+- **Deviation, resolving a genuine ambiguity in the schema:** a start-retry (the same track, `startTrackEgress` failing once and being retried) reuses the *same* segment row, bumping its `attempt` field, while a restart-after-unexpected-end creates a *new* row with `attempt: 1`. Both are plausible readings of the spec's data model; the plan step 9's own test-naming assumption ("a `failed` segment" singular for a two-attempt start failure, vs. "a *second* segment" for a restart) settled it in favor of this split, so `startEgressForTrack`'s internal retry loop never calls `createSegment` twice.
+- `RecordingOrchestrator` and `RecordingStateService` resolve lessons directly through Prisma (`findLiveLesson`/`getLesson`) rather than importing `ClassroomModule`'s `LessonService` — the same avoid-a-circular-import choice F06's `ScenarioService` already made, since `ClassroomModule` now imports `RecordingModule` for the webhook wiring.
+- **Deviation, same reasoning:** `RecordingModule` declares its own `LiveKitService` provider rather than importing it from `ClassroomModule` (which doesn't export it, and exporting it would also require `RecordingModule` to import `ClassroomModule` — circular either way). `LiveKitService` is a stateless SDK-client wrapper built fresh from `env()` in its constructor, so a second instance costs nothing.
+- `LessonService.startLesson` now returns whether it performed the transition; `LessonLifecycleService.applyParticipantJoined` only calls `RecordingOrchestrator.onLessonStarted` on that `true`, so a replayed `participant_joined` never starts a second round of egress. Its own recording-orchestration failure is caught and logged, matching F06's `ScenarioOrchestratorService` call-site pattern — a broken start must never break the join itself.
+- `LessonService.projectSession` now takes the caller and awaits `RecordingStateService.projectLiveRecording(lessonId, callerId)` for the `recording` block, replacing Stage 1's lesson-wide-only placeholder. `ClassroomService.session`/`ClassroomController.session` thread the caller through from `@CurrentUser()`.
+- Egress/webhook timestamp fields (`EgressInfo`/`FileInfo`'s `startedAt`/`endedAt`/`duration`) are Unix **nanoseconds**, confirmed against a real `EgressInfo` object from the running stack (a 19-digit `startedAt` value) — not the seconds `WebhookEvent.createdAt` itself uses. Converted via `nanos / 1_000_000n` before going through `Number()`, since the raw nanosecond value exceeds `Number.MAX_SAFE_INTEGER`.
+- `onEgressUpdated`/`onEgressEnded` fall back to the webhook event's own `createdAt` when a `FileInfo`'s timestamp is `0` (not yet populated) — matches `LessonLifecycleService`'s established "event time, not receipt time" rule, and keeps the segment's `fileStartedAt`/`fileEndedAt` populated even if LiveKit's own file metadata lags.
+- **Manual, real-stack verification (not the embedded pane — this ran against the actual running Docker stack, since the whole point was proving the webhook state machine, which needs no browser at all):**
+  - Logged in as both seeded users, opened a real lesson, and sent real signed `participant_joined` webhooks (same signing scheme as `classroom-webhook.spec.ts`, replicated in a throwaway script) to drive the lesson through `waiting → live`, confirming `onLessonStarted` fires exactly once and calls the real `LiveKitService.listParticipants` without throwing.
+  - Confirmed a `track_published` event **before** the lesson goes live is ignored (0 segments created) — the `does_not_record_before_the_lesson_starts` criterion, proven against the real webhook route rather than assumed.
+  - Sent a real `track_published` for a fabricated (nonexistent) track id once live: this drove a **real** `EgressService.startTrackEgress` call against the actually-running `egress`/`livekit` containers, which genuinely accepted it and started joining the room over real WebRTC.
+  - **This produced an unplanned but extremely valuable result: the real egress process organically failed ~30 seconds later** (`"track TR_manualcheck1 not found"`) and sent its own real, LiveKit-signed `egress_ended` webhook back to the API — driving the *actual* restart logic end-to-end with zero fabricated events: segment 1 → `failed`/`unexpected=true`, a real second `startTrackEgress` call fired automatically, that one **also** organically failed ~30 seconds later, and — since two rows now existed against `MAX_EGRESS_RESTARTS=1` — no third attempt was made; the participant moved to `stopped` and the lesson to the sticky `not_recording`. Confirmed entirely by querying Postgres directly (`lesson_recording_segments`, `lessons.recording_status`) between steps.
+  - Re-ran with tighter timing to exercise the path the organic failure is too slow to reach: sent a fabricated `egress_updated` (`EGRESS_ACTIVE`) for a real, in-flight egress **before** its ~30-second organic timeout, and confirmed the full transition — segment `active`, participant `recording`, lesson `recording` with `recordingStartedAt` set, and `GET /classroom/session` reporting `mine.capturedSeconds` counting up in real time from the fabricated `fileStartedAt`.
+  - **Confirmed the privacy boundary live, not just by code inspection:** with participant A's track active, `GET /classroom/session` read as participant B showed the *same* lesson-wide `recording.status` (a shared fact) but B's own `mine.status: "not_started"` / `capturedSeconds: 0` — never A's figures.
+  - Sent a fabricated `egress_ended` with `EGRESS_COMPLETE` (not one of the "unexpected" statuses) for the still-live lesson: confirmed `unexpected=false` is recorded, no restart is attempted, the participant moves to `stopped`, and — correctly — the *lesson's* `recording_status` is **not** disturbed by a clean per-track end (only a failure-class end can trigger the sticky `not_recording`).
+  - Ended the lesson cleanly afterward and confirmed no lesson was left open. Every throwaway script and its two temporary source files were deleted after use; nothing manual-check-shaped was committed.
+- Restarted the API dev server's container dependencies mid-stage (`docker compose exec api pnpm install` for `ffmpeg-static`'s container-side install, `npx prisma generate` for the new columns/models) — both needed after Stage 2's/this stage's changes reached a running container for the first time.
+
+**Validation:** `pnpm -r typecheck` ✅ · `pnpm lint` ✅ · `pnpm --filter @english-quest/api test:unit` ✅ 101/101 (includes the regenerated OpenAPI committed-snapshot, since the webhook route's own description text changed) · `pnpm --filter @english-quest/api test:integration` ✅ 135/135 across 11 files (Testcontainers Postgres/Redis; confirms the `ClassroomModule` ⇄ `RecordingModule` wiring boots cleanly with no circular-DI error) · real-stack manual verification (see above) — the whole live orchestrator (start, retry-on-failure, restart-on-unexpected-end, restart-budget exhaustion, the ACTIVE transition, per-caller privacy scoping, a clean COMPLETE end) exercised against the actually-running API, Postgres, LiveKit and egress containers, driven partly by genuine organic LiveKit/egress behaviour and partly by precisely-timed fabricated webhook events.
 **Commit:** _(pending)_
-
-## Stage 3: Recording during the lesson — ⬜ pending
-
-- [ ] **8. Recording state service**
-- [ ] **9. Egress orchestration**
-- [ ] **10. Webhook and lifecycle wiring**
-- [ ] **11. Live recording in the session read**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 4: Finalization and hand-off — ⬜ pending
 

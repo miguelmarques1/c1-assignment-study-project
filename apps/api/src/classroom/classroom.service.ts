@@ -85,8 +85,8 @@ export class ClassroomService {
     };
   }
 
-  session(): Promise<ClassroomSession> {
-    return this.lessons.projectSession(CLASSROOM_ROOM_NAME);
+  session(callerId: string): Promise<ClassroomSession> {
+    return this.lessons.projectSession(CLASSROOM_ROOM_NAME, callerId);
   }
 
   async endLesson(lessonId: string, callerId: string): Promise<ClassroomEndResult> {

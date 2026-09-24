@@ -4,6 +4,7 @@ import type { Request } from 'express';
 
 import { Public } from '../auth/public.decorator';
 import { ERROR_RESPONSE } from '../openapi/components';
+import { RecordingOrchestrator } from '../recording/recording-orchestrator.service';
 import { LessonLifecycleService } from './lesson-lifecycle.service';
 import { LiveKitService } from './livekit.service';
 
@@ -18,6 +19,7 @@ export class ClassroomWebhookController {
   constructor(
     private readonly liveKit: LiveKitService,
     private readonly lifecycle: LessonLifecycleService,
+    private readonly recording: RecordingOrchestrator,
   ) {}
 
   @Public()
@@ -26,9 +28,10 @@ export class ClassroomWebhookController {
   @ApiOperation({
     summary: 'LiveKit lifecycle webhook',
     description:
-      'Receives participant_joined, participant_left and room_finished. Every other event ' +
-      'type is acknowledged and ignored. Authenticated by the Authorization header signature ' +
-      'over a SHA-256 checksum of the raw body, verified with WebhookReceiver — never by session.',
+      'Receives participant_joined, participant_left, room_finished, track_published and the ' +
+      'egress_started / egress_updated / egress_ended events F07 uses to drive recording. Every ' +
+      'other event type is acknowledged and ignored. Authenticated by the Authorization header ' +
+      'signature over a SHA-256 checksum of the raw body, verified with WebhookReceiver — never by session.',
   })
   @ApiResponse({ status: 200, description: 'Acknowledged.' })
   @ApiResponse({
@@ -52,6 +55,16 @@ export class ClassroomWebhookController {
         break;
       case 'room_finished':
         await this.lifecycle.applyRoomFinished(event);
+        break;
+      case 'track_published':
+        await this.recording.onTrackPublished(event);
+        break;
+      case 'egress_started':
+      case 'egress_updated':
+        await this.recording.onEgressUpdated(event);
+        break;
+      case 'egress_ended':
+        await this.recording.onEgressEnded(event);
         break;
       default:
         // Acknowledged and ignored, so enabling more LiveKit events later

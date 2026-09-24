@@ -1,13 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma, type Lesson } from '@prisma/client';
-import type {
-  ClassroomSession,
-  LessonEndReason,
-  LessonStatus,
-  LiveRecordingStatus,
-} from '@english-quest/shared';
+import type { ClassroomSession, LessonEndReason, LessonStatus } from '@english-quest/shared';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { RecordingStateService } from '../recording/recording-state.service';
 
 const OPEN_STATUSES = ['waiting', 'live'] as const;
 const TERMINAL_STATUSES = ['ended', 'ended_unexpectedly', 'abandoned'] as const;
@@ -31,7 +27,10 @@ function isUniqueViolation(error: unknown): boolean {
  */
 @Injectable()
 export class LessonService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly recording: RecordingStateService,
+  ) {}
 
   findOpenLesson(room: string): Promise<Lesson | null> {
     return this.prisma.lesson.findFirst({ where: { room, status: { in: [...OPEN_STATUSES] } } });
@@ -148,12 +147,17 @@ export class LessonService {
     await this.prisma.lesson.update({ where: { id: lessonId }, data: { allDisconnectedSince: at } });
   }
 
-  /** Idempotent: a no-op once `started_at` is already set. */
-  async startLesson(lessonId: string, startedAt: Date): Promise<void> {
-    await this.prisma.lesson.updateMany({
+  /**
+   * Idempotent: a no-op once `started_at` is already set. Returns whether
+   * this call is the one that performed the transition — F07 starts
+   * recording only on that call, never on a replayed join.
+   */
+  async startLesson(lessonId: string, startedAt: Date): Promise<boolean> {
+    const result = await this.prisma.lesson.updateMany({
       where: { id: lessonId, startedAt: null },
       data: { status: 'live', startedAt },
     });
+    return result.count > 0;
   }
 
   /**
@@ -195,8 +199,8 @@ export class LessonService {
     return finalized;
   }
 
-  /** `GET /classroom/session` projection: null when nothing is open. */
-  async projectSession(room: string): Promise<ClassroomSession> {
+  /** `GET /classroom/session` projection: null when nothing is open, scoped to the caller's own recording figures. */
+  async projectSession(room: string, callerId: string): Promise<ClassroomSession> {
     const lesson = await this.findOpenLesson(room);
     if (!lesson) {
       return null;
@@ -235,16 +239,9 @@ export class LessonService {
         joinedAt: row.joinedAt.toISOString(),
       })),
       awaiting: others.map((user) => ({ userId: user.id, displayName: user.displayName })),
-      // F07: `status`/`since` already read the real (currently always-default)
-      // lesson-wide recording columns. `mine` is a placeholder until Stage 3
-      // wires a caller-scoped projection over that participant's own
-      // segments — nothing populates a segment before then, so `not_started`
-      // and 0 are correct for every session read today, not just a stub.
-      recording: {
-        status: lesson.recordingStatus as LiveRecordingStatus,
-        since: lesson.recordingStartedAt?.toISOString() ?? null,
-        mine: { status: 'not_started', capturedSeconds: 0 },
-      },
+      // F07: the caller's own captured audio, from their own segments only —
+      // never another participant's.
+      recording: await this.recording.projectLiveRecording(lesson.id, callerId),
     };
   }
 }
