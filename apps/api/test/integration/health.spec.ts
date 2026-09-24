@@ -28,7 +28,7 @@ describe('GET /health', () => {
     const names = response.body.data.dependencies.map(
       (entry: { name: string }) => entry.name,
     );
-    expect(names.sort()).toEqual(['livekit', 'minio', 'postgres', 'redis']);
+    expect(names.sort()).toEqual(['egress', 'livekit', 'minio', 'postgres', 'redis']);
 
     const postgres = response.body.data.dependencies.find(
       (entry: { name: string }) => entry.name === 'postgres',

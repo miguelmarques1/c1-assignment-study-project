@@ -27,6 +27,7 @@ export class HealthService {
       this.probe('redis', () => this.redis.ping()),
       this.probe('minio', () => this.storage.ping()),
       this.probe('livekit', () => HealthService.probeLivekit()),
+      this.probe('egress', () => HealthService.probeEgress()),
     ]);
 
     const status = dependencies.every((entry) => entry.status === 'up') ? 'ok' : 'degraded';
@@ -68,6 +69,17 @@ export class HealthService {
     // Any answered request proves reachability; LiveKit replies 200 on the root.
     if (response.status >= 500) {
       throw new Error(`LiveKit responded with ${response.status}`);
+    }
+  }
+
+  /** The egress container's own `health_port` (F07) — a plain HTTP probe, same shape as LiveKit's. */
+  private static async probeEgress(): Promise<void> {
+    const response = await fetch(env().LIVEKIT_EGRESS_HEALTH_URL, {
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    });
+
+    if (response.status >= 500) {
+      throw new Error(`Egress responded with ${response.status}`);
     }
   }
 }

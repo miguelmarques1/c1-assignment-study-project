@@ -1,13 +1,21 @@
 import { randomUUID } from 'node:crypto';
 
 import { Injectable } from '@nestjs/common';
-import { Prisma, type LessonRecordingSegment } from '@prisma/client';
-import type { LiveParticipantRecordingStatus, LiveRecording, LiveRecordingStatus } from '@english-quest/shared';
+import { Prisma, type Lesson, type LessonParticipant, type LessonPipelineBranch, type LessonRecordingSegment } from '@prisma/client';
+import type {
+  LessonRecordingStatus,
+  LiveParticipantRecordingStatus,
+  LiveRecording,
+  LiveRecordingStatus,
+} from '@english-quest/shared';
 
 import { PrismaService } from '../prisma/prisma.service';
-import { segmentObjectKey } from './recording.constants';
+import type { ParticipantClassification } from './recording-classifier';
+import { audioObjectKey, segmentObjectKey } from './recording.constants';
 
 const OPEN_SEGMENT_STATUSES = ['requested', 'starting', 'active', 'ending'] as const;
+const NEEDS_FINALIZATION_STATUSES = ['idle', 'starting', 'recording', 'not_recording', 'finalizing'] as const;
+const RETRYABLE_FAILURE_CODES = ['recording_missing', 'recording_assembly_failed'] as const;
 
 function isUniqueViolation(error: unknown): boolean {
   return error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
@@ -260,5 +268,222 @@ export class RecordingStateService {
         capturedSeconds: Math.round(capturedMs / 1000),
       },
     };
+  }
+
+  // ---------------------------------------------------------------------
+  // Finalization
+  // ---------------------------------------------------------------------
+
+  /**
+   * Claims every terminal lesson whose recording is not yet finalized and
+   * whose lease is free, one at a time, so a lesson another (or a slower)
+   * tick already holds is left alone. `storage_unavailable` is deliberately
+   * excluded — only the explicit retry route re-enters it.
+   */
+  async claimForFinalization(now: Date, leaseMs: number): Promise<Lesson[]> {
+    const candidates = await this.prisma.lesson.findMany({
+      where: {
+        status: { in: ['ended', 'ended_unexpectedly'] },
+        recordingStatus: { in: [...NEEDS_FINALIZATION_STATUSES] },
+        OR: [{ recordingLeaseUntil: null }, { recordingLeaseUntil: { lt: now } }],
+      },
+    });
+
+    const claimed: Lesson[] = [];
+    for (const lesson of candidates) {
+      const leaseUntil = new Date(now.getTime() + leaseMs);
+      const finalizingSince = lesson.recordingFinalizingSince ?? now;
+      const result = await this.prisma.lesson.updateMany({
+        where: {
+          id: lesson.id,
+          OR: [{ recordingLeaseUntil: null }, { recordingLeaseUntil: { lt: now } }],
+        },
+        data: {
+          recordingStatus: 'finalizing',
+          recordingFinalizingSince: finalizingSince,
+          recordingLeaseUntil: leaseUntil,
+        },
+      });
+      if (result.count > 0) {
+        claimed.push({
+          ...lesson,
+          recordingStatus: 'finalizing',
+          recordingFinalizingSince: finalizingSince,
+          recordingLeaseUntil: leaseUntil,
+        });
+      }
+    }
+    return claimed;
+  }
+
+  /** Releases the lease without changing status, so the next tick retries the same wait (settle or storage). */
+  async releaseLease(lessonId: string): Promise<void> {
+    await this.prisma.lesson.update({ where: { id: lessonId }, data: { recordingLeaseUntil: null } });
+  }
+
+  /** The first storage transport error of a finalization pass — recorded once, so the 2-minute window has a fixed start. */
+  async recordStorageFailureStart(lessonId: string, since: Date): Promise<void> {
+    await this.prisma.lesson.updateMany({
+      where: { id: lessonId, storageUnavailableSince: null },
+      data: { storageUnavailableSince: since },
+    });
+  }
+
+  /** Every segment for the lesson, any participant, any status — the finalizer's settle check reads this. */
+  listSegments(lessonId: string): Promise<LessonRecordingSegment[]> {
+    return this.prisma.lessonRecordingSegment.findMany({
+      where: { lessonId },
+      orderBy: { fileStartedAt: 'asc' },
+    });
+  }
+
+  /** Registered participants who actually connected at least once — the PRD's "who gets a branch" rule. */
+  listConnectedParticipants(lessonId: string): Promise<LessonParticipant[]> {
+    return this.prisma.lessonParticipant.findMany({
+      where: { lessonId, lastConnectedAt: { not: null } },
+    });
+  }
+
+  /** LiveKit no longer knows about a segment that was never confirmed ended — the 120-second reconciliation path. */
+  async reconcileSegment(segmentId: string): Promise<void> {
+    await this.prisma.lessonRecordingSegment.updateMany({
+      where: { id: segmentId, status: { in: [...OPEN_SEGMENT_STATUSES] } },
+      data: { status: 'failed', unexpected: true, error: 'Egress never reported an outcome.' },
+    });
+  }
+
+  /** Writes a participant's final recording columns, once classification has decided them. */
+  async writeParticipantResult(
+    lessonId: string,
+    userId: string,
+    classification: ParticipantClassification,
+  ): Promise<void> {
+    await this.prisma.lessonParticipant.update({
+      where: { lessonId_userId: { lessonId, userId } },
+      data: {
+        recordingStatus: classification.recordingStatus,
+        audioObjectKey: classification.audioBytes !== null ? audioObjectKey(lessonId, userId) : null,
+        audioBytes: classification.audioBytes !== null ? BigInt(classification.audioBytes) : null,
+        audioDurationMs: classification.audioDurationMs,
+        capturedMs: classification.capturedMs,
+      },
+    });
+  }
+
+  /** Records the timeline origin separately, since it comes from the assembler, not the classification. */
+  async writeParticipantRecordingStartedAt(lessonId: string, userId: string, at: Date | null): Promise<void> {
+    await this.prisma.lessonParticipant.update({
+      where: { lessonId_userId: { lessonId, userId } },
+      data: { recordingStartedAt: at },
+    });
+  }
+
+  /** Creates the branch on first classification, or updates it on a retry. Never touches `launched_at`/`fallback_requested_at`. */
+  async upsertBranch(
+    lessonId: string,
+    userId: string,
+    classification: ParticipantClassification,
+  ): Promise<LessonPipelineBranch> {
+    const status = classification.launches ? 'queued' : 'failed';
+    return this.prisma.lessonPipelineBranch.upsert({
+      where: { lessonId_userId: { lessonId, userId } },
+      create: {
+        lessonId,
+        userId,
+        stage: 'recording',
+        status,
+        failureCode: classification.failureCode,
+        failureReason: classification.failureReason,
+        attempts: 1,
+      },
+      update: {
+        status,
+        failureCode: classification.failureCode,
+        failureReason: classification.failureReason,
+        attempts: { increment: 1 },
+      },
+    });
+  }
+
+  /** The lesson's branches move to `storage_unavailable`, created if they don't exist yet. */
+  async markBranchesStorageUnavailable(lessonId: string, userIds: string[]): Promise<void> {
+    for (const userId of userIds) {
+      await this.prisma.lessonPipelineBranch.upsert({
+        where: { lessonId_userId: { lessonId, userId } },
+        create: { lessonId, userId, stage: 'recording', status: 'storage_unavailable' },
+        update: { status: 'storage_unavailable' },
+      });
+    }
+  }
+
+  async markBranchLaunched(branchId: string, at: Date): Promise<void> {
+    await this.prisma.lessonPipelineBranch.update({ where: { id: branchId }, data: { launchedAt: at } });
+  }
+
+  async markBranchFallbackRequested(branchId: string, at: Date): Promise<void> {
+    await this.prisma.lessonPipelineBranch.update({ where: { id: branchId }, data: { fallbackRequestedAt: at } });
+  }
+
+  /** The lesson reached a final, non-retryable recording outcome. */
+  async finalizeLessonRecording(lessonId: string, status: LessonRecordingStatus, at: Date): Promise<void> {
+    await this.prisma.lesson.update({
+      where: { id: lessonId },
+      data: {
+        recordingStatus: status,
+        recordingFinalizedAt: at,
+        recordingLeaseUntil: null,
+        storageUnavailableSince: null,
+      },
+    });
+  }
+
+  /** The lesson's own storage window has run out — every connected participant's branch moves with it. */
+  async markLessonStorageUnavailable(lessonId: string, since: Date): Promise<void> {
+    await this.prisma.lesson.updateMany({
+      where: { id: lessonId, storageUnavailableSince: null },
+      data: { storageUnavailableSince: since },
+    });
+    await this.prisma.lesson.update({
+      where: { id: lessonId },
+      data: { recordingStatus: 'storage_unavailable', recordingLeaseUntil: null },
+    });
+  }
+
+  /**
+   * `POST /lessons/:lessonId/recording/retry`: moves every retryable branch
+   * back to `verifying`, the lesson back to `finalizing`, and clears the
+   * storage window so a recovered store gets its own fresh 2 minutes.
+   */
+  async retryRecording(lessonId: string, at: Date): Promise<number> {
+    const result = await this.prisma.lessonPipelineBranch.updateMany({
+      where: {
+        lessonId,
+        OR: [
+          { status: 'storage_unavailable' },
+          { status: 'failed', failureCode: { in: [...RETRYABLE_FAILURE_CODES] } },
+        ],
+      },
+      data: { status: 'verifying', failureCode: null, failureReason: null },
+    });
+    if (result.count > 0) {
+      await this.prisma.lesson.update({
+        where: { id: lessonId },
+        data: {
+          recordingStatus: 'finalizing',
+          recordingFinalizingSince: at,
+          storageUnavailableSince: null,
+          recordingLeaseUntil: null,
+        },
+      });
+    }
+    return result.count;
+  }
+
+  listBranches(lessonId: string): Promise<LessonPipelineBranch[]> {
+    return this.prisma.lessonPipelineBranch.findMany({ where: { lessonId } });
+  }
+
+  getBranch(lessonId: string, userId: string): Promise<LessonPipelineBranch | null> {
+    return this.prisma.lessonPipelineBranch.findUnique({ where: { lessonId_userId: { lessonId, userId } } });
   }
 }

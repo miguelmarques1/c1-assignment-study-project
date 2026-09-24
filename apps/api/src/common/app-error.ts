@@ -91,4 +91,13 @@ export class AppError extends Error {
   static notTheOpener(): AppError {
     return new AppError(ERROR_CODES.SCENARIO_NOT_THE_OPENER);
   }
+
+  /** Nothing in the lesson's recording is retryable — the current state is carried so the client can say why. */
+  static recordingNotRetryable(recordingStatus: string): AppError {
+    return new AppError(ERROR_CODES.RECORDING_NOT_RETRYABLE, { recordingStatus });
+  }
+
+  static recordingNotFinalized(): AppError {
+    return new AppError(ERROR_CODES.RECORDING_NOT_FINALIZED);
+  }
 }
