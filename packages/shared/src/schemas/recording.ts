@@ -1,5 +1,15 @@
 import { z } from 'zod';
 
+import {
+  branchFailureCodeSchema,
+  pipelineBranchStatusSchema,
+  pipelineStageSchema,
+  recordingFailureCodeSchema,
+  type PipelineBranchStatus,
+  type PipelineStage,
+  type RecordingFailureCode,
+} from './pipeline';
+
 /**
  * The lesson-level recording contract (F07). `lessonRecordingStatusSchema`
  * covers the whole lifecycle, from before any egress starts through the
@@ -49,25 +59,14 @@ export const liveParticipantRecordingStatusSchema = z.enum([
 ]);
 export type LiveParticipantRecordingStatus = z.infer<typeof liveParticipantRecordingStatusSchema>;
 
-export const pipelineBranchStageSchema = z.enum(['recording', 'transcription']);
-export type PipelineBranchStage = z.infer<typeof pipelineBranchStageSchema>;
-
-export const pipelineBranchStatusSchema = z.enum([
-  'verifying',
-  'queued',
-  'failed',
-  'storage_unavailable',
-]);
-export type PipelineBranchStatus = z.infer<typeof pipelineBranchStatusSchema>;
-
-/** A branch fails at the `recording` stage with exactly one of these codes. */
-export const recordingFailureCodeSchema = z.enum([
-  'recording_failed_to_start',
-  'recording_missing',
-  'recording_too_short',
-  'recording_assembly_failed',
-]);
-export type RecordingFailureCode = z.infer<typeof recordingFailureCodeSchema>;
+/**
+ * The branch vocabulary moved to `pipeline.ts` when F08 widened it; these
+ * names stay exported from here so F07's readers keep their imports.
+ */
+export const pipelineBranchStageSchema = pipelineStageSchema;
+export type PipelineBranchStage = PipelineStage;
+export { pipelineBranchStatusSchema, recordingFailureCodeSchema };
+export type { PipelineBranchStatus, RecordingFailureCode };
 
 /** The `recording` block `GET /classroom/session` gains — lesson-wide plus the caller's own. */
 export const liveRecordingSchema = z.object({
@@ -83,7 +82,8 @@ export type LiveRecording = z.infer<typeof liveRecordingSchema>;
 export const pipelineBranchViewSchema = z.object({
   stage: pipelineBranchStageSchema,
   status: pipelineBranchStatusSchema,
-  failureCode: recordingFailureCodeSchema.nullable(),
+  /** Any stage's failure code — F07's own, or a later stage's once the branch moved on. */
+  failureCode: branchFailureCodeSchema.nullable(),
   failureReason: z.string().nullable(),
   retryable: z.boolean(),
   fallbackPlanRequested: z.boolean(),

@@ -198,4 +198,23 @@ describe('loadEnv', () => {
       expect((error as EnvValidationError).issues.join('\n')).toContain('LIVEKIT_EGRESS_HEALTH_URL');
     }
   });
+
+  it('defaults_the_transcription_locale_to_en_us', () => {
+    const config = loadEnv(validEnv({ TRANSCRIPTION_LOCALE: undefined }));
+    expect(config.TRANSCRIPTION_LOCALE).toBe('en-US');
+  });
+
+  it('accepts_another_transcription_locale', () => {
+    const config = loadEnv(validEnv({ TRANSCRIPTION_LOCALE: 'en-GB' }));
+    expect(config.TRANSCRIPTION_LOCALE).toBe('en-GB');
+  });
+
+  it('rejects_a_malformed_transcription_locale', () => {
+    try {
+      loadEnv(validEnv({ TRANSCRIPTION_LOCALE: 'english' }));
+      expect.unreachable('should have thrown');
+    } catch (error) {
+      expect((error as EnvValidationError).issues.join('\n')).toContain('TRANSCRIPTION_LOCALE');
+    }
+  });
 });

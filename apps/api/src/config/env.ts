@@ -136,6 +136,18 @@ export const envSchema = z.object({
     .url({ error: 'LIVEKIT_EGRESS_HEALTH_URL must be a URL.' })
     .default('http://localhost:8080'),
 
+  /**
+   * The locale Azure Speech recognizes lesson audio in (F08). Configuration
+   * per deployment rather than per user, and stored on every transcript so an
+   * old transcript stays interpretable after the value changes.
+   */
+  TRANSCRIPTION_LOCALE: z
+    .string()
+    .regex(/^[a-z]{2,3}-[A-Z]{2}$/, {
+      error: 'TRANSCRIPTION_LOCALE must be a locale such as en-US.',
+    })
+    .default('en-US'),
+
   SEED_USERS: seedUsersField,
 });
 

@@ -1,3 +1,4 @@
+import { BullModule } from '@nestjs/bullmq';
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -5,6 +6,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { AuthModule } from './auth/auth.module';
 import { SessionGuard } from './auth/session.guard';
 import { ClassroomModule } from './classroom/classroom.module';
+import { env } from './config/env';
 import { CredentialsModule } from './credentials/credentials.module';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -16,6 +18,11 @@ import { StorageModule } from './storage/storage.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
+    // The factory runs only when the application actually starts, so the
+    // OpenAPI generator's preview boot never opens a Redis connection.
+    BullModule.forRootAsync({
+      useFactory: () => ({ connection: { url: env().REDIS_URL } }),
+    }),
     PrismaModule,
     RedisModule,
     StorageModule,

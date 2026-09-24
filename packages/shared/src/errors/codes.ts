@@ -45,6 +45,10 @@ export const ERROR_CODES = {
   RECORDING_NOT_RETRYABLE: 'REC001',
   /** The recording is still being captured or finalized. */
   RECORDING_NOT_FINALIZED: 'REC002',
+  /** The caller's branch has no failed stage to re-run. */
+  PIPELINE_NOT_RETRYABLE: 'PIPE001',
+  /** The caller's branch failed at recording, which has its own retry route. */
+  PIPELINE_RETRY_RECORDING: 'PIPE002',
   /** At least one infrastructure dependency is unreachable. */
   HEALTH_DEPENDENCY_DOWN: 'HEALTH001',
   /** Unhandled server-side failure. */
@@ -76,6 +80,8 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   [ERROR_CODES.SCENARIO_NOT_THE_OPENER]: 403,
   [ERROR_CODES.RECORDING_NOT_RETRYABLE]: 409,
   [ERROR_CODES.RECORDING_NOT_FINALIZED]: 409,
+  [ERROR_CODES.PIPELINE_NOT_RETRYABLE]: 409,
+  [ERROR_CODES.PIPELINE_RETRY_RECORDING]: 409,
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 503,
   [ERROR_CODES.INTERNAL_ERROR]: 500,
 };
@@ -111,6 +117,8 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
     'Only the participant who opened the room can change the situation.',
   [ERROR_CODES.RECORDING_NOT_RETRYABLE]: 'There is nothing to retry for this lesson.',
   [ERROR_CODES.RECORDING_NOT_FINALIZED]: 'This lesson is still being processed.',
+  [ERROR_CODES.PIPELINE_NOT_RETRYABLE]: 'There is nothing to retry at this stage.',
+  [ERROR_CODES.PIPELINE_RETRY_RECORDING]: "This lesson's recording has to be retried first.",
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 'One or more dependencies are unavailable.',
   [ERROR_CODES.INTERNAL_ERROR]: 'Something went wrong on our side.',
 };

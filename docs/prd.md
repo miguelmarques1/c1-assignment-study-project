@@ -514,7 +514,7 @@ After the lesson ends, the user is returned to the dashboard where the lesson ap
 
 **Capabilities:**
 - Each participant's track is transcribed using that participant's own Azure Speech key and region. Recognition language is `en-US`, configurable per deployment.
-- Output is stored as ordered utterances: lesson id, user id, index, start_ms, end_ms, text, recognition confidence, and an array of words each with text, start_ms, duration_ms and confidence.
+- Output is stored as ordered utterances: lesson id, user id, index, start_ms, end_ms, text, recognition confidence, and an array of words each with text, start_ms, duration_ms and, where the provider reports it, confidence. Azure fast transcription reports recognition confidence per utterance rather than per word, so lesson transcripts carry it on the utterance and leave word confidence empty.
 - Speaker attribution requires no diarization: one track belongs to exactly one participant by construction.
 - All participants' utterance streams are merged by timestamp into a single chronological lesson transcript for display, while remaining individually owned for analysis.
 - Processing runs asynchronously on a Redis-backed queue with a per-lesson, per-participant job. Retries occur 3 times with exponential backoff at 30 seconds, 2 minutes and 8 minutes.
@@ -543,8 +543,8 @@ If the user has no valid Azure key, the stage renders as blocked rather than fai
 
 **Capabilities:**
 - Selection is fully deterministic over transcript metadata — no LLM call, no additional cost, reproducible for the same input and rule version.
-- Eligibility filters: utterance duration between 3 and 30 seconds; at least 8 words; at most 40% of tokens classified as filler or backchannel (`uh`, `um`, `yeah`, `right`, `okay`, `hmm` and equivalents); no more than 25% of words with confidence below 0.40, which indicates unusable audio rather than poor pronunciation.
-- Ranking among eligible utterances, in order: lowest mean word confidence first, then highest count of words matching the participant's currently unmastered pronunciation tags, then longest duration.
+- Eligibility filters: utterance duration between 3 and 30 seconds; at least 8 words; at most 40% of tokens classified as filler or backchannel (`uh`, `um`, `yeah`, `right`, `okay`, `hmm` and equivalents); recognition confidence of at least 0.40, which below that indicates unusable audio rather than poor pronunciation — measured as no more than 25% of words below 0.40 where word confidence exists, and on the utterance's own confidence otherwise.
+- Ranking among eligible utterances, in order: lowest recognition confidence first (mean word confidence where it exists, otherwise the utterance's own), then highest count of words matching the participant's currently unmastered pronunciation tags, then longest duration.
 - Cap of 12 excerpts per participant per lesson, with a minimum spacing rule that no more than 3 excerpts may come from the same contiguous 5-minute window, so the sample spans the lesson rather than clustering in one passage.
 - If fewer than 4 eligible utterances exist, all eligible ones are selected and the lesson is flagged `sparse_pronunciation_sample` so the aggregate is displayed with lower confidence.
 - Every threshold is configuration, and every excerpt records the `selection_rule_version` in force when it was chosen, so results before and after tuning remain comparable.
@@ -1352,7 +1352,7 @@ graph TD
 - [ ] Utterances with more than 40% filler tokens are excluded
 - [ ] No more than 12 excerpts are selected per participant per lesson
 - [ ] No more than 3 selected excerpts fall within the same contiguous 5-minute window
-- [ ] Among eligible utterances, lower mean word confidence is selected before higher
+- [ ] Among eligible utterances, lower recognition confidence is selected before higher
 - [ ] A lesson yielding fewer than 4 eligible utterances is flagged `sparse_pronunciation_sample`
 - [ ] Every excerpt stores its `selection_rule_version`
 

@@ -111,3 +111,37 @@ export {
   type SharedSituation,
   type VocabularyDomain,
 } from './schemas/scenario';
+
+export {
+  blockedReasonCodeSchema,
+  branchFailureCodeSchema,
+  lessonPipelineViewSchema,
+  pipelineReasonCodeSchema,
+  pipelineStageSchema,
+  pipelineStageStatusSchema,
+  pipelineStageViewSchema,
+  stageFailureCodeSchema,
+  transcriptionFailureCodeSchema,
+  type BlockedReasonCode,
+  type BranchFailureCode,
+  type LessonPipelineView,
+  type PipelineReasonCode,
+  type PipelineStage,
+  type PipelineStageStatus,
+  type PipelineStageView,
+  type StageFailureCode,
+  type TranscriptionFailureCode,
+} from './schemas/pipeline';
+
+export {
+  lessonTranscriptViewSchema,
+  transcriptSpeakerSchema,
+  transcriptSpeakerStatusSchema,
+  transcriptUtteranceSchema,
+  transcriptWordSchema,
+  type LessonTranscriptView,
+  type TranscriptSpeaker,
+  type TranscriptSpeakerStatus,
+  type TranscriptUtterance,
+  type TranscriptWord,
+} from './schemas/transcript';
