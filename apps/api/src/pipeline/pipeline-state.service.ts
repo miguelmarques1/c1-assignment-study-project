@@ -30,6 +30,15 @@ const CLEARED = {
   finishedAt: null,
 } as const;
 
+/**
+ * Copies exactly the three reason fields. Callers hand over the typed
+ * outcome errors themselves, and spreading an Error instance would also
+ * carry its `name` field into the Prisma update, which rejects it.
+ */
+function reasonFields(reason: Reason): Reason {
+  return { reasonCode: reason.reasonCode, reason: reason.reason, providerMessage: reason.providerMessage };
+}
+
 /** Long enough for a lesson's worth of utterances to go in with room to spare. */
 const COMPLETE_TRANSACTION_TIMEOUT_MS = 30_000;
 
@@ -113,7 +122,7 @@ export class PipelineStateService {
   async markRetrying(row: LessonPipelineStage, reason: Reason, nextAttemptAt: Date): Promise<void> {
     await this.transition(row, 'retrying', {
       ...CLEARED,
-      ...reason,
+      ...reasonFields(reason),
       status: 'retrying',
       nextAttemptAt,
     });
@@ -122,7 +131,7 @@ export class PipelineStateService {
   async markBlocked(row: LessonPipelineStage, reason: Reason, provider: CredentialProvider): Promise<void> {
     await this.transition(row, 'blocked_missing_key', {
       ...CLEARED,
-      ...reason,
+      ...reasonFields(reason),
       status: 'blocked_missing_key',
       blockedProvider: provider,
     });
@@ -132,7 +141,7 @@ export class PipelineStateService {
     await this.transition(
       row,
       'failed',
-      { ...CLEARED, ...reason, status: 'failed', finishedAt: now },
+      { ...CLEARED, ...reasonFields(reason), status: 'failed', finishedAt: now },
       { failureCode: reason.reasonCode, failureReason: reason.reason },
     );
   }
@@ -164,6 +173,29 @@ export class PipelineStateService {
       },
       { timeout: COMPLETE_TRANSACTION_TIMEOUT_MS },
     );
+  }
+
+  /**
+   * Ends a pending stage whose job died while the stage was mid-run — the
+   * runner itself failed to record an outcome. It is failed as
+   * `internal_error` for the owner to retry, never re-run automatically:
+   * a fault that repeats would otherwise spend the owner's quota forever.
+   */
+  async abandon(row: LessonPipelineStage, reason: Reason, now: Date): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const moved = await tx.lessonPipelineStage.updateMany({
+        where: { id: row.id, run: row.run, status: { in: ['running', 'retrying'] } },
+        data: { ...CLEARED, ...reasonFields(reason), status: 'failed', finishedAt: now },
+      });
+      if (moved.count === 0) {
+        return false;
+      }
+      await this.movePointer(tx, row.branchId, row.stage, 'failed', {
+        failureCode: reason.reasonCode,
+        failureReason: reason.reason,
+      });
+      return true;
+    });
   }
 
   /** Blocked → queued with the next run, once the owner has a usable key. Null if it moved on meanwhile. */

@@ -14,6 +14,7 @@ import { PromptsModule } from './prompts/prompts.module';
 import { RedisModule } from './redis/redis.module';
 import { ScenarioModule } from './scenario/scenario.module';
 import { StorageModule } from './storage/storage.module';
+import { TranscriptionModule } from './transcription/transcription.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { StorageModule } from './storage/storage.module';
     PromptsModule,
     ClassroomModule,
     ScenarioModule,
+    TranscriptionModule,
   ],
   providers: [
     // Authentication is global: a route is protected unless it opts out with

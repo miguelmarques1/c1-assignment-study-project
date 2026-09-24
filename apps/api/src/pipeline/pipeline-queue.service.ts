@@ -1,6 +1,6 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { Injectable, Logger, type BeforeApplicationShutdown } from '@nestjs/common';
-import type { Queue } from 'bullmq';
+import type { JobState, Queue } from 'bullmq';
 
 import {
   PIPELINE_JOB_RETENTION,
@@ -41,21 +41,15 @@ export class PipelineQueueService implements BeforeApplicationShutdown {
     await this.queue.add(stage, { branchId, stage, run }, { jobId: pipelineJobId(stage, branchId, run), ...PIPELINE_JOB_RETENTION });
   }
 
-  /**
-   * Makes sure a pending stage run has a live job. A job that is missing
-   * (Redis lost it, or the add after a launch failed) or already terminal
-   * while Postgres still says pending is replaced. Returns whether it added one.
-   */
-  async ensureJob(branchId: string, stage: QueuedPipelineStage, run: number): Promise<boolean> {
-    const existing = await this.queue.getJob(pipelineJobId(stage, branchId, run));
-    if (existing) {
-      const state = await existing.getState();
-      if (state !== 'completed' && state !== 'failed' && state !== 'unknown') {
-        return false;
-      }
-      await existing.remove();
-    }
+  /** Where a stage run's job is: a BullMQ state, or `missing` when Redis holds no such job. */
+  async jobState(branchId: string, stage: QueuedPipelineStage, run: number): Promise<JobState | 'unknown' | 'missing'> {
+    const job = await this.queue.getJob(pipelineJobId(stage, branchId, run));
+    return job ? job.getState() : 'missing';
+  }
+
+  /** Adds the run's job, first removing a terminal one that would otherwise swallow the add. */
+  async replaceJob(branchId: string, stage: QueuedPipelineStage, run: number): Promise<void> {
+    await this.queue.getJob(pipelineJobId(stage, branchId, run)).then((job) => job?.remove());
     await this.enqueue(branchId, stage, run);
-    return true;
   }
 }

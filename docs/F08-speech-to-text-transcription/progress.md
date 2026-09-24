@@ -47,19 +47,32 @@
 - The stage-4 files already written (`pipeline.controller.ts`, `lesson-access.service.ts`) and the stage-3/5 files are not part of this commit. The controller was moved out of `src/` while this stage was validated, because it calls service methods stage 4 adds.
 
 **Validation:** `pnpm --filter @english-quest/api typecheck` ✅ · `pnpm lint` ✅ · `vitest run test/unit` ✅ 145/145 (the 120 existing tests plus the 25 new unit tests already written for stage 5: client, response mapping, backoff, merge) · the 15 existing integration files ✅ 185/185 (including `recording-finalization.spec.ts` with the async launch, and `health.spec.ts` after the shutdown fix). The first full run of this stage showed the hang described above; it is recorded, not hidden.
+**Commit:** `44ebb38` — F08 stage 2 - pipeline runner
+
+## Stage 3: Azure transcription — ✅ done
+
+- [x] **11. Fast transcription client**
+- [x] **12. Response mapping and speech-to-text capability**
+- [x] **13. Transcript writer**
+- [x] **14. Transcription stage handler**
+
+**Observations:**
+- **A real bug in stage 2's committed runner, surfaced the first time a handler returned anything but success.** The processor passes the typed outcome error (`StageBlockedError` etc.) to `markBlocked`/`markFailed`/`markRetrying` as the "reason", and the state service spread it into the Prisma update. Spreading an `Error` instance also copies its enumerable `name` class field, and Prisma rejects the unknown `name` column. So every blocked, failed or retrying outcome threw inside the runner, and the row stayed `running`. 8 of the 15 transcription tests caught it. Fixed by copying exactly the three reason fields (`reasonFields`).
+- **A second, related hazard found while checking the fix on the real stack.** Before the fix reached the dev server, the scratch lesson left by stage 2 (no audio object) ran **16 times**. Each attempt ended with the job `failed` and the row still `running`, and the drain replaced the job every 15 s. Harmless there, because there's no provider call without audio. But with real audio, *any* fault that keeps the runner from recording an outcome would spend the owner's Azure quota every 15 s, forever. **Deviation from the spec's drain rule (bounded now):** a pending row whose job is `failed` (or in an unknown state) while the row is mid-run (`running`/`retrying`) is now **failed as `internal_error`**, not re-run (`PipelineStateService.abandon`). The owner can still retry by hand. Only a `queued` row, or a job that is missing or `completed`, is re-added. `ensureJob` became `jobState` + `replaceJob`, so the drain can decide. New test: `a_stage_whose_job_died_mid_run_is_failed_not_rerun`.
+- **Live check with the user's own Azure key (`TEST_AZURE_SPEECH_*`, region `eastus2`, an AI Services resource), through a throwaway script run from `apps/api` and deleted afterwards.** The sample was 17 s of speech synthesized locally with Windows' System.Speech and converted to Ogg/Opus 48 kbps with `ffmpeg-static`. TTS is fine here: it tests the endpoint and is not product content.
+  - The **regional endpoint** `https://eastus2.api.cognitive.microsoft.com/speechtotext/transcriptions:transcribe?api-version=2025-10-15` accepts the AI Services key: HTTP 200 in about 3 s for 17 s of audio, Ogg/Opus taken directly. This settles the spec's open risk about the regional host versus the resource's custom subdomain.
+  - Raw response keys: `durationMilliseconds, combinedPhrases, phrases`. Phrase keys: `offsetMilliseconds, durationMilliseconds, text, words, locale, confidence`. **Word keys: `text, offsetMilliseconds, durationMilliseconds` only**, which confirms that the provider gives no per-word confidence.
+  - **Finding that matters to F09: every phrase in the response carried the same confidence (0.826 for all four).** The documentation's own example shows the same pattern, with one value repeated across a run of phrases that changes only between groups. So "utterance confidence" is really a per-chunk figure. It barely separates utterances within a stretch of speech, and F09's plan to rank by lowest confidence first (as realigned in stage 1) will not discriminate the way its PRD rule intends. F08 stores what the provider returns, faithfully. **Recorded as an open follow-up for F09's spec**, which has to choose another selection signal or accept the coarse one.
+  - A refused key gives a real HTTP 401 with Azure's sentence, which maps to `SpeechAuthRejectedError` with `status: 401` and the provider message intact.
+- **End to end on the real local stack, with no fakes anywhere.** A scratch lesson was left exactly as F07's finalizer leaves one: `you@example.com`, who holds the user's own valid Azure key, and `partner@example.com`, who has no key. Each got the 17 s Ogg in local MinIO and a branch at `transcription`/`queued` with no stage row. The dev server's own drain picked both up within one tick:
+  - `you` was transcribed with the user's key (`latency_ms` 2931; 4 utterances, 34 words). The stage went `completed` 3 s after it started, and the branch moved to `excerpt_selection`/`queued`.
+  - `partner` became `blocked_missing_key` / `credential_missing` with no Azure call. `credential_usage` recorded `F08_lesson_transcription` as `ok` for `you` and `blocked` for `partner`, each under its own user.
+- **Blocked → resume, timed on the real stack.** You can't save a real key through the settings screen here: the key would have to be typed, and entering API keys is off-limits for the agent. So a key rejection was simulated by flipping `you`'s stored Azure credential to `invalid` in SQL, with the ciphertext untouched. A new single-speaker scratch lesson then blocked with `credential_rejected`. Restoring the status to `valid` stands in for a successful save. The stage **left `blocked` 12 s later** (criterion: within 60 s) and completed at 15 s on run 2. The credential is back to exactly its original state (`valid`, same `last_validated_at`).
+- `TranscriptionModule` is wired into `AppModule`. The handler registers itself with the registry in `onModuleInit`, before the worker starts at bootstrap.
+- The stage 5 integration suites `transcription-pipeline.spec.ts`, `pipeline-drain.spec.ts` and `speech-to-text.spec.ts` (with `helpers/fake-speech.ts` and `helpers/pipeline-fixtures.ts`) were already written and are what validated this stage. They are committed with stage 5, per the plan.
+
+**Validation:** `pnpm --filter @english-quest/api typecheck` ✅ · `pnpm lint` ✅ · `vitest run test/unit` ✅ 145/145 · integration ✅ 211/211 across 18 files: the 15 existing ones plus `transcription-pipeline` (15), `pipeline-drain` (8) and `speech-to-text` (3). The route suites wait for stage 4. The live Azure check and the real-stack end-to-end and resume checks are described above.
 **Commit:** _(pending — recorded in the next stage)_
-
-## Stage 3: Azure transcription — ⬜ pending
-
-- [ ] **11. Fast transcription client**
-- [ ] **12. Response mapping and speech-to-text capability**
-- [ ] **13. Transcript writer**
-- [ ] **14. Transcription stage handler**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 4: Routes and document — ⬜ pending
 

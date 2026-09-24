@@ -4,6 +4,7 @@ import type { LessonPipelineStage } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import {
+  INTERNAL_ERROR_REASON,
   PENDING_STAGE_STATUSES,
   PIPELINE_DRAIN_INTERVAL_MS,
   type QueuedPipelineStage,
@@ -16,7 +17,11 @@ export interface DrainResult {
   backfilled: number;
   resumed: number;
   enqueued: number;
+  abandoned: number;
 }
+
+/** Job states that mean the run is still in BullMQ's hands. */
+const LIVE_JOB_STATES = new Set(['waiting', 'active', 'delayed', 'prioritized', 'waiting-children']);
 
 /** A key the provider has not refused. `unverified` counts: the probe could not reach the provider, which says nothing against the key. */
 const USABLE_CREDENTIAL_STATUSES = ['valid', 'unverified'];
@@ -35,7 +40,10 @@ function errorMessage(error: unknown): string {
  *   either client, or the nightly revalidation re-enabling one, needs no
  *   call into the pipeline;
  * - every pending stage with a registered handler has a live job, which
- *   recovers an add that failed at launch or a Redis that lost its data.
+ *   recovers an add that failed at launch or a Redis that lost its data —
+ *   except a stage whose job failed mid-run: that means the runner could
+ *   not record an outcome, and re-running it would repeat the provider
+ *   call on every tick, so it is failed as `internal_error` instead.
  *
  * Follows `LessonLifecycleJob`: one row failing never stops the sweep.
  */
@@ -54,8 +62,8 @@ export class PipelineDrainJob {
   async run(now: Date = new Date()): Promise<DrainResult> {
     const backfilled = await this.backfill(now);
     const resumed = await this.resumeBlocked(now);
-    const enqueued = await this.ensureJobs();
-    return { backfilled, resumed, enqueued };
+    const { enqueued, abandoned } = await this.ensureJobs(now);
+    return { backfilled, resumed, enqueued, abandoned };
   }
 
   private async backfill(now: Date): Promise<number> {
@@ -101,23 +109,39 @@ export class PipelineDrainJob {
     return count;
   }
 
-  private async ensureJobs(): Promise<number> {
+  private async ensureJobs(now: Date): Promise<{ enqueued: number; abandoned: number }> {
     const pending: LessonPipelineStage[] = await this.prisma.lessonPipelineStage.findMany({
       where: { status: { in: [...PENDING_STAGE_STATUSES] } },
     });
 
-    let count = 0;
+    let enqueued = 0;
+    let abandoned = 0;
     for (const row of pending) {
       if (!this.registry.has(row.stage)) {
         continue;
       }
+      const stage = row.stage as QueuedPipelineStage;
       await this.safely(`ensure job for stage ${row.id}`, async () => {
-        if (await this.queue.ensureJob(row.branchId, row.stage as QueuedPipelineStage, row.run)) {
-          count += 1;
+        const state = await this.queue.jobState(row.branchId, stage, row.run);
+        if (LIVE_JOB_STATES.has(state)) {
+          return;
         }
+        const diedMidRun = (state === 'failed' || state === 'unknown') && row.status !== 'queued';
+        if (diedMidRun) {
+          this.logger.error(`Stage ${row.id} (${row.stage}) lost its job mid-run; failing it as internal_error.`);
+          const reason = { reasonCode: 'internal_error', reason: INTERNAL_ERROR_REASON, providerMessage: null };
+          if (await this.state.abandon(row, reason, now)) {
+            abandoned += 1;
+          }
+          return;
+        }
+        // Missing (never added, or Redis lost it), or finished without
+        // recording an outcome (no handler yet when it ran): add it again.
+        await this.queue.replaceJob(row.branchId, stage, row.run);
+        enqueued += 1;
       });
     }
-    return count;
+    return { enqueued, abandoned };
   }
 
   private async safely(label: string, work: () => Promise<void>): Promise<void> {
