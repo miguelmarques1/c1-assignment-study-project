@@ -1,6 +1,6 @@
 # Implementation Progress: Excerpt Selection
 
-**Status:** in progress
+**Status:** success
 **Branch:** main
 **Started:** 2026-09-24
 **Last updated:** 2026-09-24
@@ -85,4 +85,33 @@
   - The spec's notes for F10 (the reader contract, file offsets, completing without an aggregate on an empty selection, the stage name fixed here), F12 (replace `PronunciationFocusPort`, version the `source`), F19 (render `excerpt.reason`, add the Dart models) and the final stage (terminal branch status) match what was built.
 
 **Validation:** documentation-only changes in this stage (spec, progress logs). The code was validated at stage 3's close. The full re-run is in the final verification below.
-**Commit:** _(none)_
+**Commit:** `5e9af87` — F09 stage 4 - verification and hand-off
+
+## Final verification
+
+- **Full suite, whole repo, run fresh after the last stage commit:** `pnpm -r typecheck` ✅ · `pnpm lint` ✅ (zero warnings) · `pnpm --filter @english-quest/api test:unit` ✅ 177/177 across 23 files · `pnpm --filter @english-quest/api test:integration` ✅ 251/251 across 22 files · `pnpm --filter @english-quest/web test` ✅ 126/126 across 19 files · `pnpm --filter @english-quest/shared test` ✅ (no test files, exits 0) · `flutter analyze` ✅ no issues · `flutter test` ✅ 39/39. F09 changed no Dart code. The mobile run covered the working tree as it stands, including two uncommitted mobile edits that predate this run and are not part of it. No regressions and no pre-existing failures remain. The two failures seen mid-run (the reset deadlock and F07's fixture race) were fixed in stage 2 and are recorded there.
+- **Component Overview walk-through (spec section 4):** all 30 listed files exist with their described exports and contracts: shared schemas and barrel, the ten `src/excerpts/` files, the modified pipeline, transcription and app modules, the rules YAML, the schema and migration `0009`, the regenerated `docs/api/openapi.json`, `AGENTS.md`, `docs/prd.md`, and the new test files. `openapi/components.ts` is unchanged, as specified. The adaptations (`excerpt-tokens.ts`, the `PronunciationFocusPort` class seam, the fixtures, F07's suite) are recorded in the stage observations and corrected in the spec. **Missing from spec: none.**
+- **AC re-check (PRD, F09), mapped tests re-run in the fresh pass above:**
+  - ✓ No LLM call and identical output for the same input and rule version: `runs_without_any_provider_call_or_credential`, `is_deterministic_for_the_same_input_and_rules`, `a_rerun_replaces_the_previous_selection`
+  - ✓ Shorter than 3 s, longer than 30 s, or under 8 words never selected: `excludes_utterances_outside_3_to_30_seconds`, `excludes_utterances_with_fewer_than_8_words`
+  - ✓ More than 40% filler tokens excluded: `excludes_utterances_with_more_than_40_percent_fillers`
+  - ✓ No more than 12 per participant per lesson: `never_selects_more_than_12`, `total_selected_audio_stays_within_6_minutes`, `rejects_rules_that_could_exceed_6_minutes_of_audio`
+  - ✓ No more than 3 in any contiguous 5-minute window: `never_places_more_than_3_in_any_5_minute_window`, `a_short_lesson_selects_at_most_3`
+  - ✓ Lower recognition confidence selected before higher: `ranks_lower_confidence_before_higher`, `selects_from_exactly_the_owners_stored_utterances`
+  - ✓ Fewer than 4 eligible flagged `sparse_pronunciation_sample`: `selects_every_eligible_utterance_when_fewer_than_4`, `a_lesson_with_fewer_than_4_eligible_is_flagged_sparse`
+  - ✓ Every excerpt stores its `selection_rule_version`: `every_excerpt_stores_its_selection_rule_version`, `the_rule_fingerprint_is_pinned_to_its_version`
+- **Cross-feature (F09's halves):** F08→F09, selection runs over exactly the stored utterances (`selects_from_exactly_the_owners_stored_utterances`, through F08's real transcription stage) ✓. F09→F10, the reader returns exactly the stored set with reference text and file-offset ranges (`the_reader_returns_exactly_the_stored_excerpts`) ✓; F10 proves it submits that set. F02, no credential used at all (`runs_without_any_provider_call_or_credential`) ✓.
+- **Environment smoke check, after the last commit:** on the running dev server, `/health` is ok with all five dependencies up. The live `/docs-json` carries `myExcerptSelection`, `excerpt` and `pronunciation_assessment` across the same 21 paths as the committed snapshot. The log shows `Loaded excerpt selection rules v1 (e4e9f122dbd2)`, and the pipeline worker's Redis connection is present. The deeper real-stack exercises are in the stage 2 and 3 observations: selection by the dev server's own drain, matching the pure selector exactly, at 33–38 ms per stage, and both routes read as each seeded user.
+- **Soft-fails (both optional in the spec's live checklist):**
+  - The real-speech confidence distribution was not run. It spends about 10 minutes of the user's Azure quota and needs their go-ahead.
+  - The real two-window lesson was not run. It needs two live participants in the user's own Chrome.
+- **Status decision:** `success`. The full suite is green, nothing is missing from the component overview, and every F09 acceptance criterion's mapped tests pass on the fresh pass. The smoke check passed. The two soft-fails are optional checks, recorded honestly.
+
+**Follow-ups left open:**
+- **Rule version 2 calibration**, once the user agrees to spend the quota: transcribe a real 5–10-minute English recording (not TTS) through F08 with their key, record the distinct confidence values and how many phrases share each, and look at what version 1 selects. Tune the thresholds, or add a secondary signal, from that evidence, bumping the version and its pin.
+- **F10:** register the `pronunciation_assessment` handler (every selected branch is already waiting there) and read `ExcerptSelectionReader.forParticipant`. Slice by file offsets. **Complete without an aggregate when the selection is empty**, so the branch still reaches analysis. Show the sparse note from `sparsePronunciationSample` and `selectedCount`.
+- **F12:** replace `PronunciationFocusPort` with the ledger's unmastered pronunciation tags and a token matcher, and put the matcher's version in `source`.
+- **F19:** render the badge from `utterances[].excerpt.reason` on the caller's own lines, label `excerpt_selection` as `Selecting excerpts`, and add Dart models for `excerpt` and `myExcerptSelection`.
+- **Whichever feature adds the pipeline's final stage:** add a terminal branch status. `PipelineStateService.complete` does not move the pointer when there is no next stage.
+- Multi-word fillers (`you know`, `I mean`) and ambiguous single words (`like`, `well`) are out of rule version 1. Adding them is a version bump.
+
