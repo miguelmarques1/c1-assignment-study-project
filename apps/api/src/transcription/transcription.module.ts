@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 
 import { PipelineModule } from '../pipeline/pipeline.module';
 import { SpeechModule } from '../speech/speech.module';
+import { TranscriptController } from './transcript.controller';
+import { TranscriptService } from './transcript.service';
 import { TranscriptWriter } from './transcript-writer.service';
 import { TranscriptionStageHandler } from './transcription-stage.handler';
 
@@ -11,6 +13,7 @@ import { TranscriptionStageHandler } from './transcription-stage.handler';
  */
 @Module({
   imports: [PipelineModule, SpeechModule],
-  providers: [TranscriptWriter, TranscriptionStageHandler],
+  controllers: [TranscriptController],
+  providers: [TranscriptWriter, TranscriptionStageHandler, TranscriptService],
 })
 export class TranscriptionModule {}

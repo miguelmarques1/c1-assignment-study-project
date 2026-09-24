@@ -6,7 +6,7 @@ import type {
   ParticipantRecordingStatus,
   PipelineBranchStage,
   PipelineBranchStatus,
-  RecordingFailureCode,
+  BranchFailureCode,
 } from '@english-quest/shared';
 
 import { AppError } from '../common/app-error';
@@ -93,7 +93,9 @@ export class RecordingService {
           ? {
               stage: branch.stage as PipelineBranchStage,
               status: branch.status as PipelineBranchStatus,
-              failureCode: branch.failureCode as RecordingFailureCode | null,
+              // Once the branch moved past recording this is a later stage's code;
+              // `retryable` below still refers only to this feature's own retry.
+              failureCode: branch.failureCode as BranchFailureCode | null,
               failureReason: branch.failureReason,
               retryable:
                 branch.status === 'storage_unavailable' ||

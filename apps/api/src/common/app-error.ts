@@ -100,4 +100,16 @@ export class AppError extends Error {
   static recordingNotFinalized(): AppError {
     return new AppError(ERROR_CODES.RECORDING_NOT_FINALIZED);
   }
+
+  /** The caller's branch has no failed stage to re-run; the current stage and status say why. */
+  static pipelineNotRetryable(stage: string | null, status: string | null): AppError {
+    return new AppError(ERROR_CODES.PIPELINE_NOT_RETRYABLE, { stage, status });
+  }
+
+  /** The caller's branch failed at recording, which F07's lesson-wide route retries. */
+  static pipelineRetryRecording(lessonId: string): AppError {
+    return new AppError(ERROR_CODES.PIPELINE_RETRY_RECORDING, {
+      retryRoute: `/lessons/${lessonId}/recording/retry`,
+    });
+  }
 }

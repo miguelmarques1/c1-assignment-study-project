@@ -72,18 +72,29 @@
 - The stage 5 integration suites `transcription-pipeline.spec.ts`, `pipeline-drain.spec.ts` and `speech-to-text.spec.ts` (with `helpers/fake-speech.ts` and `helpers/pipeline-fixtures.ts`) were already written and are what validated this stage. They are committed with stage 5, per the plan.
 
 **Validation:** `pnpm --filter @english-quest/api typecheck` ✅ · `pnpm lint` ✅ · `vitest run test/unit` ✅ 145/145 · integration ✅ 211/211 across 18 files: the 15 existing ones plus `transcription-pipeline` (15), `pipeline-drain` (8) and `speech-to-text` (3). The route suites wait for stage 4. The live Azure check and the real-stack end-to-end and resume checks are described above.
+**Commit:** `bdaea4b` — F08 stage 3 - Azure transcription
+
+## Stage 4: Routes and document — ✅ done
+
+- [x] **15. Lesson access and pipeline routes**
+- [x] **16. Transcript route**
+- [x] **17. OpenAPI document**
+
+**Observations:**
+- `LessonAccessService` (in `pipeline/`, exported) is the shared participant check for the two new route families. It returns `CLASS004` for an unknown lesson and for a lesson the caller never joined. F07's `RecordingService` keeps its own copy; changing F07 was out of this stage's scope.
+- The retry route rejects anything that is not the caller's current stage in `failed`. That includes `blocked_missing_key`, which resumes by itself: `PIPE001` carries `details: { stage, status }`, and `{ stage: null, status: null }` when there is no branch. A branch failed or `storage_unavailable` at `recording` gets `PIPE002` with `details.retryRoute`.
+- The derived `recording` entry uses `lessons.started_at` → `recording_finalized_at` as its span and the branch's `launched_at` as its last attempt. It reads `running` while F07 is still verifying. F07's `storage_unavailable` shows as `failed` with reason code `storage_unavailable` and the sentence "Storage was unavailable when this recording was verified." That sentence is new copy, written here because F07 has only a status, not a sentence, for that state. Recorded so F19 can reword it if it wants.
+- The transcript's speaker list is every participant with a branch plus the caller. A participant without a branch counts as `pending` while F07 is still finalizing, and `unavailable` afterwards. Blocked, queued, running, retrying and `storage_unavailable` all read `pending`, and any `failed` branch reads `unavailable`. No reason, code or provider is ever included.
+- `RecordingService`'s view now types `failureCode` as the widened `BranchFailureCode`. Its `retryable` still only means F07's own retry, so a transcription failure reads `retryable: false` there, while `retryable: true` shows up on the pipeline view.
+- `docs/api/openapi.json` regenerated: 22 operations, adding `GET /lessons/{lessonId}/pipeline`, `POST /lessons/{lessonId}/pipeline/retry` and `GET /lessons/{lessonId}/transcript`, plus the `LessonPipelineView` and `LessonTranscriptView` components and the `pipeline` and `transcript` tags.
+- **Real-stack check of the three routes, on the running dev server, with bearer tokens for both seeded accounts,** against stage 3's live scratch lesson (`you` transcribed with the user's real key, `partner` blocked):
+  - `you` sees `recording` completed, `transcription` completed and `excerpt_selection` queued. Speakers read `You` available and `Partner` pending. All 4 utterances are there, `you`'s own with `confidence` and `words`. The retry returns 409 `PIPE001` with `details {stage: excerpt_selection, status: queued}`.
+  - `partner` sees their own `transcription` as `blocked_missing_key`, `credential_missing`, "Blocked — add your Azure Speech key to continue.", `blockedProvider: azure_speech`, not retryable. They get the same 4 utterances with **no** `confidence` or `words` keys (all `you`'s). The retry returns 409 `PIPE001` with `details {stage: transcription, status: blocked_missing_key}`.
+  - The dev server log shows all three routes mapped.
+- The two route suites (`pipeline-routes.spec.ts` 12, `transcript-routes.spec.ts` 8) were already written, and are what validated this stage. They're committed with stage 5.
+
+**Validation:** `pnpm --filter @english-quest/api typecheck` ✅ · `pnpm lint` ✅ · `openapi:generate` (22 operations) ✅ · `vitest run test/unit` ✅ 145/145 (includes the committed-snapshot test on the regenerated document) · `vitest run test/integration` ✅ 231/231 across 20 files · real-stack route check (see above).
 **Commit:** _(pending — recorded in the next stage)_
-
-## Stage 4: Routes and document — ⬜ pending
-
-- [ ] **15. Lesson access and pipeline routes**
-- [ ] **16. Transcript route**
-- [ ] **17. OpenAPI document**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 5: Closing the loop — ⬜ pending
 

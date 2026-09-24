@@ -6,7 +6,9 @@ import {
   classroomTokenSchema,
   currentUserSchema,
   healthReportSchema,
+  lessonPipelineViewSchema,
   lessonRecordingViewSchema,
+  lessonTranscriptViewSchema,
   loginSchema,
   maskedCredentialListSchema,
   maskedCredentialSchema,
@@ -62,6 +64,8 @@ export const OPENAPI_COMPONENTS: Record<string, SchemaObject> = {
   ClassroomEndResult: toOpenApi(classroomEndResultSchema, 'output'),
   ScenarioView: toOpenApi(scenarioViewSchema, 'output'),
   LessonRecordingView: toOpenApi(lessonRecordingViewSchema, 'output'),
+  LessonPipelineView: toOpenApi(lessonPipelineViewSchema, 'output'),
+  LessonTranscriptView: toOpenApi(lessonTranscriptViewSchema, 'output'),
 };
 
 /** Shorthand for the error responses, which every route can return. */
