@@ -63,14 +63,26 @@
   - In both directions, the other speaker's utterances carry no `excerpt`, `confidence` or `words` key. `GET …/pipeline` shows `recording`, `transcription` and `excerpt_selection` as `completed` and `pronunciation_assessment` as `queued` for each user.
 
 **Validation:** `pnpm -r typecheck` ✅ · `pnpm lint` ✅ · `pnpm --filter @english-quest/api test:unit` ✅ 177/177 (includes the extended merge test and the committed-snapshot test on the regenerated document) · `openapi:generate` ✅ (22 operations, description-only diff) · `transcript-routes.spec.ts` ✅ 11/11 · `pnpm --filter @english-quest/api test:integration` ✅ 251/251 across 22 files · real-stack route check (above).
-**Commit:** _(none)_
+**Commit:** `6a0c4e7` — F09 stage 3 - transcript exposure and document
 
-## Stage 4: Verification and hand-off — ⬜ pending
+## Stage 4: Verification and hand-off — ✅ done
 
-- [ ] **12. Live verification**
-- [ ] **13. Follow-ups for neighbouring features**
+- [ ] **12. Live verification**: everything required is done. The two optional items (the real-speech confidence distribution and the two-window lesson) were not run, see below. Left unticked on purpose.
+- [x] **13. Follow-ups for neighbouring features**
 
-**Observations:** _(none yet)_
+**Observations:**
+- **Live checklist, as run:**
+  - Branches waiting at `excerpt_selection` before F09's first boot: **none** (stage 1). So the first boot selected nothing, as the dev server's quiet drain confirmed.
+  - Scratch lesson exercising every rule edge, for both seeded users: selected by the dev server's own drain within 2 s, 33–38 ms per stage, and identical to the pure selector's prediction (stage 2).
+  - `GET …/transcript` and `GET …/pipeline` as each seeded user, with bearer tokens: own badges and summary only, and no detail on the other speaker's lines (stage 3).
+  - Scratch data deleted afterwards (`f09-live-check`): the cascade removed its selections, excerpts, transcripts, utterances and stage rows. No audio object was ever uploaded for it.
+- **Soft-fail: the real-speech confidence distribution (optional) was not run.** It transcribes a real 5–10-minute recording through F08 with the user's Azure key, about 10 minutes of their quota, and the spec requires their go-ahead. An autonomous run cannot get that. It is the evidence rule version 2 would be calibrated on, and it is listed as open below.
+- **Soft-fail: the real two-window lesson (optional) was not run.** It needs two live participants in the user's own Chrome, which this environment cannot provide (F05/F07/F08 precedent).
+- **Follow-ups written:**
+  - F09's spec was corrected in place wherever the implementation differs, each change marked as corrected or added during implementation: the `PronunciationFocusPort` class seam instead of the token, `excerpt-tokens.ts`, the fixtures (`makeTranscribedLesson`, `failedAtTranscription`, `selectionFailed`, `startSelection`), the settling reset, and F07's suite in the test tables.
+  - F07's progress got an appended, dated note: its finalization-suite fixture race is resolved (test-only).
+  - F08's progress got an appended, dated note: F09's answer to the confidence follow-up, the adapted F08 tests, the settling reset, and the missing terminal branch status for the pipeline's last stage.
+  - The spec's notes for F10 (the reader contract, file offsets, completing without an aggregate on an empty selection, the stage name fixed here), F12 (replace `PronunciationFocusPort`, version the `source`), F19 (render `excerpt.reason`, add the Dart models) and the final stage (terminal branch status) match what was built.
 
-**Validation:** _(not run)_
+**Validation:** documentation-only changes in this stage (spec, progress logs). The code was validated at stage 3's close. The full re-run is in the final verification below.
 **Commit:** _(none)_
