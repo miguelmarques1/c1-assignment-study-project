@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { EXCERPT_SELECTION_RETRY_POLICY } from '../../src/excerpts/excerpt-selection.constants';
 import { retryDelayFor, type PipelineStageHandler } from '../../src/pipeline/pipeline-stage.handler';
 import { PipelineStageRegistry } from '../../src/pipeline/pipeline-stage.registry';
 import { TRANSCRIPTION_RETRY_POLICY } from '../../src/transcription/transcription.constants';
@@ -18,6 +19,13 @@ describe('pipeline retry policy', () => {
   it('transcription_allows_three_retries', () => {
     expect(TRANSCRIPTION_RETRY_POLICY.attempts).toBe(4);
     expect(retryDelayFor(TRANSCRIPTION_RETRY_POLICY, 4)).toBeNull();
+  });
+
+  it('excerpt_selection_retries_at_5s_and_30s', () => {
+    expect(EXCERPT_SELECTION_RETRY_POLICY.attempts).toBe(3);
+    expect(retryDelayFor(EXCERPT_SELECTION_RETRY_POLICY, 1)).toBe(5_000);
+    expect(retryDelayFor(EXCERPT_SELECTION_RETRY_POLICY, 2)).toBe(30_000);
+    expect(retryDelayFor(EXCERPT_SELECTION_RETRY_POLICY, 3)).toBeNull();
   });
 
   it('the_backoff_reads_the_policy_of_the_jobs_stage', () => {

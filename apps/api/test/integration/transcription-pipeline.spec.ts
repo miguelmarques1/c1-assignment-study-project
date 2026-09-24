@@ -157,12 +157,12 @@ describe('transcription stage', () => {
     expect(done.finishedAt!.getTime()).toBeGreaterThanOrEqual(done.startedAt!.getTime());
     expect(done.attempts).toBe(1);
 
-    const next = await pipeline.ctx.prisma.lessonPipelineStage.findUniqueOrThrow({
-      where: { branchId_stage: { branchId, stage: 'excerpt_selection' } },
-    });
-    expect(next).toMatchObject({ status: 'queued', run: 1 });
+    // Completion queued excerpt selection at run 1, which F09's handler now
+    // runs straight away; the branch comes to rest at the stage after it.
+    const next = await waitForStage(pipeline.ctx, branchId, 'excerpt_selection', ['completed']);
+    expect(next.run).toBe(1);
     const branch = await pipeline.ctx.prisma.lessonPipelineBranch.findUniqueOrThrow({ where: { id: branchId } });
-    expect(branch).toMatchObject({ stage: 'excerpt_selection', status: 'queued', failureCode: null });
+    expect(branch).toMatchObject({ stage: 'pronunciation_assessment', status: 'queued', failureCode: null });
   }, 60_000);
 
   it('a_missing_key_blocks_rather_than_fails', async () => {

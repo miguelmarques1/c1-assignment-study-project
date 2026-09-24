@@ -8,6 +8,7 @@ import { SessionGuard } from './auth/session.guard';
 import { ClassroomModule } from './classroom/classroom.module';
 import { env } from './config/env';
 import { CredentialsModule } from './credentials/credentials.module';
+import { ExcerptSelectionModule } from './excerpts/excerpt-selection.module';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PromptsModule } from './prompts/prompts.module';
@@ -34,6 +35,7 @@ import { TranscriptionModule } from './transcription/transcription.module';
     ClassroomModule,
     ScenarioModule,
     TranscriptionModule,
+    ExcerptSelectionModule,
   ],
   providers: [
     // Authentication is global: a route is protected unless it opts out with

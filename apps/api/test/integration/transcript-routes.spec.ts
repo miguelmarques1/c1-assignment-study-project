@@ -114,11 +114,11 @@ describe('GET /lessons/:lessonId/transcript', () => {
     const ana = await seedSpeaker(pipeline.ctx, 'Ana');
     const lesson = await makeRecordedLesson(pipeline, [{ speaker: ana }]);
     await launchAll(pipeline, lesson);
-    await waitForStage(pipeline.ctx, lesson.branches.get(ana.id)!, 'transcription', ['completed']);
+    await waitForStage(pipeline.ctx, lesson.branches.get(ana.id)!, 'excerpt_selection', ['completed']);
     const branch = await pipeline.ctx.prisma.lessonPipelineBranch.findUniqueOrThrow({
       where: { id: lesson.branches.get(ana.id)! },
     });
-    expect(branch).toMatchObject({ stage: 'excerpt_selection', status: 'queued' });
+    expect(branch).toMatchObject({ stage: 'pronunciation_assessment', status: 'queued' });
 
     const response = await readTranscript(lesson.lessonId, ana);
 

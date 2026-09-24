@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { SchedulerRegistry } from '@nestjs/schedule';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { LiveKitService } from '../../src/classroom/livekit.service';
@@ -195,6 +196,10 @@ beforeAll(async () => {
       { token: StudyPlanFallbackPort, useValue: { requestFallbackPlan: fallbackMock } },
     ],
   });
+  // Every test drives finalization itself through runFinalizationOnce(). The
+  // job's own 5-second tick would otherwise finalize a lesson that a fixture
+  // has created `finalizing` but not yet given its participants and segments.
+  ctx.app.get(SchedulerRegistry).deleteInterval('recording-finalization-sweep');
 }, 180_000);
 
 afterAll(async () => {

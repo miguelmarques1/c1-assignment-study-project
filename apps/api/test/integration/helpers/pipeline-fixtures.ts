@@ -4,6 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 
+import { getQueueToken } from '@nestjs/bullmq';
+import type { Queue } from 'bullmq';
 import ffmpegPath from 'ffmpeg-static';
 import request from 'supertest';
 
@@ -11,6 +13,8 @@ import { PasswordService } from '../../../src/auth/password.service';
 import { resetEnvCache } from '../../../src/config/env';
 import { CredentialCryptoService } from '../../../src/credentials/credential-crypto.service';
 import { PIPELINE_RETRY_OVERRIDES } from '../../../src/pipeline/pipeline-stage.registry';
+import { PIPELINE_QUEUE } from '../../../src/pipeline/pipeline.constants';
+import { PipelineQueueService } from '../../../src/pipeline/pipeline-queue.service';
 import { PipelineService } from '../../../src/pipeline/pipeline.service';
 import { audioObjectKey } from '../../../src/recording/recording.constants';
 import { FastTranscriptionClient } from '../../../src/speech/fast-transcription.client';
@@ -26,6 +30,9 @@ const passwords = new PasswordService();
 
 /** Three short retries instead of 30 s, 2 min and 8 min; the production values are pinned by a unit test. */
 export const FAST_RETRY_POLICY = { attempts: 4, delaysMs: [40, 40, 40] };
+
+/** Excerpt selection's two retries (5 s and 30 s in production), shortened the same way. */
+export const FAST_SELECTION_RETRY_POLICY = { attempts: 3, delaysMs: [40, 40] };
 
 export interface PipelineTestContext {
   ctx: TestContext;
@@ -81,7 +88,10 @@ export async function createPipelineTestContext(
     overrides: [
       { token: StorageService, useValue: storage },
       { token: FastTranscriptionClient, useValue: speech },
-      { token: PIPELINE_RETRY_OVERRIDES, useValue: { transcription: FAST_RETRY_POLICY } },
+      {
+        token: PIPELINE_RETRY_OVERRIDES,
+        useValue: { transcription: FAST_RETRY_POLICY, excerpt_selection: FAST_SELECTION_RETRY_POLICY },
+      },
       ...(typeof extra.overrides === 'function' ? extra.overrides() : (extra.overrides ?? [])),
     ],
   });
@@ -255,6 +265,168 @@ export async function launchAll(pipeline: PipelineTestContext, lesson: RecordedL
   }
 }
 
+export interface SeedUtterance {
+  /** Offsets in the participant's `audio.ogg`, as F08 stores them. */
+  startMs: number;
+  endMs: number;
+  text: string;
+  confidence: number | null;
+}
+
+export interface TranscribedParticipant {
+  speaker: Speaker;
+  /** What F08 stored for this participant; absent or null for a branch waiting without a transcript. */
+  utterances?: SeedUtterance[] | null;
+  /** A branch that never got past transcription, so it never reaches selection. */
+  failedAtTranscription?: boolean;
+}
+
+/**
+ * What F08's completing transaction leaves behind: a stored transcript and
+ * a branch waiting at `excerpt_selection` / `queued` (transcription row
+ * completed, selection row queued at run 1), with no job yet. Words carry
+ * the utterance's text spread over its span with no confidence, which is
+ * fast transcription's shape. No audio is uploaded: selection never reads it.
+ */
+export async function makeTranscribedLesson(
+  pipeline: PipelineTestContext,
+  participants: TranscribedParticipant[],
+): Promise<RecordedLesson> {
+  const { ctx } = pipeline;
+  const durationSeconds = 1_800;
+  const startedAt = new Date(Date.now() - durationSeconds * 1000);
+  const lesson = await ctx.prisma.lesson.create({
+    data: {
+      room: 'classroom-main',
+      openedBy: participants[0]!.speaker.id,
+      maxParticipants: 4,
+      status: 'ended',
+      startedAt,
+      endedAt: new Date(),
+      endReason: 'ended_by_participant',
+      durationSeconds,
+      recordingStatus: 'recorded',
+      recordingFinalizedAt: new Date(),
+    },
+  });
+
+  const branches = new Map<string, string>();
+  for (const participant of participants) {
+    const userId = participant.speaker.id;
+    await ctx.prisma.lessonParticipant.create({
+      data: {
+        lessonId: lesson.id,
+        userId,
+        identity: userId,
+        joinedAt: startedAt,
+        connected: false,
+        recordingStatus: 'complete',
+        audioObjectKey: audioObjectKey(lesson.id, userId),
+        audioBytes: BigInt(200_000),
+        recordingStartedAt: startedAt,
+        audioDurationMs: durationSeconds * 1000,
+        capturedMs: durationSeconds * 1000,
+      },
+    });
+
+    const now = new Date();
+    if (participant.failedAtTranscription) {
+      const branch = await ctx.prisma.lessonPipelineBranch.create({
+        data: {
+          lessonId: lesson.id,
+          userId,
+          stage: 'transcription',
+          status: 'failed',
+          failureCode: 'transcription_service_error',
+          failureReason: 'Azure Speech could not transcribe this recording.',
+          launchedAt: now,
+        },
+      });
+      await ctx.prisma.lessonPipelineStage.create({
+        data: {
+          branchId: branch.id,
+          stage: 'transcription',
+          status: 'failed',
+          attempts: 4,
+          startedAt: now,
+          lastAttemptAt: now,
+          finishedAt: now,
+          reasonCode: 'transcription_service_error',
+          reason: 'Azure Speech could not transcribe this recording.',
+        },
+      });
+      branches.set(userId, branch.id);
+      continue;
+    }
+
+    if (participant.utterances) {
+      await seedTranscript(ctx, lesson.id, userId, participant.utterances);
+    }
+    const branch = await ctx.prisma.lessonPipelineBranch.create({
+      data: { lessonId: lesson.id, userId, stage: 'excerpt_selection', status: 'queued', launchedAt: now },
+    });
+    await ctx.prisma.lessonPipelineStage.createMany({
+      data: [
+        { branchId: branch.id, stage: 'transcription', status: 'completed', attempts: 1, startedAt: now, lastAttemptAt: now, finishedAt: now },
+        { branchId: branch.id, stage: 'excerpt_selection', status: 'queued', queuedAt: now },
+      ],
+    });
+    branches.set(userId, branch.id);
+  }
+
+  return { lessonId: lesson.id, startedAt, branches, audioBytes: new Map() };
+}
+
+/** A transcript and its utterances exactly as F08's writer stores them, `idx` in offset order. */
+export async function seedTranscript(
+  ctx: TestContext,
+  lessonId: string,
+  userId: string,
+  utterances: SeedUtterance[],
+): Promise<string> {
+  const ordered = [...utterances].sort((a, b) => a.startMs - b.startMs);
+  const withWords = ordered.map((utterance) => {
+    const texts = utterance.text.split(/\s+/).filter((text) => text.length > 0);
+    const step = Math.floor((utterance.endMs - utterance.startMs) / Math.max(texts.length, 1));
+    return {
+      ...utterance,
+      words: texts.map((text, i) => ({ text, startMs: utterance.startMs + i * step, durationMs: step, confidence: null })),
+    };
+  });
+  const transcript = await ctx.prisma.lessonTranscript.create({
+    data: {
+      lessonId,
+      userId,
+      provider: 'azure_fast_transcription',
+      apiVersion: '2025-10-15',
+      locale: 'en-US',
+      audioDurationMs: null,
+      latencyMs: 1,
+      utteranceCount: Math.max(withWords.length, 1),
+      wordCount: withWords.reduce((sum, utterance) => sum + utterance.words.length, 0),
+    },
+  });
+  await ctx.prisma.lessonUtterance.createMany({
+    data: withWords.map((utterance, idx) => ({
+      transcriptId: transcript.id,
+      lessonId,
+      userId,
+      idx,
+      startMs: utterance.startMs,
+      endMs: utterance.endMs,
+      text: utterance.text,
+      confidence: utterance.confidence,
+      words: utterance.words,
+    })),
+  });
+  return transcript.id;
+}
+
+/** Adds the selection job for a branch waiting at `excerpt_selection`, as the transcription stage's completion does. */
+export async function startSelection(pipeline: PipelineTestContext, branchId: string, run = 1): Promise<void> {
+  await pipeline.ctx.app.get(PipelineQueueService).enqueue(branchId, 'excerpt_selection', run);
+}
+
 /** Polls a branch's stage row until it reaches one of `statuses`. The worker is asynchronous; tests wait on its end state. */
 export async function waitForStage(
   ctx: TestContext,
@@ -278,8 +450,27 @@ export async function waitForStage(
   }
 }
 
+/**
+ * Waits until no pipeline job is running or about to run. A test that
+ * stops watching once its own stage completes still leaves the stages after
+ * it running on the worker (excerpt selection follows every transcription),
+ * and deleting their lesson under a completing transaction deadlocks.
+ */
+async function settlePipeline(ctx: TestContext, timeoutMs = 10_000): Promise<void> {
+  const queue = ctx.app.get<Queue>(getQueueToken(PIPELINE_QUEUE), { strict: false });
+  const started = Date.now();
+  while (Date.now() - started < timeoutMs) {
+    const counts = await queue.getJobCounts('active', 'waiting', 'prioritized', 'delayed');
+    if (Object.values(counts).every((count) => count === 0)) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
 /** Removes every lesson, pipeline and user row between tests; the cascade takes stages, transcripts and utterances. */
 export async function resetPipelineTables(ctx: TestContext): Promise<void> {
+  await settlePipeline(ctx);
   await ctx.prisma.lesson.deleteMany();
   await ctx.prisma.credentialUsage.deleteMany();
   await ctx.prisma.userCredential.deleteMany();

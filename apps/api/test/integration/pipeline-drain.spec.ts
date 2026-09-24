@@ -140,15 +140,17 @@ describe('pipeline drain', () => {
     const lesson = await makeRecordedLesson(pipeline, [{ speaker: ana }]);
     const branchId = lesson.branches.get(ana.id)!;
     await launchAll(pipeline, lesson);
-    await waitForStage(pipeline.ctx, branchId, 'transcription', ['completed']);
+    // Transcription and excerpt selection both have handlers; the branch
+    // comes to rest at pronunciation assessment, which has none yet.
+    await waitForStage(pipeline.ctx, branchId, 'excerpt_selection', ['completed']);
 
     await drain().run();
 
     const waiting = await pipeline.ctx.prisma.lessonPipelineStage.findUniqueOrThrow({
-      where: { branchId_stage: { branchId, stage: 'excerpt_selection' } },
+      where: { branchId_stage: { branchId, stage: 'pronunciation_assessment' } },
     });
     expect(waiting.status).toBe('queued');
-    expect(await queue().getJob(pipelineJobId('excerpt_selection', branchId, 1))).toBeUndefined();
+    expect(await queue().getJob(pipelineJobId('pronunciation_assessment', branchId, 1))).toBeUndefined();
   }, 60_000);
 
   it('a_stage_whose_job_died_mid_run_is_failed_not_rerun', async () => {

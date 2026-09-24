@@ -51,7 +51,7 @@ describe('GET /lessons/:lessonId/pipeline', () => {
     const ana = await seedSpeaker(pipeline.ctx, 'Ana');
     const lesson = await makeRecordedLesson(pipeline, [{ speaker: ana }]);
     await launchAll(pipeline, lesson);
-    await waitForStage(pipeline.ctx, lesson.branches.get(ana.id)!, 'transcription', ['completed']);
+    await waitForStage(pipeline.ctx, lesson.branches.get(ana.id)!, 'excerpt_selection', ['completed']);
 
     const response = await readPipeline(lesson.lessonId, ana);
 
@@ -59,11 +59,12 @@ describe('GET /lessons/:lessonId/pipeline', () => {
     const view = response.body.data;
     expect(view.lessonId).toBe(lesson.lessonId);
     expect(Date.parse(view.serverTime)).not.toBeNaN();
-    expect(view.branch).toMatchObject({ stage: 'excerpt_selection', status: 'queued' });
+    expect(view.branch).toMatchObject({ stage: 'pronunciation_assessment', status: 'queued' });
     expect(view.branch.stages.map((stage: { stage: string; status: string }) => [stage.stage, stage.status])).toEqual([
       ['recording', 'completed'],
       ['transcription', 'completed'],
-      ['excerpt_selection', 'queued'],
+      ['excerpt_selection', 'completed'],
+      ['pronunciation_assessment', 'queued'],
     ]);
     const transcription = view.branch.stages[1];
     expect(transcription.startedAt).not.toBeNull();
@@ -163,7 +164,8 @@ describe('POST /lessons/:lessonId/pipeline/retry', () => {
     const lesson = await makeRecordedLesson(pipeline, [{ speaker: ana }]);
     const branchId = lesson.branches.get(ana.id)!;
     await launchAll(pipeline, lesson);
-    await waitForStage(pipeline.ctx, branchId, 'transcription', ['completed']);
+    // Let selection's first run settle, so it cannot move the pointer after the hand-made failure below.
+    await waitForStage(pipeline.ctx, branchId, 'excerpt_selection', ['completed']);
     // A later stage that had already been reached once, and a transcription failed by hand after it.
     await pipeline.ctx.prisma.lessonPipelineStage.update({
       where: { branchId_stage: { branchId, stage: 'transcription' } },
@@ -186,10 +188,9 @@ describe('POST /lessons/:lessonId/pipeline/retry', () => {
     expect((await retry(lesson.lessonId, ana)).status).toBe(202);
     await waitForStage(pipeline.ctx, branchId, 'transcription', ['completed']);
 
-    const next = await pipeline.ctx.prisma.lessonPipelineStage.findUniqueOrThrow({
-      where: { branchId_stage: { branchId, stage: 'excerpt_selection' } },
-    });
-    expect(next).toMatchObject({ status: 'queued', run: 2 });
+    // The retried transcription re-queued selection at run 2, and F09's handler ran it again.
+    const next = await waitForStage(pipeline.ctx, branchId, 'excerpt_selection', ['completed']);
+    expect(next.run).toBe(2);
   }, 60_000);
 
   it('retry_is_rejected_when_nothing_failed', async () => {
@@ -197,13 +198,13 @@ describe('POST /lessons/:lessonId/pipeline/retry', () => {
     const bruno = await seedSpeaker(pipeline.ctx, 'Bruno', { withKey: false });
     const lesson = await makeRecordedLesson(pipeline, [{ speaker: ana }, { speaker: bruno }]);
     await launchAll(pipeline, lesson);
-    await waitForStage(pipeline.ctx, lesson.branches.get(ana.id)!, 'transcription', ['completed']);
+    await waitForStage(pipeline.ctx, lesson.branches.get(ana.id)!, 'excerpt_selection', ['completed']);
     await waitForStage(pipeline.ctx, lesson.branches.get(bruno.id)!, 'transcription', ['blocked_missing_key']);
 
     const completed = await retry(lesson.lessonId, ana);
     expect(completed.status).toBe(409);
     expect(completed.body.error.code).toBe('PIPE001');
-    expect(completed.body.error.details).toEqual({ stage: 'excerpt_selection', status: 'queued' });
+    expect(completed.body.error.details).toEqual({ stage: 'pronunciation_assessment', status: 'queued' });
 
     const blocked = await retry(lesson.lessonId, bruno);
     expect(blocked.status).toBe(409);
