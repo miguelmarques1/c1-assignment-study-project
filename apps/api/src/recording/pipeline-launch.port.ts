@@ -1,4 +1,6 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
+
+import { PipelineService } from '../pipeline/pipeline.service';
 
 export interface PipelineLaunchPayload {
   lessonId: string;
@@ -10,20 +12,17 @@ export interface PipelineLaunchPayload {
 }
 
 /**
- * F08's seam. Called exactly once per branch, when a participant's recording
- * is verified and ready for transcription. F07 introduces no job queue of
- * its own — `.env.example` already assigns the job queues to F08 onward —
- * so this default implementation only logs, and the `queued` branch row is
- * what F08 drains at boot for lessons recorded before it ships.
+ * The seam between recording and the rest of the pipeline. Called exactly
+ * once per branch, when a participant's recording is verified. Since F08 it
+ * hands the branch to the pipeline runner, which writes the `transcription`
+ * stage row and queues its job; the finalizer awaits it, so a branch is
+ * only marked launched once its stage row exists.
  */
 @Injectable()
 export class PipelineLaunchPort {
-  private readonly logger = new Logger(PipelineLaunchPort.name);
+  constructor(private readonly pipeline: PipelineService) {}
 
-  launch(payload: PipelineLaunchPayload): void {
-    this.logger.log(
-      `Pipeline launch requested for lesson ${payload.lessonId}, user ${payload.userId} ` +
-        `(${payload.audioDurationMs}ms assembled, ${payload.capturedMs}ms captured) — no consumer yet (F08).`,
-    );
+  async launch(payload: PipelineLaunchPayload): Promise<void> {
+    await this.pipeline.launch({ lessonId: payload.lessonId, userId: payload.userId });
   }
 }

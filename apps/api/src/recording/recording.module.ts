@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { LiveKitService } from '../classroom/livekit.service';
+import { PipelineModule } from '../pipeline/pipeline.module';
 import { AudioAssembler } from './audio-assembler.service';
 import { EgressService } from './egress.service';
 import { PipelineLaunchPort } from './pipeline-launch.port';
@@ -13,6 +14,7 @@ import { RecordingStateService } from './recording-state.service';
 import { StudyPlanFallbackPort } from './study-plan-fallback.port';
 
 @Module({
+  imports: [PipelineModule],
   controllers: [RecordingController],
   providers: [
     // `LiveKitService` is also a provider of `ClassroomModule`. It is a

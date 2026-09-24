@@ -307,7 +307,7 @@ export class RecordingFinalizerService {
       const branch = await this.state.upsertBranch(lesson.id, item.userId, item.classification);
 
       if (item.classification.launches && !branch.launchedAt) {
-        this.launchPort.launch({
+        await this.launchPort.launch({
           lessonId: lesson.id,
           userId: item.userId,
           audioObjectKey: audioObjectKey(lesson.id, item.userId),
