@@ -5,10 +5,13 @@ import {
   createPipelineTestContext,
   launchAll,
   makeRecordedLesson,
+  makeTranscribedLesson,
   resetPipelineTables,
   seedSpeaker,
+  startSelection,
   waitForStage,
   type PipelineTestContext,
+  type SeedUtterance,
   type Speaker,
 } from './helpers/pipeline-fixtures';
 
@@ -22,6 +25,37 @@ interface Utterance {
   text: string;
   confidence?: number | null;
   words?: Array<{ text: string; startMs: number; durationMs: number; confidence: number | null }>;
+  excerpt?: Record<string, unknown>;
+}
+
+const MINUTE = 60_000;
+
+/** An utterance every version-1 rule accepts, at `minute` of its speaker's file. */
+function said(minute: number, confidence: number): SeedUtterance {
+  const text = `By minute ${minute} we should have moved the whole meeting`;
+  return { startMs: minute * MINUTE, endMs: minute * MINUTE + 5_000, text, confidence };
+}
+
+/** Ana and Bruno each transcribed and selected; Ana also said one turn too short to select. */
+async function selectedLesson() {
+  const ana = await seedSpeaker(pipeline.ctx, 'Ana');
+  const bruno = await seedSpeaker(pipeline.ctx, 'Bruno');
+  const lesson = await makeTranscribedLesson(pipeline, [
+    {
+      speaker: ana,
+      utterances: [
+        said(1, 0.83),
+        said(8, 0.62),
+        { startMs: 9 * MINUTE, endMs: 9 * MINUTE + 1_000, text: 'Yeah, right.', confidence: 0.9 },
+      ],
+    },
+    { speaker: bruno, utterances: [said(2, 0.7), said(9, 0.5), said(16, 0.8), said(23, 0.6)] },
+  ]);
+  for (const speaker of [ana, bruno]) {
+    await startSelection(pipeline, lesson.branches.get(speaker.id)!);
+    await waitForStage(pipeline.ctx, lesson.branches.get(speaker.id)!, 'excerpt_selection', ['completed']);
+  }
+  return { ana, bruno, lesson };
 }
 
 function readTranscript(lessonId: string, speaker: Speaker) {
@@ -124,6 +158,87 @@ describe('GET /lessons/:lessonId/transcript', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.data.utterances).toHaveLength(2);
+  }, 60_000);
+
+  it('marks_the_callers_selected_utterances_with_their_excerpt', async () => {
+    const { ana, lesson } = await selectedLesson();
+
+    const view = (await readTranscript(lesson.lessonId, ana)).body.data;
+    const own = (view.utterances as Utterance[]).filter((entry) => entry.userId === ana.id);
+    const byText = new Map(own.map((entry) => [entry.text, entry]));
+
+    expect(byText.get(said(8, 0.62).text)!.excerpt).toEqual({
+      rank: 1,
+      reason: 'Selected: recognition confidence 0.62, 10 words',
+      confidence: expect.closeTo(0.62, 5),
+      wordCount: 10,
+      durationMs: 5_000,
+      focusWordCount: 0,
+      ruleVersion: '1',
+    });
+    expect(byText.get(said(1, 0.83).text)!.excerpt).toMatchObject({ rank: 2 });
+    expect(byText.get('Yeah, right.')).not.toHaveProperty('excerpt');
+    expect(view.myExcerptSelection).toEqual({
+      ruleVersion: '1',
+      utteranceCount: 3,
+      eligibleCount: 2,
+      selectedCount: 2,
+      selectedAudioMs: 10_000,
+      sparsePronunciationSample: true,
+    });
+  }, 60_000);
+
+  it('never_exposes_another_participants_excerpts_or_selection', async () => {
+    const { ana, bruno, lesson } = await selectedLesson();
+    const cases: Array<[Speaker, Speaker, number]> = [
+      [ana, bruno, 2],
+      [bruno, ana, 4],
+    ];
+
+    for (const [reader, other, ownCount] of cases) {
+      const response = await readTranscript(lesson.lessonId, reader);
+      const view = response.body.data;
+      const utterances = view.utterances as Utterance[];
+      const theirs = utterances.filter((entry) => entry.userId === other.id);
+      const mine = utterances.filter((entry) => entry.userId === reader.id);
+
+      expect(theirs.length).toBeGreaterThan(0);
+      for (const entry of theirs) {
+        expect(entry).not.toHaveProperty('excerpt');
+      }
+      expect(mine.filter((entry) => entry.excerpt)).toHaveLength(ownCount);
+      expect(view.myExcerptSelection.selectedCount).toBe(ownCount);
+
+      // Nothing of the other participant's selection anywhere in the body.
+      const otherSelection = await pipeline.ctx.prisma.lessonExcerptSelection.findFirstOrThrow({
+        where: { userId: other.id },
+        include: { excerpts: true },
+      });
+      const body = JSON.stringify(response.body);
+      expect(body).not.toContain(otherSelection.id);
+      for (const excerpt of otherSelection.excerpts) {
+        expect(body).not.toContain(excerpt.id);
+      }
+      expect(view.myExcerptSelection.utteranceCount).not.toBe(otherSelection.utteranceCount);
+    }
+  }, 60_000);
+
+  it('my_excerpt_selection_is_null_until_selection_runs', async () => {
+    const ana = await seedSpeaker(pipeline.ctx, 'Ana');
+    const lesson = await makeTranscribedLesson(pipeline, [
+      { speaker: ana, utterances: [said(1, 0.8), said(8, 0.7)], selectionFailed: true },
+    ]);
+
+    const view = (await readTranscript(lesson.lessonId, ana)).body.data;
+
+    expect(view.myExcerptSelection).toBeNull();
+    const own = view.utterances as Utterance[];
+    expect(own).toHaveLength(2);
+    for (const entry of own) {
+      expect(entry).not.toHaveProperty('excerpt');
+      expect(entry).toHaveProperty('confidence');
+      expect(entry).toHaveProperty('words');
+    }
   }, 60_000);
 
   it('reports_each_speakers_coarse_status', async () => {

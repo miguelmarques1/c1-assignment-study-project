@@ -279,6 +279,8 @@ export interface TranscribedParticipant {
   utterances?: SeedUtterance[] | null;
   /** A branch that never got past transcription, so it never reaches selection. */
   failedAtTranscription?: boolean;
+  /** Transcribed, but selection itself failed, so there is no selection row — and no job the drain would add. */
+  selectionFailed?: boolean;
 }
 
 /**
@@ -362,13 +364,26 @@ export async function makeTranscribedLesson(
     if (participant.utterances) {
       await seedTranscript(ctx, lesson.id, userId, participant.utterances);
     }
+    const failure = { reasonCode: 'internal_error', reason: 'Something went wrong while processing this stage.' };
     const branch = await ctx.prisma.lessonPipelineBranch.create({
-      data: { lessonId: lesson.id, userId, stage: 'excerpt_selection', status: 'queued', launchedAt: now },
+      data: participant.selectionFailed
+        ? {
+            lessonId: lesson.id,
+            userId,
+            stage: 'excerpt_selection',
+            status: 'failed',
+            launchedAt: now,
+            failureCode: failure.reasonCode,
+            failureReason: failure.reason,
+          }
+        : { lessonId: lesson.id, userId, stage: 'excerpt_selection', status: 'queued', launchedAt: now },
     });
     await ctx.prisma.lessonPipelineStage.createMany({
       data: [
         { branchId: branch.id, stage: 'transcription', status: 'completed', attempts: 1, startedAt: now, lastAttemptAt: now, finishedAt: now },
-        { branchId: branch.id, stage: 'excerpt_selection', status: 'queued', queuedAt: now },
+        participant.selectionFailed
+          ? { branchId: branch.id, stage: 'excerpt_selection', status: 'failed', attempts: 3, startedAt: now, lastAttemptAt: now, finishedAt: now, ...failure }
+          : { branchId: branch.id, stage: 'excerpt_selection', status: 'queued', queuedAt: now },
       ],
     });
     branches.set(userId, branch.id);

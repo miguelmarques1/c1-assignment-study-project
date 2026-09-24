@@ -1,4 +1,4 @@
-import type { TranscriptUtterance, TranscriptWord } from '@english-quest/shared';
+import type { TranscriptExcerpt, TranscriptUtterance, TranscriptWord } from '@english-quest/shared';
 
 export interface StoredUtterance {
   id: string;
@@ -24,12 +24,15 @@ export interface TranscriptTrack {
  * comparable once shifted by the gap between that start and the lesson's.
  *
  * `confidence` and `words` are projected only onto the caller's own
- * utterances: the text is shared, the recognition signal is not.
+ * utterances: the text is shared, the recognition signal is not. The same
+ * goes for `excerpt` (F09): `callerExcerpts` is keyed by utterance id, and
+ * only the caller's own utterances ever look it up.
  */
 export function mergeTranscript(
   lessonStartedAt: Date | null,
   callerId: string,
   tracks: TranscriptTrack[],
+  callerExcerpts: ReadonlyMap<string, TranscriptExcerpt> = new Map(),
 ): TranscriptUtterance[] {
   const merged = tracks.flatMap((track) => {
     const shiftMs =
@@ -46,11 +49,13 @@ export function mergeTranscript(
         endMs: utterance.endMs + shiftMs,
         text: utterance.text,
       };
+      const excerpt = isMine ? callerExcerpts.get(utterance.id) : undefined;
       const entry: TranscriptUtterance = isMine
         ? {
             ...base,
             confidence: utterance.confidence,
             words: utterance.words.map((word) => ({ ...word, startMs: word.startMs + shiftMs })),
+            ...(excerpt ? { excerpt } : {}),
           }
         : base;
       return { entry, idx: utterance.idx };

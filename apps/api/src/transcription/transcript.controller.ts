@@ -31,7 +31,9 @@ export class TranscriptController {
     description:
       "Every participant's utterances in one conversation, in milliseconds from the lesson's start. " +
       "Recognition confidence and word timings appear only on the caller's own utterances, and another " +
-      "participant's status is only `available`, `pending` or `unavailable`, never the reason.",
+      "participant's status is only `available`, `pending` or `unavailable`, never the reason. " +
+      "The caller's own utterances chosen for pronunciation assessment carry `excerpt`, with why they were " +
+      'chosen, and `myExcerptSelection` summarizes the caller\'s selection (null until it has run).',
   })
   @ApiParam({ name: 'lessonId', type: 'string', format: 'uuid' })
   @ApiResponse({ status: 200, description: 'The merged transcript.', schema: dataEnvelope('LessonTranscriptView') })

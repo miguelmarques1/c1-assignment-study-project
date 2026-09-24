@@ -45,16 +45,24 @@
 - The stage 3 merge-test extension had been drafted early and fails typecheck until stage 3 changes `mergeTranscript`. It was set aside as a patch in the scratchpad so stage 2 validates, and committed, on its own.
 
 **Validation:** `pnpm -r typecheck` ✅ · `pnpm lint` ✅ · `vitest run test/unit` ✅ 176/176 (adds `excerpt-selector.spec.ts` 23 and `excerpt_selection_retries_at_5s_and_30s`) · `excerpt-selection-pipeline.spec.ts` ✅ 14/14 on its first run · `pnpm --filter @english-quest/api test:integration` ✅ 248/248 across 22 files on the third full run. The first full run found the reset deadlock (247/248); the second found F07's fixture race (247/248). Both are fixed and recorded above. `recording-finalization.spec.ts` passed 3× standalone after its fix · real-stack runtime check (above).
-**Commit:** _(none)_
+**Commit:** `b82e71e` — F09 stage 2 - selection stage
 
-## Stage 3: Transcript exposure and document — ⬜ pending
+## Stage 3: Transcript exposure and document — ✅ done
 
-- [ ] **10. Transcript route extension**
-- [ ] **11. OpenAPI document**
+- [x] **10. Transcript route extension**
+- [x] **11. OpenAPI document**
 
-**Observations:** _(none yet)_
+**Observations:**
+- `TranscriptService` reads the caller's selection through `ExcerptSelectionReader.forParticipant(lessonId, callerId)`, and only the caller's: another participant's selection is never read on this path. `mergeTranscript` takes the caller's badges as a `utteranceId → excerpt` map, and only the caller's own track ever looks it up. `projects_the_excerpt_only_onto_the_callers_utterances` passes it a map that also names the other speaker's utterance, and nothing leaks. `durationMs` in the badge is derived from the stored range (`end_ms − start_ms`), not stored twice.
+- `TranscriptionModule` imports `ExcerptSelectionModule` for the reader. There is no cycle: excerpts imports only the pipeline module.
+- The transcript route's `@ApiOperation` description now names `excerpt` and `myExcerptSelection`. That one-line description change is this stage's whole `docs/api/openapi.json` diff: the schemas themselves changed in stage 1.
+- The new route tests use a `selectionFailed` option on `makeTranscribedLesson` for the "null until selection runs" case. A failed selection stage has no job, so the app's own 15 s drain cannot race the assertion. A merely queued stage could be picked up mid-test.
+- **Real-stack check of both routes on the running dev server, with bearer tokens for both seeded accounts,** against stage 2's scratch lesson. The server restarted on its own after the last edit (`Found 0 errors`, then `Nest application successfully started`, before the reads).
+  - `you` sees `myExcerptSelection` = v1, 18 considered, 13 eligible, 9 selected, 77 000 ms, not sparse. `excerpt` appears on exactly 9 of their 18 utterances, ranks 1–9, and rank 1 reads `Selected: recognition confidence 0.40, 10 words`.
+  - `partner` sees their own summary: 5 considered, 0 eligible, 0 selected, sparse, and no `excerpt` anywhere.
+  - In both directions, the other speaker's utterances carry no `excerpt`, `confidence` or `words` key. `GET …/pipeline` shows `recording`, `transcription` and `excerpt_selection` as `completed` and `pronunciation_assessment` as `queued` for each user.
 
-**Validation:** _(not run)_
+**Validation:** `pnpm -r typecheck` ✅ · `pnpm lint` ✅ · `pnpm --filter @english-quest/api test:unit` ✅ 177/177 (includes the extended merge test and the committed-snapshot test on the regenerated document) · `openapi:generate` ✅ (22 operations, description-only diff) · `transcript-routes.spec.ts` ✅ 11/11 · `pnpm --filter @english-quest/api test:integration` ✅ 251/251 across 22 files · real-stack route check (above).
 **Commit:** _(none)_
 
 ## Stage 4: Verification and hand-off — ⬜ pending

@@ -79,6 +79,40 @@ describe('mergeTranscript', () => {
     expect(asBruno.words![0]!.startMs).toBe(6_000);
   });
 
+  it('projects_the_excerpt_only_onto_the_callers_utterances', () => {
+    const mineSelected = utterance(0, 1_000, 6_000, 'Mine and selected');
+    const mineNot = utterance(1, 7_000, 8_000, 'Mine only');
+    const theirs = utterance(0, 1_000, 6_000, 'Theirs');
+    const badge = {
+      rank: 1,
+      reason: 'Selected: recognition confidence 0.80, 3 words',
+      confidence: 0.8,
+      wordCount: 3,
+      durationMs: 5_000,
+      focusWordCount: 0,
+      ruleVersion: '1',
+    };
+    // Even a map that (wrongly) names another speaker's utterance never leaks onto it.
+    const excerpts = new Map([
+      [mineSelected.id, badge],
+      [theirs.id, { ...badge, rank: 2 }],
+    ]);
+
+    const merged = mergeTranscript(
+      LESSON_START,
+      ALICE,
+      [
+        { userId: ALICE, recordingStartedAt: LESSON_START, utterances: [mineSelected, mineNot] },
+        { userId: BRUNO, recordingStartedAt: new Date(LESSON_START.getTime() + 60_000), utterances: [theirs] },
+      ],
+      excerpts,
+    );
+
+    expect(merged.find((entry) => entry.text === 'Mine and selected')!.excerpt).toEqual(badge);
+    expect(merged.find((entry) => entry.text === 'Mine only')).not.toHaveProperty('excerpt');
+    expect(merged.find((entry) => entry.text === 'Theirs')).not.toHaveProperty('excerpt');
+  });
+
   it('leaves_offsets_unshifted_before_the_lesson_has_a_start', () => {
     const merged = mergeTranscript(null, ALICE, [
       { userId: ALICE, recordingStartedAt: LESSON_START, utterances: [utterance(0, 1_000, 2_000, 'Early')] },

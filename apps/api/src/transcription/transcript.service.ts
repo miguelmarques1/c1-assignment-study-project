@@ -1,12 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import {
   transcriptWordSchema,
+  type ExcerptSelectionSummary,
   type LessonTranscriptView,
+  type TranscriptExcerpt,
   type TranscriptSpeakerStatus,
 } from '@english-quest/shared';
 import type { LessonPipelineBranch } from '@prisma/client';
 import { z } from 'zod';
 
+import { ExcerptSelectionReader, type StoredExcerptSelection } from '../excerpts/excerpt-selection.reader';
 import { LessonAccessService } from '../pipeline/lesson-access.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { mergeTranscript, type TranscriptTrack } from './transcript-merge';
@@ -22,12 +25,13 @@ export class TranscriptService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly access: LessonAccessService,
+    private readonly excerpts: ExcerptSelectionReader,
   ) {}
 
   async getView(lessonId: string, callerId: string): Promise<LessonTranscriptView> {
     const lesson = await this.access.requireParticipant(lessonId, callerId);
 
-    const [participants, branches, transcripts, utterances] = await Promise.all([
+    const [participants, branches, transcripts, utterances, mySelection] = await Promise.all([
       this.prisma.lessonParticipant.findMany({
         where: { lessonId },
         include: { user: { select: { displayName: true } } },
@@ -35,6 +39,8 @@ export class TranscriptService {
       this.prisma.lessonPipelineBranch.findMany({ where: { lessonId } }),
       this.prisma.lessonTranscript.findMany({ where: { lessonId }, select: { userId: true } }),
       this.prisma.lessonUtterance.findMany({ where: { lessonId }, orderBy: [{ userId: 'asc' }, { idx: 'asc' }] }),
+      // Only ever the caller's: another participant's selection is never read here.
+      this.excerpts.forParticipant(lessonId, callerId),
     ]);
 
     const transcribed = new Set(transcripts.map((transcript) => transcript.userId));
@@ -76,10 +82,38 @@ export class TranscriptService {
       lessonId: lesson.id,
       lessonStartedAt: lesson.startedAt?.toISOString() ?? null,
       speakers,
-      // Filled from F09's reader once the selection stage exists (F09 stage 3).
-      myExcerptSelection: null,
-      utterances: mergeTranscript(lesson.startedAt, callerId, tracks),
+      myExcerptSelection: mySelection ? this.summary(mySelection) : null,
+      utterances: mergeTranscript(lesson.startedAt, callerId, tracks, this.badges(mySelection)),
     };
+  }
+
+  private summary({ selection }: StoredExcerptSelection): ExcerptSelectionSummary {
+    return {
+      ruleVersion: selection.ruleVersion,
+      utteranceCount: selection.utteranceCount,
+      eligibleCount: selection.eligibleCount,
+      selectedCount: selection.selectedCount,
+      selectedAudioMs: selection.selectedAudioMs,
+      sparsePronunciationSample: selection.sparsePronunciationSample,
+    };
+  }
+
+  /** The caller's badges, by utterance id. */
+  private badges(mine: StoredExcerptSelection | null): Map<string, TranscriptExcerpt> {
+    return new Map(
+      (mine?.excerpts ?? []).map((excerpt) => [
+        excerpt.utteranceId,
+        {
+          rank: excerpt.rank,
+          reason: excerpt.reason,
+          confidence: excerpt.confidence,
+          wordCount: excerpt.wordCount,
+          durationMs: excerpt.endMs - excerpt.startMs,
+          focusWordCount: excerpt.focusWordCount,
+          ruleVersion: excerpt.selectionRuleVersion,
+        },
+      ]),
+    );
   }
 
   /**
