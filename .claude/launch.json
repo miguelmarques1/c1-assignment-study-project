@@ -2,16 +2,14 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "next-dev",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--", "-p", "3001"],
-      "port": 3001
+      "name": "web",
+      "url": "http://localhost:3000",
+      "port": 3000
     },
     {
-      "name": "prisma-studio",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "db:studio"],
-      "port": 5555
+      "name": "api",
+      "url": "http://localhost:3001",
+      "port": 3001
     }
   ]
 }
