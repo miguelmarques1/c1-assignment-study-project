@@ -66,17 +66,22 @@
 - `PIPELINE_STAGE_ORDER` now ends `…, lesson_analysis, profile_update`, one feature early per the established pattern — no handler is registered for `profile_update` yet, so a branch reaching it just waits, like `lesson_analysis` did before this stage.
 
 **Validation:** typecheck (api, web) ✅ · lint ✅ · unit 256/256 (36 new: 8 analysis-transcript, 19 analysis-output, 9 analysis-outcome) ✅ · integration, fresh full runs: `excerpt-selection-pipeline` 14/14 ✅, `pipeline-drain` 8/8 ✅ (renamed 1 test), `pipeline-routes` 12/12 ✅, `transcript-routes` 11/11 ✅, `transcription-pipeline` 15/15 ✅, `pronunciation-pipeline` 22/22 ✅ (1 flaky test fixed), `analysis-pipeline` (new) 17/17 ✅
+**Commit:** 7db69e3 "F11 stage 3 - analysis stage"
+
+## Stage 4: Route and document — ✅ done
+
+- [x] **14. Analysis route**
+- [x] **15. OpenAPI document**
+
+**Observations:**
+- `analysis.service.ts` / `analysis.controller.ts` (written in Stage 3, wired in now) mirror `pronunciation.service.ts`'s status derivation exactly: `unavailable` when there's no branch at all, `pending` while the `lesson_analysis` stage row is missing or not yet `completed`/`failed` (covering queued, running, retrying and blocked uniformly — the client never needs to know a blocked branch is different from still processing), `failed`/`ready` read directly off the completed stage row. Deltas and taxonomy labels are computed server-side so web and mobile render identically, per the spec's decision.
+- Competency order is the PRD's fixed `grammar, vocabulary, fluency, interaction, comprehension`; errors sort major-first via a stable sort (ties keep the stored, post-discard order).
+- Restarted the real dev server against the live stack (killed several stray/orphaned `nest start --watch` and `node dist/main` processes accumulated from earlier stage restarts — one was still holding port 3001, causing an `EADDRINUSE` on the first fresh boot attempt) and confirmed for real: `GET /health` OK, `GET /lessons/:id/analysis` unauthenticated → 401, logged in as the seeded `you@example.com` → `CLASS004`/403 for a lesson not participated in, `not-a-uuid` → 400/`VAL001`, and the live `/docs-json` (not just the committed snapshot) already lists `LessonAnalysisView` and `/lessons/{lessonId}/analysis`.
+- `apps/api/test/integration/analysis-routes.spec.ts` (9 tests) covers the status derivation (`ready`/`pending`/`blocked-as-pending`/`failed`/`unavailable`), competency ordering with deltas across two real analysed lessons for the same owner, error ordering by severity with taxonomy labels, privacy (never another participant's data), the pipeline view's blocked-Gemini state (`blockedProvider: "gemini"`, the exact sentence), the retry route re-running a failed analysis to completion, and the three standard rejections (403/400/401).
+- OpenAPI: `LessonAnalysisView` registered from `lessonAnalysisViewSchema`, the `analysis` tag added. Regenerated through `pnpm build` + `node dist/openapi/generate.js` (the `tsx`/esbuild `emitDecoratorMetadata` gotcha F10 recorded is still present in the committed npm script, unrelated to this feature) — 24 operations, `GET /lessons/{lessonId}/analysis` new. `test/unit/openapi.spec.ts` confirms the snapshot is fresh.
+
+**Validation:** typecheck (api, web) ✅ · lint ✅ · unit 256/256 (unchanged from Stage 3) ✅ · integration `analysis-routes.spec.ts` (new) 9/9 ✅ · openapi snapshot regenerated and fresh (24 operations) ✅ · real dev-server boot and live route checks against the running stack ✅
 **Commit:** _(recorded after commit below)_
-
-## Stage 4: Route and document — ⬜ pending
-
-- [ ] **14. Analysis route**
-- [ ] **15. OpenAPI document**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 5: Verification and hand-off — ⬜ pending
 

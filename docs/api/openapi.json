@@ -1460,6 +1460,85 @@
           "pronunciation"
         ]
       }
+    },
+    "/lessons/{lessonId}/analysis": {
+      "get": {
+        "description": "The caller's own truthful state (`pending`, `ready`, `failed` or `unavailable`) and, when ready, their five competency scores with deltas against their previous analysed lesson, errors grouped by severity with taxonomy labels, the scenario-fit block and topics to practice. Never another participant's data.",
+        "operationId": "AnalysisController_get",
+        "parameters": [
+          {
+            "name": "lessonId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The caller's lesson analysis.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/LessonAnalysisView"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VAL001: lessonId is not a valid UUID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH003: no valid session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "CLASS004: the caller is not a participant of that lesson.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionBearer": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Read the caller's lesson analysis",
+        "tags": [
+          "analysis"
+        ]
+      }
     }
   },
   "info": {
@@ -1500,6 +1579,10 @@
     {
       "name": "pronunciation",
       "description": "The caller's pronunciation assessment: scores, worst phonemes and words, per-excerpt detail"
+    },
+    {
+      "name": "analysis",
+      "description": "The caller's own AI lesson analysis: competency scores, tagged errors, scenario fit and topics to practice"
     }
   ],
   "servers": [
@@ -3536,6 +3619,250 @@
           "status",
           "result",
           "excerpts"
+        ],
+        "additionalProperties": false
+      },
+      "LessonAnalysisView": {
+        "type": "object",
+        "properties": {
+          "lessonId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "ready",
+              "failed",
+              "unavailable"
+            ]
+          },
+          "analysis": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "competencies": {
+                    "minItems": 5,
+                    "maxItems": 5,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "competency": {
+                          "type": "string",
+                          "enum": [
+                            "grammar",
+                            "vocabulary",
+                            "fluency",
+                            "interaction",
+                            "comprehension"
+                          ]
+                        },
+                        "score": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 100
+                        },
+                        "justification": {
+                          "type": "string"
+                        },
+                        "delta": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "competency",
+                        "score",
+                        "justification",
+                        "delta"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "strengths": {
+                    "minItems": 3,
+                    "maxItems": 5,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "errors": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "quote": {
+                          "type": "string"
+                        },
+                        "correction": {
+                          "type": "string"
+                        },
+                        "explanation": {
+                          "type": "string"
+                        },
+                        "severity": {
+                          "type": "string",
+                          "enum": [
+                            "minor",
+                            "moderate",
+                            "major"
+                          ]
+                        },
+                        "tag": {
+                          "type": "string"
+                        },
+                        "tagLabel": {
+                          "type": "string"
+                        },
+                        "recurring": {
+                          "type": "boolean"
+                        },
+                        "utteranceId": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "format": "uuid",
+                              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "quote",
+                        "correction",
+                        "explanation",
+                        "severity",
+                        "tag",
+                        "tagLabel",
+                        "recurring",
+                        "utteranceId"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "recurringTags": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "scenarioContext": {
+                    "type": "string",
+                    "enum": [
+                      "full",
+                      "situation_only",
+                      "none"
+                    ]
+                  },
+                  "scenarioFit": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "roleLabel": {
+                            "type": "string"
+                          },
+                          "registerExpected": {
+                            "type": "string",
+                            "enum": [
+                              "formal",
+                              "neutral",
+                              "informal"
+                            ]
+                          },
+                          "registerMatched": {
+                            "type": "boolean"
+                          },
+                          "registerComment": {
+                            "type": "string"
+                          },
+                          "expressionsUsed": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "expressionsNotUsed": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "required": [
+                          "roleLabel",
+                          "registerExpected",
+                          "registerMatched",
+                          "registerComment",
+                          "expressionsUsed",
+                          "expressionsNotUsed"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "topicsToPractice": {
+                    "minItems": 3,
+                    "maxItems": 6,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "notes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "analyzedAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                  }
+                },
+                "required": [
+                  "competencies",
+                  "strengths",
+                  "errors",
+                  "recurringTags",
+                  "scenarioContext",
+                  "scenarioFit",
+                  "topicsToPractice",
+                  "notes",
+                  "analyzedAt"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "lessonId",
+          "status",
+          "analysis"
         ],
         "additionalProperties": false
       }

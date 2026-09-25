@@ -8,17 +8,21 @@ import { AnalysisInputBuilder } from './analysis-input.builder';
 import { AnalysisResultWriter } from './analysis-result.writer';
 import { AnalysisStageHandler } from './analysis-stage.handler';
 import { LessonAnalysisReader } from './analysis-result.reader';
+import { AnalysisController } from './analysis.controller';
+import { AnalysisService } from './analysis.service';
 
 /**
  * The `lesson_analysis` stage (F11). Registers its handler with the
- * pipeline runner at module init; exports the reader F12 and F19 read an
+ * pipeline runner at module init, and exposes the caller's own view at
+ * `GET /lessons/:lessonId/analysis`. Exports the reader F12 and F19 read an
  * analysis through. `PromptExecutionService` and `CredentialsService` are
  * both global (`PromptsModule`, `CredentialsModule`), so neither is imported
  * here.
  */
 @Module({
   imports: [PipelineModule, PronunciationModule, ProfileModule, TaxonomyModule],
-  providers: [AnalysisInputBuilder, AnalysisResultWriter, LessonAnalysisReader, AnalysisStageHandler],
+  controllers: [AnalysisController],
+  providers: [AnalysisInputBuilder, AnalysisResultWriter, LessonAnalysisReader, AnalysisStageHandler, AnalysisService],
   exports: [LessonAnalysisReader],
 })
 export class AnalysisModule {}
