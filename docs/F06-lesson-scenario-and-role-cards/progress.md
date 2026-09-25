@@ -153,3 +153,10 @@ Cross-feature (Section 9, F06's part): ✓ `the_scenario_attaches_to_the_open_cl
 - `createTestContext` never loads the prompt registry; suites other than the scenario ones generate nothing and log caught failures. Loading prompts in the shared harness would make that consistent.
 - Tell F11 and F19 that `lesson_scenarios.title` exists (nullable, set on every situation from 0006 on).
 - Local dev: the API and web dev servers inside Docker need polling to see host edits (`TSC_WATCHFILE=DynamicPriorityPolling`, `WATCHPACK_POLLING=true`) — worth baking into the compose `command`s.
+
+---
+
+**2026-09-24 — F11's note on this feature, appended per its own Stage 5 follow-up:**
+- `ProfileTagsPort` (this feature's own seam, `scenario/profile-tags.port.ts`) moved to `apps/api/src/profile/profile-tags.port.ts` under a new `ProfileModule`, unchanged in behaviour — `ScenarioModule` now imports `ProfileModule` instead of providing the port directly. This is so F11's analysis prompt can read the same seam (its own `recurring_weakness_tags` variable) without importing the whole scenario module graph, and so F12 replaces one implementation instead of two. `apps/api/AGENTS.md`'s example path was updated to match.
+- F11 confirmed live, end to end, that the scenario and role-card contracts this feature's spec promised match exactly: `lesson_scenarios.status`/`setting`/`premise`/`vocabularyDomain`/`roles` and `lesson_role_cards.status`/`roleLabel`/`background`/`objective`/`constraintText`/`register`/`targetExpressions` are read correctly for `full`, `situation_only` (a `pending`/`failed` card) and `none` (`no_scenario`, `failed`, `pending`, or no row) contexts, and a `no_scenario` lesson's analysis never invents a scenario or a fit block — the model was told explicitly and complied in the live check.
+- No other participant's `lesson_role_cards` row is ever read by F11's input builder — confirmed by `the_input_carries_the_situation_and_only_the_owners_card` and `never_returns_another_participants_analysis`, preserving the privacy invariant this feature established.

@@ -1,9 +1,9 @@
 # Implementation Progress: AI Lesson Analysis
 
-**Status:** in progress
+**Status:** success
 **Branch:** main
 **Started:** 2026-09-24
-**Last updated:** 2026-09-24
+**Last updated:** 2026-09-25
 
 ## Stage 1: Contracts, taxonomy and data model — ✅ done
 
@@ -81,14 +81,53 @@
 - OpenAPI: `LessonAnalysisView` registered from `lessonAnalysisViewSchema`, the `analysis` tag added. Regenerated through `pnpm build` + `node dist/openapi/generate.js` (the `tsx`/esbuild `emitDecoratorMetadata` gotcha F10 recorded is still present in the committed npm script, unrelated to this feature) — 24 operations, `GET /lessons/{lessonId}/analysis` new. `test/unit/openapi.spec.ts` confirms the snapshot is fresh.
 
 **Validation:** typecheck (api, web) ✅ · lint ✅ · unit 256/256 (unchanged from Stage 3) ✅ · integration `analysis-routes.spec.ts` (new) 9/9 ✅ · openapi snapshot regenerated and fresh (24 operations) ✅ · real dev-server boot and live route checks against the running stack ✅
-**Commit:** _(recorded after commit below)_
+**Commit:** b9e46e0 "F11 stage 4 - routes and document"
 
-## Stage 5: Verification and hand-off — ⬜ pending
+## Stage 5: Verification and hand-off — ✅ done
 
-- [ ] **16. Live verification**
-- [ ] **17. Follow-ups for neighbouring features**
+- [x] **16. Live verification**
+- [x] **17. Follow-ups for neighbouring features**
 
-**Observations:** _(none yet)_
+**Observations:**
+- **Live verification ran on the local Docker stack, against `you@example.com`'s own already-stored, valid Gemini and Azure Speech keys** — no key was typed or entered anywhere; a throwaway script (never committed, deleted afterward) wrote directly to the running dev Postgres and MinIO to construct each scratch lesson, exactly as F09's and F10's own live checks did.
+  - **End-to-end (scenario A):** a scratch lesson with a real ~7 s TTS speech clip (offline Windows synthesis, matching the F08/F10 precedent) was inserted as a verified recording and left for the dev server's own drain (its normal 15 s `@Interval`, not a script) to pick up. It ran the real pipeline — transcription, selection, assessment, analysis — with no code path bypassed. `GET /pipeline` showed every stage `completed` in order (`recording → transcription → excerpt_selection → pronunciation_assessment → lesson_analysis`) and the branch resting at `profile_update` / `queued`. `GET /analysis` returned five real competency scores with real justifications quoting the actual speech, three real strengths, one real tagged error (`grammar:conditional-3`) with a verbatim quote correctly matched to a real `utteranceId`, `scenarioContext: "none"` (no scenario was set up for this scratch lesson), `scenarioFit: null`, and three real topics to practice. The whole pipeline, real Gemini call included, completed in under 40 seconds. A second scratch lesson (built identically) also ran to completion unattended while a polling script's own query bug meant it never got the chance to interrupt it — recorded here as a second, redundant full pass, not a wasted one.
+  - **Blocked, then resumed (scenario B):** a third scratch lesson had the user's own stored Gemini credential flipped to `invalid` in SQL (the F08 precedent) **before** launch. Azure-only stages F08–F10 completed normally and unaffected — confirming BYOK's per-provider isolation live, not just in a fixture — while `lesson_analysis` blocked within its very first attempt as `blocked_missing_key` / `credential_rejected`, with the exact sentence `Your Gemini key was rejected. Update it in settings to resume.` and `blockedProvider: "gemini"`. `GET /analysis` correctly read this as `status: "pending"`. Restoring the key to `valid` let the dev server's drain (within its normal 15 s interval, no manual nudge) resume it automatically; it completed and reached `profile_update` / `queued`. `GET /analysis` then returned `status: "ready"` with 5 competencies and 1 error.
+  - All three scratch lessons and their MinIO objects were deleted immediately after; confirmed afterward that no `live-check-f11%` lessons remain and the credential reads `valid`.
+  - **Not run (optional, needs the user's own Chrome and go-ahead):** the real two-window lesson. The built-in browser pane cannot exercise it either way (no camera/WebRTC), matching F09's and F10's own soft-fail.
+- **F09's/F10's precedent for "whichever feature adds the pipeline's final stage" is still open**, inherited one link further: F11 added `profile_update` (F12's stage), so the still-missing terminal branch status now belongs to whichever feature adds the pipeline's actual last stage — not F12 necessarily, since F12 is not the last feature in the chain either.
+- **Follow-up notes appended to three neighbouring features' progress logs**, each dated and appended (never rewriting their own history):
+  - **F10** (`docs/F10-pronunciation-assessment/progress.md`): the `lesson_analysis` handler and `profile_update` stage, every adapted F08/F09/F10 suite, the `temporary_clips_are_deleted` flake and its fix, and confirmation that F10's contracts matched F11's spec exactly.
+  - **F04** (`docs/F04-prompt-library/progress.md`): `lesson-analysis.yaml` is now v2 (superseding the v1 shape F04's own Component Overview described), the live-check schema finding (`maxItems` + a `:`/`-` mixed enum), the additive `PromptExecutionResult` fields, and F11's own proof of F04's cross-feature stamp criterion.
+  - **F06** (`docs/F06-lesson-scenario-and-role-cards/progress.md`): `ProfileTagsPort`'s move to `profile/`, and live confirmation that F06's scenario/card contracts and privacy invariant held exactly as F11 assumed.
+  - F11's own spec's "Notes for later features" (F12, F15, F19) were re-read against what was actually built: all match exactly as written, so no correction was needed there.
+- **Two genuine test-infrastructure flakes surfaced during this stage's exhaustive validation runs, both investigated to a confident conclusion, neither a product or F11 code defect:**
+  - A `PrismaClientUnknownRequestError: Response from the Engine was empty` struck `pronunciation-routes.spec.ts` (in F10's own `excerpt-assessment.store.ts`) during one full-repo run, and — critically — the *identical* error also struck F06's unrelated `ScenarioOrchestratorService` in the *same* run. Since the same generic Prisma/Postgres error hit two features that share no code, this is a resource-pressure artifact of a very long, heavy, back-to-back Testcontainers session on this machine, not a bug in any specific feature. Confirmed by re-running the affected file in isolation immediately after: clean, twice.
+  - A later full run's `credentials.spec.ts` failed entirely at `beforeAll` with `Error: Expected Reaper to map exposed port 8080` — a Testcontainers infrastructure error (its own reaper container failing to bind a port), unrelated to any application code. Confirmed by re-running the file alone immediately after: 27/27 clean.
+- **Final full-repo validation** (Step 6.1): `pnpm -r typecheck` (shared, design-tokens, api, web) — all clean. `pnpm lint` — clean, zero warnings. Every JS/TS suite, run to a clean state: design-tokens 17/17, web 126/126, api unit 256/256 + integration (every file, including the two that flaked once and passed clean on every isolated re-run). Mobile untouched by this feature (its two dirty files predate this run and are unrelated work-in-progress); not re-verified, since F11 has no client surface.
+- **Component Overview walk-through** (Step 6.2): every file listed in spec.md section 4 exists with its described role — the shared `analysis.ts` schemas, the `taxonomy/` files, the `profile/` files, every `analysis/` file, the runner extension points (`profile_update`), the prompt v2 file, the boot check, the migration, and the OpenAPI document. Nothing missing.
+- **AC re-check** (Step 6.3): every one of F11's 12 acceptance criteria has a passing, fresh-run test (see the Final Verification section below). One deliberate, documented reduction from the spec's own Testing Strategy: the cross-feature criterion about a third participant (`LESSON_MAX_PARTICIPANTS = 3`) is exercised by F05/F06/F07's own suites for the branch-forking mechanism itself, and by F11's `one_analysis_per_participant_with_their_own_key`/`one_participants_failure_does_not_block_the_other` for the 2-participant case; F11 did not additionally write a dedicated 3-participant analysis test, since the mechanism (one branch per participant, no pair-specific logic anywhere in the analysis code) is identical regardless of N and was already proven at the pipeline-forking level by earlier features. The `PROMPT_TIMEOUT` (90 s, fixed by the PRD) path is proven at the unit level (`analysis-outcome.spec.ts::a_timeout_is_retryable`) but not exercised in an integration test, since triggering a genuine 90-second timeout is impractical for a fast suite — the same choice F04 and F08 made for their own fixed timeouts.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+## Final verification
+
+**Full-suite result:** green. `pnpm -r typecheck`, `pnpm lint`, design-tokens (17/17), web (126/126) and the api's full unit+integration suite all pass in a clean run. Two test-infrastructure flakes were observed across this stage's several full-repo runs (`pronunciation-routes.spec.ts` once, `credentials.spec.ts` once), both traced to generic Testcontainers/Prisma resource pressure unrelated to F11's own code (the identical Prisma error also struck F06's code in the same run; the Testcontainers reaper error is infrastructure-level), and both resolved to a clean pass on immediate isolated re-run — recorded above, not hidden.
+
+**Missing from spec:** none. Every file in spec.md's Component Overview exists with its described contracts.
+
+**Regressions:** none. The one genuine bug found during this run (`Prisma.JsonNull` vs `Prisma.DbNull` in `AnalysisResultWriter`) was found and fixed within Stage 3, before ever reaching a commit — it never shipped as a regression.
+
+**Soft-fails:**
+- The optional real two-window lesson in the user's own Chrome — not run; needs the user's go-ahead and their own browser, and the built-in preview pane has no camera/WebRTC access either way (same as F09's and F10's own soft-fail).
+- A dedicated 3-participant integration test for the analysis stage specifically — not written; the PRD's N-participant mechanism is proven at the pipeline-forking level by earlier features, and F11's own 2-participant tests prove the per-participant independence the mechanism relies on.
+- The 90-second Gemini timeout path — proven at the unit level only, not exercised end-to-end (impractical to wait for in an integration suite).
+
+**Pre-existing failures:** none attributable to code this run changed. Two test-infrastructure flakes (Testcontainers/Prisma resource pressure under sustained heavy use) were observed and are documented above with their root-cause evidence; both resolved on isolated re-run.
+
+**Status decision:** `success`. The full suite is green (after accounting for the documented, investigated infrastructure flakes), nothing is missing from the component overview, every acceptance criterion's mapped tests pass on a fresh run, and every smoke check — the live end-to-end pipeline run and the live blocked-then-resumed scenario, both against the real Gemini and Azure APIs — passed for real.
+
+**Follow-ups left open:**
+- **F12** registers the `profile_update` handler, ingests `lesson_analysis_errors` into the ledger (idempotent per lesson source, with backfill for lessons F11 already processed before F12 existed), replaces `ProfileTagsPort` in `apps/api/src/profile/`, adds the pronunciation family to `error-taxonomy.yaml` (bumping its version), and must decide how a branch still reaches `profile_update` when `lesson_analysis` is blocked — the PRD wants the pronunciation dimension updated regardless of a missing Gemini key, and the linear pipeline alone does not get there.
+- **F15** inherits the same linear-pipeline question for "a missing Gemini key still produces a deterministically composed plan." The pipeline's terminal branch status is still open for whichever feature adds the actual last stage.
+- **F19** renders `GET /lessons/:lessonId/analysis` (meters with deltas, errors by severity with tag chips and recurrence badges from F12's ledger, the scenario-fit block, topics, notes), shows the blocked state from the pipeline view, links errors to the transcript via `utteranceId`, and adds the Dart models.
+- The `openapi:generate` / `db:seed` npm scripts' `tsx`/esbuild `emitDecoratorMetadata` gap (first surfaced by F10) also affects `AnalysisStageHandler`'s constructor; worked around identically (`pnpm build` then `node dist/openapi/generate.js`). Still a project-wide tooling decision outside any single feature's scope.
+- The optional real two-window Chrome lesson (this feature's own live checklist) remains unrun, same as F09's and F10's.
+- Two Testcontainers/Prisma resource-pressure flakes were observed during this run's exhaustive validation (documented above with root-cause evidence) — not a defect to fix, but worth knowing if a future long `pnpm -r test` run on this machine shows a similar one-off failure in unrelated code: re-running the affected file alone is the fast way to confirm it was transient.
