@@ -16,6 +16,7 @@ import { PronunciationModule } from './pronunciation/pronunciation.module';
 import { RedisModule } from './redis/redis.module';
 import { ScenarioModule } from './scenario/scenario.module';
 import { StorageModule } from './storage/storage.module';
+import { TaxonomyModule } from './taxonomy/taxonomy.module';
 import { TranscriptionModule } from './transcription/transcription.module';
 
 @Module({
@@ -38,6 +39,7 @@ import { TranscriptionModule } from './transcription/transcription.module';
     TranscriptionModule,
     ExcerptSelectionModule,
     PronunciationModule,
+    TaxonomyModule,
   ],
   providers: [
     // Authentication is global: a route is protected unless it opts out with

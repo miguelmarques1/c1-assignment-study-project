@@ -10,6 +10,7 @@ import { runMigrations } from './boot/run-migrations';
 import { waitForDependencies } from './boot/wait-for-dependencies';
 import { verifyCredentialDecryptability } from './boot/verify-credential-decryptability';
 import { loadPrompts } from './boot/load-prompts';
+import { verifyAnalysisPrompt } from './boot/verify-analysis-prompt';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { loadEnv } from './config/env';
 import { CredentialCryptoService } from './credentials/credential-crypto.service';
@@ -17,6 +18,7 @@ import { PrismaService } from './prisma/prisma.service';
 import { HealthService } from './health/health.service';
 import { setupOpenApi } from './openapi/setup';
 import { PromptRegistryService } from './prompts/prompt-registry.service';
+import { ErrorTaxonomyService } from './taxonomy/error-taxonomy.service';
 import { StorageService } from './storage/storage.service';
 
 /**
@@ -79,6 +81,14 @@ async function bootstrap(): Promise<void> {
     log: (message) => logger.log(message),
   });
   logger.log(`Prompt library: ${prompts.count} prompts loaded`);
+
+  // The lesson-analysis prompt's error taxonomy enum and the versioned
+  // taxonomy file must name exactly the same tags — a mismatch here is a
+  // curator error caught at boot, not a validation failure mid-lesson.
+  verifyAnalysisPrompt({
+    registry: app.get(PromptRegistryService),
+    taxonomy: app.get(ErrorTaxonomyService),
+  });
 
   // Readiness line: one probe per dependency with its latency, so a slow or
   // missing service is visible at startup rather than at first use.

@@ -25,17 +25,22 @@
 - Regenerated `docs/api/openapi.json` now (not deferred to Stage 4), following F10's own precedent, since the pipeline stage/reason vocabulary already changed and `test/unit/openapi.spec.ts` guards staleness on every run. Hit the same `tsx`/esbuild `emitDecoratorMetadata` silent-crash gotcha F10's Stage 4 recorded (present already, unrelated to this feature's own handler, which doesn't exist yet) — worked around identically: `pnpm --filter @english-quest/api build` then `node dist/openapi/generate.js`. Stage 4 will regenerate again once the analysis route and component exist.
 
 **Validation:** typecheck (shared, api, web) ✅ · lint ✅ · unit 217/217 (9 new: error-taxonomy) ✅ · integration (scenario 13/13, scenario-generation 11/11, prompt-execution-telemetry 6/6, prompt-boot 6/6) ✅ · openapi snapshot fresh (23 operations, no new route yet) ✅
+**Commit:** 0cb7d37 "F11 spec/plan and stage 1 - contracts, taxonomy and data model"
+
+## Stage 2: Analysis prompt — ✅ done
+
+- [x] **6. Prompt v2 and boot check**
+- [x] **7. Live prompt check**
+
+**Observations:**
+- `lesson-analysis.yaml` rewritten as v2: `competencies` is a keyed object (five required competencies, each `{score 0-100, justification}`), `errors[]` unbounded (see live-check finding below), `recurring_tags[]`, `scenario_fit` nullable `{register_matched, register_comment, expressions_attempted}` (no `expressions_missed` — code derives it from the card), `topics_to_practice` 3-6. `max_output_tokens: 8192`. Speaker labels in the template are `YOU` / `OTHER n`, never names or role labels, per the spec's privacy rule.
+- `verify-analysis-prompt.ts` compares the prompt's `errors[].tag` and `recurring_tags[]` enums against `ErrorTaxonomyService.current().analysisTags` as sets (order-independent), throwing `AnalysisTaxonomyMismatchError` naming every missing/extra tag. Wired into `main.ts` right after `loadPrompts`. `TaxonomyModule` added to `AppModule` (needed for `app.get(ErrorTaxonomyService)`).
+- **Live-check finding (step 7), a significant and non-obvious deviation from the spec's assumed schema:** Gemini's `responseJsonSchema` rejects (`400 INVALID_ARGUMENT`, no further detail in the error body) any array schema that combines `maxItems` with an item schema whose `enum` contains strings mixing both `:` and `-` — exactly the taxonomy's own `family:kebab-slug` tag format. Isolated by bisection against the live API (not assumed): a colon-only enum or a hyphen-only enum under `maxItems` is accepted; only the combination is refused, and only when `maxItems` is present (`minItems` alone is fine, no bound at all is fine). This is invisible from documentation and from Ajv's own compile step, since the schema is perfectly valid JSON Schema — it is Gemini's own schema-to-tool-config translation that trips on it. Removed `maxItems: 25` from `errors[]` in the prompt file; the 25-item cap moves to code (stage 3's output rules truncate before quote-matching) rather than the schema. Documented as a deviation in spec.md's Assumptions table, right after the schema-shape row it revises.
+- Restarted the real dev server in the `api` container (the stale `tsc --watch` process had gotten stuck on the deleted `scenario/profile-tags.port.ts` with a `TS6053` file-not-found loop that outlasted several file-change cycles even with polling on, so a fresh process was needed rather than waiting on it) — booted clean end to end against the real Postgres/Redis/MinIO/LiveKit stack, logged `Loaded prompt lesson-analysis v2` and `Loaded error taxonomy v1 (3485cba6a7ea), 36 tags, 36 scored by lesson analysis`, no `AnalysisTaxonomyMismatchError`, `Nest application successfully started`. Confirmed `GET /health` responds. This is the real boot-check exercise the runtime-surface completion rule asks for, not just a unit test.
+- Live prompt check ran three scenarios (full scenario, no scenario, truncated transcript) against the real Gemini API with the user's own `TEST_GEMINI_API_KEY`, through a throwaway script (never committed, deleted immediately after): all three validated against the (fixed) schema on the first attempt; `no_scenario` correctly returned `scenario_fit: null` with no invented scenario; the full-scenario and truncated cases returned a populated fit block with expressions drawn from the given card. Estimated tokens (chars/4) tracked the real reported input tokens within about 4% (1349 estimated vs. 1403 reported on the largest message), supporting the chars/4 local-estimate assumption. Latency ~4.2-4.8 s per call.
+
+**Validation:** typecheck ✅ · lint ✅ · unit 219/219 (2 new: `the_prompt_enum_matches_the_analysis_tags`, `boot_check_names_missing_and_extra_tags`) ✅ · integration `prompt-boot.spec.ts` 6/6 (re-run with prompt v2) ✅ · openapi snapshot fresh (no route/component change this stage) ✅ · real dev-server boot against the live stack ✅ · live Gemini check (3/3 scenarios, schema valid, `scenario_fit` correctly null/populated) ✅
 **Commit:** _(recorded after commit below)_
-
-## Stage 2: Analysis prompt — ⬜ pending
-
-- [ ] **6. Prompt v2 and boot check**
-- [ ] **7. Live prompt check**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 3: Analysis stage — ⬜ pending
 

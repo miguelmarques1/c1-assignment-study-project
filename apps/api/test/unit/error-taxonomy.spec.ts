@@ -5,6 +5,9 @@ import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { stringify } from 'yaml';
 
+import { AnalysisTaxonomyMismatchError, verifyAnalysisPrompt } from '../../src/boot/verify-analysis-prompt';
+import { loadPromptFile } from '../../src/prompts/prompt-file-loader';
+import type { PromptRegistryService } from '../../src/prompts/prompt-registry.service';
 import { ERROR_TAXONOMY_PATH } from '../../src/taxonomy/error-taxonomy.constants';
 import {
   ErrorTaxonomyValidationError,
@@ -13,6 +16,21 @@ import {
   taxonomyFingerprint,
   type ErrorTaxonomy,
 } from '../../src/taxonomy/error-taxonomy';
+import type { ErrorTaxonomyService } from '../../src/taxonomy/error-taxonomy.service';
+
+const LESSON_ANALYSIS_PROMPT_PATH = join(__dirname, '..', '..', 'prompts', 'lesson-analysis.yaml');
+
+function fakeRegistry(promptPath: string): PromptRegistryService {
+  const { prompt, issues } = loadPromptFile(promptPath);
+  if (!prompt) {
+    throw new Error(`fixture prompt failed to load: ${issues.join('; ')}`);
+  }
+  return { get: () => prompt } as unknown as PromptRegistryService;
+}
+
+function fakeTaxonomy(analysisTags: string[]): ErrorTaxonomyService {
+  return { current: () => ({ analysisTags }) } as unknown as ErrorTaxonomyService;
+}
 
 /**
  * Every taxonomy version ever committed, with the fingerprint of its
@@ -126,6 +144,32 @@ describe('error taxonomy', () => {
     const garbage = join(tempDir, 'garbage.yaml');
     writeFileSync(garbage, ': not: valid: yaml: [');
     expect(() => loadErrorTaxonomyFile(garbage)).toThrow(ErrorTaxonomyValidationError);
+  });
+
+  it('the_prompt_enum_matches_the_analysis_tags', () => {
+    const { analysisTags } = loadErrorTaxonomyFile(ERROR_TAXONOMY_PATH);
+    const registry = fakeRegistry(LESSON_ANALYSIS_PROMPT_PATH);
+    const taxonomy = fakeTaxonomy(analysisTags);
+
+    expect(() => verifyAnalysisPrompt({ registry, taxonomy })).not.toThrow();
+  });
+
+  it('boot_check_names_missing_and_extra_tags', () => {
+    const { analysisTags } = loadErrorTaxonomyFile(ERROR_TAXONOMY_PATH);
+    const registry = fakeRegistry(LESSON_ANALYSIS_PROMPT_PATH);
+    // One tag added (the prompt won't have it) and one removed (the prompt still does).
+    const skewed = [...analysisTags.slice(1), 'grammar:made-up-tag'];
+    const taxonomy = fakeTaxonomy(skewed);
+
+    try {
+      verifyAnalysisPrompt({ registry, taxonomy });
+      throw new Error('expected to throw');
+    } catch (error) {
+      expect(error).toBeInstanceOf(AnalysisTaxonomyMismatchError);
+      const mismatch = error as AnalysisTaxonomyMismatchError;
+      expect(mismatch.issues.join('\n')).toContain('grammar:made-up-tag');
+      expect(mismatch.issues.join('\n')).toContain(analysisTags[0]!);
+    }
   });
 
   it('every_issue_is_reported_at_once', () => {

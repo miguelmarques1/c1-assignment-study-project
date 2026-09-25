@@ -1,71 +1,106 @@
 id: lesson-analysis
-version: "1"
+version: "2"
 model: gemini-3.6-flash
 temperature: 0.4
-max_output_tokens: 3000
+max_output_tokens: 8192
 system: |
-  You are a CEFR-C1 speaking assessor reviewing one participant's side of a
-  lesson transcript. You score only the named participant, never the other
-  side of the conversation, and every claim you make must be traceable to a
-  verbatim quote from the transcript.
+  You are a CEFR-C1 speaking assessor reviewing one participant's own turns
+  in a lesson transcript. Every turn is labelled either YOU (the participant
+  you are assessing) or OTHER 1, OTHER 2, and so on (everyone else in the
+  conversation). You score and quote only YOU's own turns — the other turns
+  are context for what YOU was responding to, never material to assess or
+  quote. Every claim you make must be traceable to a verbatim quote from a
+  YOU turn. You never invent scenario details, role information or
+  pronunciation judgments beyond what you are explicitly given below.
 user_template: |
-  Transcript (this participant's turns are marked with their role label):
+  Transcript:
   ---
   {{transcript}}
   ---
+  {{truncation_note}}
 
-  Has a scenario for this lesson: {{has_scenario}}
-  Scenario setting: {{setting}}
-  Scenario premise: {{premise}}
-  This participant's role: {{own_role_label}}
-  This participant's target expressions: {{target_expressions}}
+  Scenario: {{scenario_status}}
+  {{situation}}
+  {{role_card}}
 
-  Score five competencies (fluency, grammar_accuracy, vocabulary_range,
-  pronunciation, interaction), each 1 to 5 with a one-sentence justification
-  quoting the transcript. List 3 to 5 strengths. List every notable error
-  with a verbatim quote, a taxonomy tag (grammar, vocabulary, pronunciation,
-  register, or discourse), a correction, a plain-language explanation and a
-  severity (minor, moderate, major).
+  Pronunciation (measured separately, for context only — never score it
+  yourself): {{pronunciation}}
 
-  If a scenario exists (has_scenario is true), also report whether the
-  register matched the role, which target expressions were attempted, and
-  which were missed. If has_scenario is false, set scenario_fit to null —
-  do not invent a scenario.
+  Tag every error using exactly one of these taxonomy entries (format is
+  tag — label: description):
+  {{taxonomy}}
+
+  This participant's known recurring weaknesses, if any: {{recurring_weakness_tags}}
+
+  Score five competencies for YOU only (grammar, vocabulary, fluency,
+  interaction, comprehension), each 0 to 100 with a one-sentence
+  justification quoting a YOU turn. List 3 to 5 strengths. List every
+  notable error YOU made, each with a verbatim quote from a YOU turn, a
+  taxonomy tag, a correction, a plain-language explanation and a severity
+  (minor, moderate, major). List which of those tags reflect a recurring
+  weakness already listed above.
+
+  If a scenario is in play (the line above says so), also report whether
+  YOU's register matched what the role called for, with a one-sentence
+  comment, and list the target expressions YOU attempted to use — do not
+  report which were missed, and do not invent a fit block when no scenario
+  or no role card was given.
 
   Finish with 3 to 6 topics to practice next.
 variables:
   - name: transcript
     required: true
-  - name: has_scenario
+  - name: truncation_note
+    required: false
+  - name: scenario_status
     required: true
-  - name: setting
+  - name: situation
     required: false
-  - name: premise
+  - name: role_card
     required: false
-  - name: own_role_label
-    required: false
-  - name: target_expressions
+  - name: pronunciation
+    required: true
+  - name: taxonomy
+    required: true
+  - name: recurring_weakness_tags
     required: false
 response_schema:
   type: object
   properties:
     competencies:
-      type: array
-      minItems: 5
-      maxItems: 5
-      items:
-        type: object
-        properties:
-          name:
-            type: string
-            enum: [fluency, grammar_accuracy, vocabulary_range, pronunciation, interaction]
-          score:
-            type: integer
-            minimum: 1
-            maximum: 5
-          justification:
-            type: string
-        required: [name, score, justification]
+      type: object
+      properties:
+        grammar:
+          type: object
+          properties:
+            score: { type: integer, minimum: 0, maximum: 100 }
+            justification: { type: string }
+          required: [score, justification]
+        vocabulary:
+          type: object
+          properties:
+            score: { type: integer, minimum: 0, maximum: 100 }
+            justification: { type: string }
+          required: [score, justification]
+        fluency:
+          type: object
+          properties:
+            score: { type: integer, minimum: 0, maximum: 100 }
+            justification: { type: string }
+          required: [score, justification]
+        interaction:
+          type: object
+          properties:
+            score: { type: integer, minimum: 0, maximum: 100 }
+            justification: { type: string }
+          required: [score, justification]
+        comprehension:
+          type: object
+          properties:
+            score: { type: integer, minimum: 0, maximum: 100 }
+            justification: { type: string }
+          required: [score, justification]
+      required: [grammar, vocabulary, fluency, interaction, comprehension]
     strengths:
       type: array
       minItems: 3
@@ -81,7 +116,43 @@ response_schema:
             type: string
           tag:
             type: string
-            enum: [grammar, vocabulary, pronunciation, register, discourse]
+            enum:
+              - grammar:subject-verb-agreement
+              - grammar:present-simple-continuous
+              - grammar:present-perfect
+              - grammar:past-simple
+              - grammar:past-perfect
+              - grammar:future-forms
+              - grammar:conditional-2
+              - grammar:conditional-3
+              - grammar:conditional-mixed
+              - grammar:modal-verb
+              - grammar:passive-voice
+              - grammar:reported-speech
+              - grammar:relative-clause
+              - grammar:article-definite
+              - grammar:article-indefinite
+              - grammar:preposition
+              - grammar:word-order
+              - grammar:question-form
+              - grammar:gerund-infinitive
+              - grammar:countable-uncountable
+              - grammar:comparison
+              - grammar:pronoun
+              - vocab:collocation
+              - vocab:phrasal-verb
+              - vocab:idiom
+              - vocab:word-choice
+              - vocab:word-form
+              - vocab:false-friend
+              - vocab:register
+              - vocab:domain-term
+              - discourse:connector
+              - discourse:cohesion
+              - discourse:turn-taking
+              - discourse:hedging
+              - discourse:clarification
+              - discourse:politeness
           correction:
             type: string
           explanation:
@@ -90,65 +161,110 @@ response_schema:
             type: string
             enum: [minor, moderate, major]
         required: [quote, tag, correction, explanation, severity]
+    recurring_tags:
+      type: array
+      items:
+        type: string
+        enum:
+          - grammar:subject-verb-agreement
+          - grammar:present-simple-continuous
+          - grammar:present-perfect
+          - grammar:past-simple
+          - grammar:past-perfect
+          - grammar:future-forms
+          - grammar:conditional-2
+          - grammar:conditional-3
+          - grammar:conditional-mixed
+          - grammar:modal-verb
+          - grammar:passive-voice
+          - grammar:reported-speech
+          - grammar:relative-clause
+          - grammar:article-definite
+          - grammar:article-indefinite
+          - grammar:preposition
+          - grammar:word-order
+          - grammar:question-form
+          - grammar:gerund-infinitive
+          - grammar:countable-uncountable
+          - grammar:comparison
+          - grammar:pronoun
+          - vocab:collocation
+          - vocab:phrasal-verb
+          - vocab:idiom
+          - vocab:word-choice
+          - vocab:word-form
+          - vocab:false-friend
+          - vocab:register
+          - vocab:domain-term
+          - discourse:connector
+          - discourse:cohesion
+          - discourse:turn-taking
+          - discourse:hedging
+          - discourse:clarification
+          - discourse:politeness
     scenario_fit:
       type: [object, "null"]
       properties:
-        register_appropriate:
+        register_matched:
           type: boolean
+        register_comment:
+          type: string
         expressions_attempted:
           type: array
           items:
             type: string
-        expressions_missed:
-          type: array
-          items:
-            type: string
-      required: [register_appropriate, expressions_attempted, expressions_missed]
+      required: [register_matched, register_comment, expressions_attempted]
     topics_to_practice:
       type: array
       minItems: 3
       maxItems: 6
       items:
         type: string
-  required: [competencies, strengths, errors, scenario_fit, topics_to_practice]
+  required: [competencies, strengths, errors, recurring_tags, scenario_fit, topics_to_practice]
 examples:
   - user: |
-      Transcript: "She have been to Paris last year and it was, um, really good experience."
-      Has a scenario for this lesson: false
+      Transcript: "YOU: She have been to Paris last year and it was, um, really good experience."
+      Scenario: No scenario was in play for this lesson.
     output:
       competencies:
-        - name: fluency
-          score: 3
-          justification: "Uses filler ('um') but keeps the turn going without long pauses."
-        - name: grammar_accuracy
-          score: 2
+        grammar:
+          score: 58
           justification: "Subject-verb agreement error in 'She have been'."
-        - name: vocabulary_range
-          score: 3
+        vocabulary:
+          score: 64
           justification: "Relies on generic adjectives like 'good' rather than more precise alternatives."
-        - name: pronunciation
-          score: 3
-          justification: "No transcript evidence of pronunciation issues beyond what is inferable from spelling."
-        - name: interaction
-          score: 3
+        fluency:
+          score: 66
+          justification: "Uses filler ('um') but keeps the turn going without long pauses."
+        interaction:
+          score: 60
           justification: "Single turn available; no evidence of turn-taking either way."
+        comprehension:
+          score: 70
+          justification: "Responds on-topic with a clearly time-anchored past event."
       strengths:
         - "Communicates a complete idea despite the grammar slip."
         - "Uses natural hesitation rather than switching to the native language."
         - "Past experience is clearly time-anchored with 'last year'."
       errors:
         - quote: "She have been to Paris last year"
-          tag: grammar
+          tag: grammar:present-perfect
           correction: "She went to Paris last year"
           explanation: "Use simple past, not present perfect, with a specific past time expression like 'last year'."
           severity: moderate
+      recurring_tags: []
       scenario_fit: null
       topics_to_practice:
         - "Simple past vs. present perfect with time expressions"
         - "Varying adjectives beyond 'good' / 'nice'"
         - "Reducing filler words in longer turns"
 constraints:
-  - Only assess the named participant's own turns, never the other participant's.
-  - Every error and justification must quote the transcript verbatim.
-  - Do not invent a scenario_fit block when has_scenario is false.
+  - Only assess and quote YOU's own turns; every other turn is context, never material to score or quote.
+  - Every error and justification must quote a YOU turn exactly as written.
+  - Use only the taxonomy tags listed above; never invent a tag.
+  - Do not score or comment on pronunciation; it is measured separately.
+  - Set scenario_fit to null when told no scenario or no role card was given, and never invent one.
+  - Report only which target expressions were attempted; never report which were missed.
+  - Treat an explicitly noted omitted opening as missing text, not as a conversational gap.
+  - Never speculate about another participant's role card, private objective or role.
 banned_phrases: []
