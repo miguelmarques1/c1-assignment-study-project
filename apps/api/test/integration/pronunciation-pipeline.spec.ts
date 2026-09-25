@@ -4,15 +4,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { promisify } from 'node:util';
 
-import { getQueueToken } from '@nestjs/bullmq';
-import type { Queue } from 'bullmq';
 import ffmpegPath from 'ffmpeg-static';
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { PipelineDrainJob } from '../../src/pipeline/pipeline-drain.job';
 import { PipelineStateService } from '../../src/pipeline/pipeline-state.service';
-import { PIPELINE_QUEUE, pipelineJobId } from '../../src/pipeline/pipeline.constants';
 import { PronunciationResultReader } from '../../src/pronunciation/pronunciation-result.reader';
 import { audioObjectKey } from '../../src/recording/recording.constants';
 import {
@@ -36,8 +33,29 @@ let pipeline: PipelineTestContext;
 let sharedAudioDir: string;
 let sharedAudioPath: string;
 
-const queue = () => pipeline.ctx.app.get<Queue>(getQueueToken(PIPELINE_QUEUE));
 const reader = () => pipeline.ctx.app.get(PronunciationResultReader);
+
+/**
+ * The stage row flips to `completed` inside `context.complete`'s own
+ * transaction, one step before the handler's `finally` removes its temp
+ * directory — a real but harmless gap `waitForStage` alone can race. F11
+ * registering `lesson_analysis` adds more concurrent work to the same
+ * worker pool right at that moment, which made the gap wide enough to
+ * observe here; this polls instead of asserting on the very next tick.
+ */
+async function waitForEmptyDir(path: string, timeoutMs = 5_000): Promise<void> {
+  const started = Date.now();
+  for (;;) {
+    const entries = await readdir(path);
+    if (entries.length === 0) {
+      return;
+    }
+    if (Date.now() - started > timeoutMs) {
+      throw new Error(`${path} never emptied; last contents: ${entries.join(', ')}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+}
 
 beforeAll(async () => {
   pipeline = await createPipelineTestContext();
@@ -531,11 +549,11 @@ describe('pronunciation assessment stage', () => {
   it('temporary_clips_are_deleted', async () => {
     const success = await selectedLesson(3, { speakerName: 'Ana' });
     await waitForStage(pipeline.ctx, success.branchId, 'pronunciation_assessment', ['completed']);
-    expect(await readdir(pipeline.pronunciationWorkRoot)).toEqual([]);
+    await waitForEmptyDir(pipeline.pronunciationWorkRoot);
 
     const failure = await selectedLesson(2, { speakerName: 'Bruno', corruptAudio: true });
     await waitForStage(pipeline.ctx, failure.branchId, 'pronunciation_assessment', ['failed']);
-    expect(await readdir(pipeline.pronunciationWorkRoot)).toEqual([]);
+    await waitForEmptyDir(pipeline.pronunciationWorkRoot);
   }, 90_000);
 
   it('phoneme_failures_are_recorded_as_ledger_tags', async () => {
@@ -618,14 +636,13 @@ describe('pronunciation assessment stage', () => {
     const { lesson, speaker, branchId } = await selectedLesson(2);
 
     await waitForStage(pipeline.ctx, branchId, 'pronunciation_assessment', ['completed']);
-
+    // F11 now has a handler for lesson_analysis; this fixture's speaker
+    // holds no Gemini key, so the branch blocks the instant it is queued
+    // rather than sitting idle.
+    const nextRow = await waitForStage(pipeline.ctx, branchId, 'lesson_analysis', ['blocked_missing_key']);
+    expect(nextRow).toMatchObject({ status: 'blocked_missing_key', run: 1, reasonCode: 'credential_missing' });
     const branch = await pipeline.ctx.prisma.lessonPipelineBranch.findUniqueOrThrow({ where: { id: branchId } });
-    expect(branch).toMatchObject({ stage: 'lesson_analysis', status: 'queued' });
-    const nextRow = await pipeline.ctx.prisma.lessonPipelineStage.findUniqueOrThrow({
-      where: { branchId_stage: { branchId, stage: 'lesson_analysis' } },
-    });
-    expect(nextRow).toMatchObject({ status: 'queued', run: 1 });
-    expect(await queue().getJob(pipelineJobId('lesson_analysis', branchId, 1))).toBeUndefined();
+    expect(branch).toMatchObject({ stage: 'lesson_analysis', status: 'blocked_missing_key' });
     void lesson;
     void speaker;
   }, 60_000);

@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 
+import { AnalysisModule } from './analysis/analysis.module';
 import { AuthModule } from './auth/auth.module';
 import { SessionGuard } from './auth/session.guard';
 import { ClassroomModule } from './classroom/classroom.module';
@@ -40,6 +41,7 @@ import { TranscriptionModule } from './transcription/transcription.module';
     ExcerptSelectionModule,
     PronunciationModule,
     TaxonomyModule,
+    AnalysisModule,
   ],
   providers: [
     // Authentication is global: a route is protected unless it opts out with

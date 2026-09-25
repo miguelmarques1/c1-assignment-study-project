@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { promisify } from 'node:util';
 
 import { getQueueToken } from '@nestjs/bullmq';
+import { Prisma } from '@prisma/client';
 import type { Queue } from 'bullmq';
 import ffmpegPath from 'ffmpeg-static';
 import request from 'supertest';
@@ -16,6 +17,7 @@ import { PIPELINE_RETRY_OVERRIDES } from '../../../src/pipeline/pipeline-stage.r
 import { PIPELINE_QUEUE } from '../../../src/pipeline/pipeline.constants';
 import { PipelineQueueService } from '../../../src/pipeline/pipeline-queue.service';
 import { PipelineService } from '../../../src/pipeline/pipeline.service';
+import { PromptRegistryService } from '../../../src/prompts/prompt-registry.service';
 import {
   PRONUNCIATION_EXCERPT_RETRY_DELAYS_OVERRIDE,
   PRONUNCIATION_WORK_ROOT,
@@ -45,6 +47,9 @@ export const FAST_PRONUNCIATION_RETRY_POLICY = { attempts: 3, delaysMs: [40, 40]
 
 /** The inline per-excerpt retries (2 s and 8 s in production), shortened to milliseconds. */
 export const FAST_EXCERPT_RETRY_DELAYS = [10, 10];
+
+/** Lesson analysis's own stage retries (1, 5 and 15 minutes in production), shortened the same way. */
+export const FAST_ANALYSIS_RETRY_POLICY = { attempts: 4, delaysMs: [40, 40, 40] };
 
 export interface PipelineTestContext {
   ctx: TestContext;
@@ -114,11 +119,15 @@ export async function createPipelineTestContext(
           transcription: FAST_RETRY_POLICY,
           excerpt_selection: FAST_SELECTION_RETRY_POLICY,
           pronunciation_assessment: FAST_PRONUNCIATION_RETRY_POLICY,
+          lesson_analysis: FAST_ANALYSIS_RETRY_POLICY,
         },
       },
       ...(typeof extra.overrides === 'function' ? extra.overrides() : (extra.overrides ?? [])),
     ],
   });
+  // F11's lesson_analysis stage needs the real prompt (and its schema) to
+  // validate the fake's responses exactly as production would.
+  await ctx.app.get(PromptRegistryService).loadAll(join(__dirname, '..', '..', '..', 'prompts'));
 
   return {
     ctx,
@@ -142,13 +151,21 @@ export interface Speaker {
   /** The Azure key stored for this user, or null when they have none. */
   azureKey: string | null;
   region: string;
+  /** The Gemini key stored for this user, or null when they have none — most fixtures leave this unset (F11's own blocked-by-default path). */
+  geminiKey: string | null;
 }
 
-/** A logged-in account, optionally holding an Azure Speech key stored through the real vault encryption. */
+/** A logged-in account, optionally holding an Azure Speech key and/or a Gemini key, both stored through the real vault encryption. */
 export async function seedSpeaker(
   ctx: TestContext,
   displayName: string,
-  options: { withKey?: boolean; region?: string; status?: 'valid' | 'unverified' | 'invalid' } = {},
+  options: {
+    withKey?: boolean;
+    region?: string;
+    status?: 'valid' | 'unverified' | 'invalid';
+    withGeminiKey?: boolean;
+    geminiStatus?: 'valid' | 'unverified' | 'invalid';
+  } = {},
 ): Promise<Speaker> {
   const email = `${displayName.toLowerCase()}@example.com`;
   const user = await ctx.prisma.user.create({
@@ -162,9 +179,37 @@ export async function seedSpeaker(
     await storeAzureKey(ctx, user.id, azureKey, region, options.status ?? 'valid');
   }
 
+  let geminiKey: string | null = null;
+  if (options.withGeminiKey) {
+    geminiKey = `AIza-test-key-for-${displayName.toLowerCase()}-0000000000`;
+    await storeGeminiKey(ctx, user.id, geminiKey, options.geminiStatus ?? 'valid');
+  }
+
   const response = await request(ctx.app.getHttpServer()).post('/auth/login').send({ email, password: PASSWORD });
   const cookie = (response.headers['set-cookie'] as unknown as string[])[0]!;
-  return { id: user.id, displayName, cookie, azureKey, region };
+  return { id: user.id, displayName, cookie, azureKey, region, geminiKey };
+}
+
+export async function storeGeminiKey(
+  ctx: TestContext,
+  userId: string,
+  key: string,
+  status: 'valid' | 'unverified' | 'invalid' = 'valid',
+): Promise<void> {
+  const payload = ctx.app.get(CredentialCryptoService).encrypt(key);
+  const data = {
+    ciphertext: new Uint8Array(payload.ciphertext),
+    iv: new Uint8Array(payload.iv),
+    authTag: new Uint8Array(payload.authTag),
+    lastFour: key.slice(-4),
+    region: null,
+    status,
+  };
+  await ctx.prisma.userCredential.upsert({
+    where: { userId_provider: { userId, provider: 'gemini' } },
+    create: { userId, provider: 'gemini', ...data },
+    update: data,
+  });
 }
 
 export async function storeAzureKey(
@@ -467,6 +512,215 @@ export async function seedTranscript(
 /** Adds the selection job for a branch waiting at `excerpt_selection`, as the transcription stage's completion does. */
 export async function startSelection(pipeline: PipelineTestContext, branchId: string, run = 1): Promise<void> {
   await pipeline.ctx.app.get(PipelineQueueService).enqueue(branchId, 'excerpt_selection', run);
+}
+
+/** Adds the analysis job for a branch waiting at `lesson_analysis`, as F10's completion does. */
+export async function startAnalysis(pipeline: PipelineTestContext, branchId: string, run = 1): Promise<void> {
+  await pipeline.ctx.app.get(PipelineQueueService).enqueue(branchId, 'lesson_analysis', run);
+}
+
+export interface AnalysisReadyPronunciation {
+  status: 'assessed';
+  scores: { pronunciation: number; accuracy: number; fluency: number; prosody: number | null; completeness: number };
+  worstPhonemes?: Array<{
+    phoneme: string;
+    meanAccuracy: number;
+    occurrences: number;
+    exampleWord: string;
+    exampleExcerptId: string;
+    exampleUtteranceId: string;
+  }>;
+}
+
+export interface AnalysisReadyParticipant {
+  speaker: Speaker;
+  utterances: SeedUtterance[];
+  /** Defaults to `no_sample` — F09 selected nothing and F10 never called Azure. */
+  pronunciation?: AnalysisReadyPronunciation;
+  /** The scenario row for this lesson, `ready` with the labels below; omit for `no_scenario`. */
+}
+
+export interface AnalysisReadyScenario {
+  status: 'ready' | 'no_scenario' | 'failed';
+  setting?: string;
+  premise?: string;
+  vocabularyDomain?: string;
+  roles?: Array<{ label: string; relationship: string }>;
+}
+
+export interface AnalysisReadyCard {
+  userId: string;
+  status: 'ready' | 'pending' | 'failed';
+  roleLabel?: string;
+  background?: string;
+  objective?: string;
+  constraintText?: string;
+  register?: 'formal' | 'neutral' | 'informal';
+  targetExpressions?: string[];
+}
+
+/**
+ * What F10's completing transaction leaves behind for every participant: a
+ * stored transcript, a selection row (empty by default, since nothing here
+ * needs real excerpts), a pronunciation result (`no_sample` unless scored
+ * otherwise) and a branch waiting at `lesson_analysis` / `queued` — F11's own
+ * resting point, the way `makeTranscribedLesson` fabricates F07/F08's.
+ */
+export async function makeAnalysisReadyLesson(
+  pipeline: PipelineTestContext,
+  participants: AnalysisReadyParticipant[],
+  options: { scenario?: AnalysisReadyScenario; cards?: AnalysisReadyCard[]; durationSeconds?: number } = {},
+): Promise<RecordedLesson> {
+  const { ctx } = pipeline;
+  const durationSeconds = options.durationSeconds ?? 1_800;
+  const startedAt = new Date(Date.now() - durationSeconds * 1000);
+  const lesson = await ctx.prisma.lesson.create({
+    data: {
+      room: 'classroom-main',
+      openedBy: participants[0]!.speaker.id,
+      maxParticipants: 4,
+      status: 'ended',
+      startedAt,
+      endedAt: new Date(),
+      endReason: 'ended_by_participant',
+      durationSeconds,
+      recordingStatus: 'recorded',
+      recordingFinalizedAt: new Date(),
+    },
+  });
+
+  if (options.scenario) {
+    await ctx.prisma.lessonScenario.create({
+      data: {
+        lessonId: lesson.id,
+        status: options.scenario.status,
+        setting: options.scenario.setting ?? null,
+        premise: options.scenario.premise ?? null,
+        vocabularyDomain: options.scenario.vocabularyDomain ?? null,
+        roles: options.scenario.roles ?? Prisma.JsonNull,
+        discussionHooks: Prisma.JsonNull,
+        generatedBy: participants[0]!.speaker.id,
+      },
+    });
+  }
+
+  for (const card of options.cards ?? []) {
+    await ctx.prisma.lessonRoleCard.create({
+      data: {
+        lessonId: lesson.id,
+        userId: card.userId,
+        roleLabel: card.roleLabel ?? null,
+        status: card.status,
+        background: card.background ?? null,
+        objective: card.objective ?? null,
+        constraintText: card.constraintText ?? null,
+        register: card.register ?? null,
+        targetExpressions: card.targetExpressions ?? Prisma.JsonNull,
+      },
+    });
+  }
+
+  const branches = new Map<string, string>();
+  for (const participant of participants) {
+    const userId = participant.speaker.id;
+    await ctx.prisma.lessonParticipant.create({
+      data: {
+        lessonId: lesson.id,
+        userId,
+        identity: userId,
+        joinedAt: startedAt,
+        connected: false,
+        recordingStatus: 'complete',
+        audioObjectKey: audioObjectKey(lesson.id, userId),
+        audioBytes: BigInt(200_000),
+        recordingStartedAt: startedAt,
+        audioDurationMs: durationSeconds * 1000,
+        capturedMs: durationSeconds * 1000,
+      },
+    });
+
+    const transcriptId = await seedTranscript(ctx, lesson.id, userId, participant.utterances);
+
+    const selection = await ctx.prisma.lessonExcerptSelection.create({
+      data: {
+        lessonId: lesson.id,
+        userId,
+        transcriptId,
+        ruleVersion: '1',
+        ruleFingerprint: 'a'.repeat(64),
+        rules: {},
+        focusSource: 'none',
+        focusTags: [],
+        utteranceCount: participant.utterances.length,
+        eligibleCount: 0,
+        selectedCount: 0,
+        selectedAudioMs: 0,
+        sparseSample: false,
+      },
+    });
+
+    const pron = participant.pronunciation;
+    await ctx.prisma.lessonPronunciationResult.create({
+      data: pron
+        ? {
+            lessonId: lesson.id,
+            userId,
+            selectionId: selection.id,
+            status: 'assessed',
+            excerptCount: 1,
+            assessedCount: 1,
+            partialAssessment: false,
+            sparseSample: false,
+            quotaExhausted: false,
+            pronunciation: pron.scores.pronunciation,
+            accuracy: pron.scores.accuracy,
+            fluency: pron.scores.fluency,
+            prosody: pron.scores.prosody,
+            completeness: pron.scores.completeness,
+            assessedAudioMs: 5_000,
+            worstPhonemes: pron.worstPhonemes ?? [],
+            worstWords: [],
+            phonemeTags: [],
+            provider: 'azure_pronunciation_assessment',
+            locale: 'en-US',
+            phonemeAlphabet: 'IPA',
+          }
+        : {
+            lessonId: lesson.id,
+            userId,
+            selectionId: selection.id,
+            status: 'no_sample',
+            excerptCount: 0,
+            assessedCount: 0,
+            partialAssessment: false,
+            sparseSample: false,
+            quotaExhausted: false,
+            pronunciation: null,
+            accuracy: null,
+            fluency: null,
+            prosody: null,
+            completeness: null,
+            assessedAudioMs: 0,
+            worstPhonemes: [],
+            worstWords: [],
+            phonemeTags: [],
+            provider: 'azure_pronunciation_assessment',
+            locale: 'en-US',
+            phonemeAlphabet: 'IPA',
+          },
+    });
+
+    const now = new Date();
+    const branch = await ctx.prisma.lessonPipelineBranch.create({
+      data: { lessonId: lesson.id, userId, stage: 'lesson_analysis', status: 'queued', launchedAt: now },
+    });
+    await ctx.prisma.lessonPipelineStage.create({
+      data: { branchId: branch.id, stage: 'lesson_analysis', status: 'queued', queuedAt: now },
+    });
+    branches.set(userId, branch.id);
+  }
+
+  return { lessonId: lesson.id, startedAt, branches, audioBytes: new Map() };
 }
 
 /** Polls a branch's stage row until it reaches one of `statuses`. The worker is asynchronous; tests wait on its end state. */

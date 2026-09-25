@@ -53,7 +53,10 @@ describe('GET /lessons/:lessonId/pipeline', () => {
     await launchAll(pipeline, lesson);
     // The fake speech client's default phrases are under F09's word-count
     // floor, so nothing is selected and F10 completes at once as no_sample.
+    // The branch then moves to lesson analysis, which blocks immediately —
+    // this fixture user holds no Gemini key.
     await waitForStage(pipeline.ctx, lesson.branches.get(ana.id)!, 'pronunciation_assessment', ['completed']);
+    await waitForStage(pipeline.ctx, lesson.branches.get(ana.id)!, 'lesson_analysis', ['blocked_missing_key']);
 
     const response = await readPipeline(lesson.lessonId, ana);
 
@@ -61,13 +64,13 @@ describe('GET /lessons/:lessonId/pipeline', () => {
     const view = response.body.data;
     expect(view.lessonId).toBe(lesson.lessonId);
     expect(Date.parse(view.serverTime)).not.toBeNaN();
-    expect(view.branch).toMatchObject({ stage: 'lesson_analysis', status: 'queued' });
+    expect(view.branch).toMatchObject({ stage: 'lesson_analysis', status: 'blocked_missing_key' });
     expect(view.branch.stages.map((stage: { stage: string; status: string }) => [stage.stage, stage.status])).toEqual([
       ['recording', 'completed'],
       ['transcription', 'completed'],
       ['excerpt_selection', 'completed'],
       ['pronunciation_assessment', 'completed'],
-      ['lesson_analysis', 'queued'],
+      ['lesson_analysis', 'blocked_missing_key'],
     ]);
     const transcription = view.branch.stages[1];
     expect(transcription.startedAt).not.toBeNull();
@@ -206,13 +209,16 @@ describe('POST /lessons/:lessonId/pipeline/retry', () => {
     await launchAll(pipeline, lesson);
     // The fake speech client's default phrases are under F09's word-count
     // floor, so nothing is selected and F10 completes at once as no_sample.
+    // The branch then moves to lesson analysis, which blocks at once — Ana
+    // holds no Gemini key — and a blocked stage is not what `retry` retries.
     await waitForStage(pipeline.ctx, lesson.branches.get(ana.id)!, 'pronunciation_assessment', ['completed']);
+    await waitForStage(pipeline.ctx, lesson.branches.get(ana.id)!, 'lesson_analysis', ['blocked_missing_key']);
     await waitForStage(pipeline.ctx, lesson.branches.get(bruno.id)!, 'transcription', ['blocked_missing_key']);
 
     const completed = await retry(lesson.lessonId, ana);
     expect(completed.status).toBe(409);
     expect(completed.body.error.code).toBe('PIPE001');
-    expect(completed.body.error.details).toEqual({ stage: 'lesson_analysis', status: 'queued' });
+    expect(completed.body.error.details).toEqual({ stage: 'lesson_analysis', status: 'blocked_missing_key' });
 
     const blocked = await retry(lesson.lessonId, bruno);
     expect(blocked.status).toBe(409);

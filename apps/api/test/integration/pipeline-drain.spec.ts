@@ -139,21 +139,18 @@ describe('pipeline drain', () => {
     const ana = await seedSpeaker(pipeline.ctx, 'Ana');
     const lesson = await makeRecordedLesson(pipeline, [{ speaker: ana }]);
     const branchId = lesson.branches.get(ana.id)!;
-    await launchAll(pipeline, lesson);
-    // Transcription, excerpt selection and pronunciation assessment all have
-    // handlers — the fake speech client's default phrases are under F09's
-    // word-count floor, so nothing is selected and F10 completes at once as
-    // no_sample. The branch comes to rest at lesson analysis, which has no
-    // handler yet.
-    await waitForStage(pipeline.ctx, branchId, 'pronunciation_assessment', ['completed']);
+    // profile_update is F11's next stage, appended one feature early exactly
+    // like every earlier stage was — F12 has not registered its handler
+    // yet, so a branch that reaches it just waits.
+    await pipeline.ctx.app.get(PipelineStateService).queueStage(branchId, 'profile_update', new Date());
 
     await drain().run();
 
     const waiting = await pipeline.ctx.prisma.lessonPipelineStage.findUniqueOrThrow({
-      where: { branchId_stage: { branchId, stage: 'lesson_analysis' } },
+      where: { branchId_stage: { branchId, stage: 'profile_update' } },
     });
     expect(waiting.status).toBe('queued');
-    expect(await queue().getJob(pipelineJobId('lesson_analysis', branchId, 1))).toBeUndefined();
+    expect(await queue().getJob(pipelineJobId('profile_update', branchId, 1))).toBeUndefined();
   }, 60_000);
 
   it('a_stage_whose_job_died_mid_run_is_failed_not_rerun', async () => {

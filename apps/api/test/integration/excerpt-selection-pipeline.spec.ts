@@ -175,16 +175,15 @@ describe('excerpt selection stage', () => {
     expect(done.finishedAt!.getTime() - done.startedAt!.getTime()).toBeLessThan(2_000);
 
     // F10's handler now runs the selected excerpts straight away (against
-    // the fake Azure client's default scores); the branch comes to rest one
-    // stage further, at lesson analysis, which has no handler yet.
+    // the fake Azure client's default scores); the branch moves one stage
+    // further, to lesson analysis, which now has F11's own handler. Ana
+    // holds no Gemini key in this fixture, so it blocks immediately rather
+    // than sitting queued — exactly the state a keyless branch settles into.
     await waitForStage(pipeline.ctx, branchId, 'pronunciation_assessment', ['completed']);
-    const next = await pipeline.ctx.prisma.lessonPipelineStage.findUniqueOrThrow({
-      where: { branchId_stage: { branchId, stage: 'lesson_analysis' } },
-    });
-    expect(next).toMatchObject({ status: 'queued', run: 1 });
+    const next = await waitForStage(pipeline.ctx, branchId, 'lesson_analysis', ['blocked_missing_key']);
+    expect(next).toMatchObject({ status: 'blocked_missing_key', run: 1, reasonCode: 'credential_missing' });
     const branch = await pipeline.ctx.prisma.lessonPipelineBranch.findUniqueOrThrow({ where: { id: branchId } });
-    expect(branch).toMatchObject({ stage: 'lesson_analysis', status: 'queued', failureCode: null });
-    expect(await queue().getJob(pipelineJobId('lesson_analysis', branchId, 1))).toBeUndefined();
+    expect(branch).toMatchObject({ stage: 'lesson_analysis', status: 'blocked_missing_key' });
   }, 60_000);
 
   it('every_excerpt_stores_its_selection_rule_version', async () => {
@@ -261,10 +260,12 @@ describe('excerpt selection stage', () => {
     expect(selection.excerpts).toEqual([]);
 
     // An empty selection completes F10 at once, as no_sample, with no audio
-    // access — the branch comes to rest one stage further, at lesson analysis.
+    // access — the branch moves one stage further, to lesson analysis,
+    // which blocks at once since this fixture user holds no Gemini key.
     await waitForStage(pipeline.ctx, branchId, 'pronunciation_assessment', ['completed']);
+    await waitForStage(pipeline.ctx, branchId, 'lesson_analysis', ['blocked_missing_key']);
     const branch = await pipeline.ctx.prisma.lessonPipelineBranch.findUniqueOrThrow({ where: { id: branchId } });
-    expect(branch).toMatchObject({ stage: 'lesson_analysis', status: 'queued' });
+    expect(branch).toMatchObject({ stage: 'lesson_analysis', status: 'blocked_missing_key' });
   }, 60_000);
 
   it('participants_select_independently', async () => {

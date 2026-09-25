@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { ANALYSIS_RETRY_POLICY } from '../../src/analysis/analysis.constants';
 import { EXCERPT_SELECTION_RETRY_POLICY } from '../../src/excerpts/excerpt-selection.constants';
 import { retryDelayFor, type PipelineStageHandler } from '../../src/pipeline/pipeline-stage.handler';
 import { PipelineStageRegistry } from '../../src/pipeline/pipeline-stage.registry';
@@ -34,6 +35,14 @@ describe('pipeline retry policy', () => {
     expect(retryDelayFor(PRONUNCIATION_RETRY_POLICY, 1)).toBe(60_000);
     expect(retryDelayFor(PRONUNCIATION_RETRY_POLICY, 2)).toBe(300_000);
     expect(retryDelayFor(PRONUNCIATION_RETRY_POLICY, 3)).toBeNull();
+  });
+
+  it('lesson_analysis_retries_at_1m_5m_15m', () => {
+    expect(ANALYSIS_RETRY_POLICY.attempts).toBe(4);
+    expect(retryDelayFor(ANALYSIS_RETRY_POLICY, 1)).toBe(60_000);
+    expect(retryDelayFor(ANALYSIS_RETRY_POLICY, 2)).toBe(300_000);
+    expect(retryDelayFor(ANALYSIS_RETRY_POLICY, 3)).toBe(900_000);
+    expect(retryDelayFor(ANALYSIS_RETRY_POLICY, 4)).toBeNull();
   });
 
   it('the_backoff_reads_the_policy_of_the_jobs_stage', () => {

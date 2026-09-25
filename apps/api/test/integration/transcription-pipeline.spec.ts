@@ -163,10 +163,12 @@ describe('transcription stage', () => {
     expect(next.run).toBe(1);
     // The fake speech client's default phrases are under F09's word-count
     // floor, so nothing is selected and F10 completes at once as no_sample;
-    // the branch comes to rest one stage further still, at lesson analysis.
+    // the branch moves one stage further still, to lesson analysis, which
+    // blocks at once since this fixture user holds no Gemini key.
     await waitForStage(pipeline.ctx, branchId, 'pronunciation_assessment', ['completed']);
+    await waitForStage(pipeline.ctx, branchId, 'lesson_analysis', ['blocked_missing_key']);
     const branch = await pipeline.ctx.prisma.lessonPipelineBranch.findUniqueOrThrow({ where: { id: branchId } });
-    expect(branch).toMatchObject({ stage: 'lesson_analysis', status: 'queued', failureCode: null });
+    expect(branch).toMatchObject({ stage: 'lesson_analysis', status: 'blocked_missing_key' });
   }, 60_000);
 
   it('a_missing_key_blocks_rather_than_fails', async () => {

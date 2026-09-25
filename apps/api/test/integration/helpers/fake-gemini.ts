@@ -10,12 +10,22 @@
  * which user's key produced which artifact.
  */
 
-export type GeminiCallKind = 'situation' | 'card';
+export type GeminiCallKind = 'situation' | 'card' | 'analysis';
 
 export interface GeminiCall {
   apiKey: string;
   kind: GeminiCallKind;
   message: string;
+}
+
+/** Thrown by the fake to simulate a provider error with an HTTP-shaped status, matching `@google/genai`'s own `ApiError`. */
+export class FakeGeminiApiError extends Error {
+  readonly status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
 }
 
 const ROLE_POOL = [
@@ -33,6 +43,14 @@ function deferred(): { promise: Promise<void>; release: () => void } {
   return { promise, release };
 }
 
+/** One scripted answer for the next `lesson-analysis` call from a given key, consumed in order (F11). */
+export type FakeAnalysisStep =
+  | { kind: 'ok'; response?: unknown }
+  | { kind: 'invalid' }
+  | { kind: 'status'; status: number; message?: string }
+  | { kind: 'network' }
+  | { kind: 'empty' };
+
 export const gemini = {
   calls: [] as GeminiCall[],
   situationsServed: 0,
@@ -46,6 +64,9 @@ export const gemini = {
   echoedDomain: 'travel and tourism, loosely',
   situationGate: null as ReturnType<typeof deferred> | null,
   cardGate: null as ReturnType<typeof deferred> | null,
+  /** Per-key queue of scripted analysis answers, consumed in order; falls back to a generated default. */
+  analysisScripts: new Map<string, FakeAnalysisStep[]>(),
+  analysisGate: null as ReturnType<typeof deferred> | null,
 
   reset(): void {
     this.calls = [];
@@ -58,6 +79,9 @@ export const gemini = {
     this.cardGate?.release();
     this.situationGate = null;
     this.cardGate = null;
+    this.analysisScripts = new Map();
+    this.analysisGate?.release();
+    this.analysisGate = null;
   },
 
   /** Holds every situation response until the returned function is called. */
@@ -72,6 +96,17 @@ export const gemini = {
     return this.cardGate.release;
   },
 
+  /** Holds every analysis response until the returned function is called. */
+  holdAnalyses(): () => void {
+    this.analysisGate = deferred();
+    return this.analysisGate.release;
+  },
+
+  /** Queues one or more answers for the next `lesson-analysis` call(s) from this key. */
+  scriptAnalysis(apiKey: string, ...steps: FakeAnalysisStep[]): void {
+    this.analysisScripts.set(apiKey, [...(this.analysisScripts.get(apiKey) ?? []), ...steps]);
+  },
+
   callsOf(kind: GeminiCallKind): GeminiCall[] {
     return this.calls.filter((call) => call.kind === kind);
   },
@@ -81,7 +116,72 @@ const USAGE = { promptTokenCount: 100, candidatesTokenCount: 200, thoughtsTokenC
 const INVALID = { text: JSON.stringify({ unexpected: true }), usageMetadata: USAGE };
 
 function kindOf(config: { responseJsonSchema?: { properties?: Record<string, unknown> } } | undefined): GeminiCallKind {
-  return 'discussion_hooks' in (config?.responseJsonSchema?.properties ?? {}) ? 'situation' : 'card';
+  const properties = config?.responseJsonSchema?.properties ?? {};
+  if ('discussion_hooks' in properties) {
+    return 'situation';
+  }
+  if ('competencies' in properties) {
+    return 'analysis';
+  }
+  return 'card';
+}
+
+/** Every `[mm:ss] YOU: text` line's own text, in order — what a default analysis quotes verbatim so it matches by construction. */
+function extractOwnLines(message: string): string[] {
+  const lines: string[] = [];
+  for (const line of message.split('\n')) {
+    const match = /^\[\d+:\d{2}\] YOU: (.+)$/.exec(line.trim());
+    if (match) {
+      lines.push(match[1]!.trim());
+    }
+  }
+  return lines;
+}
+
+/**
+ * A plausible default `lesson-analysis` v2 response. It quotes the first
+ * `YOU` line verbatim (so the output rules' quote match succeeds without a
+ * test having to script one), and only ever includes `scenario_fit` when
+ * the rendered `scenario_status` says a scenario — with a role card — was
+ * in play, mirroring what the real prompt would be told.
+ */
+export function fakeAnalysis(message: string) {
+  const ownLines = extractOwnLines(message);
+  // `full`'s sentence ends the clause in a period; `situation_only`'s otherwise
+  // identical opening continues past a comma instead, so this substring is
+  // exact for `full` alone.
+  const hasFullScenario = message.includes('A scenario was in play for this lesson.');
+  return {
+    competencies: {
+      grammar: { score: 65, justification: `Grammar note grounded in "${ownLines[0] ?? 'the transcript'}".` },
+      vocabulary: { score: 70, justification: 'Reasonable range for the topic at hand.' },
+      fluency: { score: 72, justification: 'Few hesitations, a natural pace overall.' },
+      interaction: { score: 68, justification: "Responds appropriately to the other side's turns." },
+      comprehension: { score: 75, justification: 'Understands and replies on topic throughout.' },
+    },
+    strengths: ['Communicates clearly despite minor slips.', 'Uses topic-appropriate vocabulary.', 'Keeps a natural pace.'],
+    errors:
+      ownLines.length > 0
+        ? [
+            {
+              quote: ownLines[0]!,
+              tag: 'grammar:conditional-3',
+              correction: 'a corrected version of the same sentence',
+              explanation: 'A plain-language explanation of the fix.',
+              severity: 'moderate' as const,
+            },
+          ]
+        : [],
+    recurring_tags: [],
+    scenario_fit: hasFullScenario
+      ? {
+          register_matched: true,
+          register_comment: 'Consistent, appropriate register throughout.',
+          expressions_attempted: ['with all due respect', 'I would feel more comfortable if'],
+        }
+      : null,
+    topics_to_practice: ['Third conditional in spoken hypotheticals', 'Present perfect vs. past simple', 'Polite disagreement phrases'],
+  };
 }
 
 export function fakeSituation(seats: number, serial: number) {
@@ -145,6 +245,23 @@ class FakeGoogleGenAI {
         const seats = gemini.shortOnRoles ? asked - 1 : asked;
         gemini.situationsServed += 1;
         return { text: JSON.stringify(fakeSituation(seats, gemini.situationsServed)), usageMetadata: USAGE };
+      }
+
+      if (kind === 'analysis') {
+        await gemini.analysisGate?.promise;
+        const step = gemini.analysisScripts.get(this.apiKey)?.shift() ?? { kind: 'ok' as const };
+        switch (step.kind) {
+          case 'status':
+            throw new FakeGeminiApiError(step.status, step.message ?? `HTTP ${step.status}`);
+          case 'network':
+            throw new Error('fetch failed');
+          case 'invalid':
+            return INVALID;
+          case 'empty':
+            return { text: '', usageMetadata: USAGE };
+          case 'ok':
+            return { text: JSON.stringify(step.response ?? fakeAnalysis(message)), usageMetadata: USAGE };
+        }
       }
 
       await gemini.cardGate?.promise;

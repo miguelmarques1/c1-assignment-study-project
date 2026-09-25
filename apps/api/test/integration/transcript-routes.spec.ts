@@ -150,13 +150,11 @@ describe('GET /lessons/:lessonId/transcript', () => {
     await launchAll(pipeline, lesson);
     // The fake speech client's default phrases are under F09's word-count
     // floor, so nothing is selected and F10 completes at once as no_sample —
-    // the branch comes to rest one stage further, at lesson analysis, which
-    // has no handler yet: exactly a "later stage" still pending.
+    // the branch moves one stage further, to lesson analysis, which blocks
+    // at once (Ana holds no Gemini key): exactly a "later stage" still
+    // pending, just not queued for it.
     await waitForStage(pipeline.ctx, lesson.branches.get(ana.id)!, 'pronunciation_assessment', ['completed']);
-    const branch = await pipeline.ctx.prisma.lessonPipelineBranch.findUniqueOrThrow({
-      where: { id: lesson.branches.get(ana.id)! },
-    });
-    expect(branch).toMatchObject({ stage: 'lesson_analysis', status: 'queued' });
+    await waitForStage(pipeline.ctx, lesson.branches.get(ana.id)!, 'lesson_analysis', ['blocked_missing_key']);
 
     const response = await readTranscript(lesson.lessonId, ana);
 
