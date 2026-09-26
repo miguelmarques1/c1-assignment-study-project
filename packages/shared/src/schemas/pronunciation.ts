@@ -41,6 +41,34 @@ export const worstWordSchema = z.object({
 });
 export type WorstWord = z.infer<typeof worstWordSchema>;
 
+/**
+ * A word's colour band on the transcript (F19), from its accuracy rounded to
+ * an integer: `good` from 80, `fair` 60 to 79, `poor` below 60 (F10's
+ * failure threshold).
+ */
+export const pronunciationWordBandSchema = z.enum(['good', 'fair', 'poor']);
+export type PronunciationWordBand = z.infer<typeof pronunciationWordBandSchema>;
+
+/** One assessed word of an excerpt, in spoken order: no phonemes or offsets. */
+export const assessedWordSchema = z.object({
+  text: z.string(),
+  accuracy: z.number().int().min(0).max(100),
+  errorTypes: z.array(z.string()),
+  band: pronunciationWordBandSchema,
+});
+export type AssessedWord = z.infer<typeof assessedWordSchema>;
+
+/**
+ * The rounded headline score (F19). `delta` compares with the rounded score
+ * of the caller's most recent earlier lesson with an `assessed` result; null
+ * when there is none.
+ */
+export const pronunciationOverallSchema = z.object({
+  score: z.number().int().min(0).max(100),
+  delta: z.number().int().nullable(),
+});
+export type PronunciationOverall = z.infer<typeof pronunciationOverallSchema>;
+
 /** One selected excerpt as it appears in the caller's pronunciation view (F10). */
 export const pronunciationExcerptViewSchema = z.object({
   excerptId: z.uuid(),
@@ -58,6 +86,7 @@ export type LessonPronunciationStatus = z.infer<typeof lessonPronunciationStatus
 
 export const lessonPronunciationResultSchema = z.object({
   scores: pronunciationScoresSchema,
+  overall: pronunciationOverallSchema,
   excerptCount: z.number().int().nonnegative(),
   assessedCount: z.number().int().nonnegative(),
   partialAssessment: z.boolean(),

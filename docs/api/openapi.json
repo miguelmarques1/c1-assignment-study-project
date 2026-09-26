@@ -3277,6 +3277,50 @@
                         "scores"
                       ],
                       "additionalProperties": false
+                    },
+                    "assessedWords": {
+                      "anyOf": [
+                        {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "text": {
+                                "type": "string"
+                              },
+                              "accuracy": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 100
+                              },
+                              "errorTypes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "band": {
+                                "type": "string",
+                                "enum": [
+                                  "good",
+                                  "fair",
+                                  "poor"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "text",
+                              "accuracy",
+                              "errorTypes",
+                              "band"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
                     }
                   },
                   "required": [
@@ -3287,7 +3331,8 @@
                     "durationMs",
                     "focusWordCount",
                     "ruleVersion",
-                    "pronunciation"
+                    "pronunciation",
+                    "assessedWords"
                   ],
                   "additionalProperties": false
                 }
@@ -3377,6 +3422,33 @@
                       "fluency",
                       "prosody",
                       "completeness"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "overall": {
+                    "type": "object",
+                    "properties": {
+                      "score": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 100
+                      },
+                      "delta": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "score",
+                      "delta"
                     ],
                     "additionalProperties": false
                   },
@@ -3487,6 +3559,7 @@
                 },
                 "required": [
                   "scores",
+                  "overall",
                   "excerptCount",
                   "assessedCount",
                   "partialAssessment",
@@ -3710,6 +3783,25 @@
                         "correction": {
                           "type": "string"
                         },
+                        "correctionSegments": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "text": {
+                                "type": "string"
+                              },
+                              "changed": {
+                                "type": "boolean"
+                              }
+                            },
+                            "required": [
+                              "text",
+                              "changed"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
                         "explanation": {
                           "type": "string"
                         },
@@ -3730,6 +3822,31 @@
                         "recurring": {
                           "type": "boolean"
                         },
+                        "recurrence": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "count": {
+                                  "type": "integer",
+                                  "minimum": 2,
+                                  "maximum": 9007199254740991
+                                },
+                                "label": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "count",
+                                "label"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
                         "utteranceId": {
                           "anyOf": [
                             {
@@ -3746,11 +3863,13 @@
                       "required": [
                         "quote",
                         "correction",
+                        "correctionSegments",
                         "explanation",
                         "severity",
                         "tag",
                         "tagLabel",
                         "recurring",
+                        "recurrence",
                         "utteranceId"
                       ],
                       "additionalProperties": false

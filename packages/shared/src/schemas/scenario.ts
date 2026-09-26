@@ -90,3 +90,23 @@ export const scenarioViewSchema = z
   })
   .nullable();
 export type ScenarioView = z.infer<typeof scenarioViewSchema>;
+
+/** F06's situation status, or `none` for a lesson that has no scenario row (F19). */
+export const lessonScenarioStatusSchema = z.enum([...scenarioStatusSchema.options, 'none']);
+export type LessonScenarioStatus = z.infer<typeof lessonScenarioStatusSchema>;
+
+/**
+ * Response body of `GET /lessons/:lessonId/scenario` (F19): a past lesson's
+ * situation and the caller's own card, as they were on screen. No reroll
+ * fields — the scenario is immutable once the lesson starts — and, like
+ * `ScenarioView`, no field that could hold another participant's card.
+ */
+export const lessonScenarioViewSchema = z.object({
+  lessonId: z.uuid(),
+  status: lessonScenarioStatusSchema,
+  /** Only for `ready`. */
+  situation: sharedSituationSchema.nullable(),
+  myRoleLabel: z.string().nullable(),
+  myCard: roleCardSchema.nullable(),
+});
+export type LessonScenarioView = z.infer<typeof lessonScenarioViewSchema>;

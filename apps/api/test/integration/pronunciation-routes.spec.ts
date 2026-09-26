@@ -4,6 +4,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { audioObjectKey } from '../../src/recording/recording.constants';
 import {
   createPipelineTestContext,
+  makeAnalysisReadyLesson,
   makeTranscribedLesson,
   resetPipelineTables,
   seedSpeaker,
@@ -253,6 +254,39 @@ describe('GET /lessons/:lessonId/pronunciation', () => {
     const view = await readPronunciation(lesson.lessonId, speaker);
     expect(view.body.data.status).toBe('assessed');
     expect(view.body.data.result.assessedCount).toBe(3);
+  }, 60_000);
+
+  it('overall_delta_compares_with_the_previous_assessed_lesson', async () => {
+    const ana = await seedSpeaker(pipeline.ctx, 'Ana');
+    const bruno = await seedSpeaker(pipeline.ctx, 'Bruno');
+    const scores = (pronunciation: number) => ({
+      status: 'assessed' as const,
+      scores: { pronunciation, accuracy: 80, fluency: 80, prosody: 80, completeness: 100 },
+    });
+    const line = [{ startMs: 0, endMs: 4_000, text: 'A line of speech.', confidence: 0.9 }];
+
+    /** F10's resting point for a branch whose result is already written: the stage row completed. */
+    async function assessedLesson(participants: Parameters<typeof makeAnalysisReadyLesson>[1]) {
+      const lesson = await makeAnalysisReadyLesson(pipeline, participants);
+      const now = new Date();
+      for (const branchId of lesson.branches.values()) {
+        await pipeline.ctx.prisma.lessonPipelineStage.create({
+          data: { branchId, stage: 'pronunciation_assessment', status: 'completed', attempts: 1, startedAt: now, lastAttemptAt: now, finishedAt: now },
+        });
+      }
+      return lesson;
+    }
+
+    // Bruno's earlier, higher score never becomes Ana's baseline.
+    await assessedLesson([{ speaker: bruno, utterances: line, pronunciation: scores(95) }]);
+    const first = await assessedLesson([{ speaker: ana, utterances: line, pronunciation: scores(72.4) }]);
+    const noSample = await assessedLesson([{ speaker: ana, utterances: line }]);
+    const third = await assessedLesson([{ speaker: ana, utterances: line, pronunciation: scores(69.6) }]);
+
+    expect((await readPronunciation(first.lessonId, ana)).body.data.result.overall).toEqual({ score: 72, delta: null });
+    expect((await readPronunciation(noSample.lessonId, ana)).body.data).toMatchObject({ status: 'no_sample', result: null });
+    // Rounded before subtracting (70 − 72), and the no-sample lesson in between is skipped.
+    expect((await readPronunciation(third.lessonId, ana)).body.data.result.overall).toEqual({ score: 70, delta: -2 });
   }, 60_000);
 
   it('rejects_a_non_participant', async () => {

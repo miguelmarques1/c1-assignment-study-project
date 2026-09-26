@@ -92,6 +92,7 @@ describe('mergeTranscript', () => {
       focusWordCount: 0,
       ruleVersion: '1',
       pronunciation: { status: 'pending' as const, scores: null },
+      assessedWords: null,
     };
     // Even a map that (wrongly) names another speaker's utterance never leaks onto it.
     const excerpts = new Map([

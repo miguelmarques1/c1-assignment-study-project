@@ -4,6 +4,7 @@ import type {
   LessonPronunciationStatus,
   LessonPronunciationView,
   PronunciationExcerptView,
+  PronunciationOverall,
 } from '@english-quest/shared';
 
 import { LessonAccessService } from '../pipeline/lesson-access.service';
@@ -45,9 +46,22 @@ function buildNotes(result: StoredPronunciationResultSummary): string[] {
   return notes;
 }
 
-function toResultView(result: StoredPronunciationResultSummary): LessonPronunciationResult {
+/**
+ * The rounded headline score and its change (F19, A9). Rounding both sides
+ * before subtracting keeps the displayed numbers adding up.
+ */
+function toOverall(pronunciation: number, previous: { pronunciation: number } | null): PronunciationOverall {
+  const score = Math.round(pronunciation);
+  return { score, delta: previous ? score - Math.round(previous.pronunciation) : null };
+}
+
+function toResultView(
+  result: StoredPronunciationResultSummary,
+  previous: { pronunciation: number } | null,
+): LessonPronunciationResult {
   return {
     scores: result.scores!,
+    overall: toOverall(result.scores!.pronunciation, previous),
     excerptCount: result.excerptCount,
     assessedCount: result.assessedCount,
     partialAssessment: result.partialAssessment,
@@ -75,7 +89,7 @@ export class PronunciationService {
   ) {}
 
   async getView(lessonId: string, callerId: string): Promise<LessonPronunciationView> {
-    await this.access.requireParticipant(lessonId, callerId);
+    const lesson = await this.access.requireParticipant(lessonId, callerId);
 
     const branch = await this.prisma.lessonPipelineBranch.findUnique({
       where: { lessonId_userId: { lessonId, userId: callerId } },
@@ -111,6 +125,7 @@ export class PronunciationService {
       return { lessonId, status: 'no_sample', result: null, excerpts };
     }
 
-    return { lessonId, status: 'assessed', result: toResultView(stored.result), excerpts };
+    const previous = await this.reader.previousAssessedFor(callerId, lesson.startedAt);
+    return { lessonId, status: 'assessed', result: toResultView(stored.result, previous), excerpts };
   }
 }

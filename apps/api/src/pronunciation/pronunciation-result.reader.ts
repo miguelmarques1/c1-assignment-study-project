@@ -91,6 +91,13 @@ export interface StoredPronunciationView {
   excerpts: StoredPronunciationExcerpt[];
 }
 
+/** One assessed lesson's overall pronunciation score, for F19's per-lesson deltas. */
+export interface PronunciationScorePoint {
+  lessonId: string;
+  startedAt: Date;
+  pronunciation: number;
+}
+
 /**
  * The read side of F10: the participant's own result and every one of their
  * selected excerpts' own assessment, for F11's analysis input, F12's
@@ -102,6 +109,37 @@ export interface StoredPronunciationView {
 @Injectable()
 export class PronunciationResultReader {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * The owner's most recent `assessed` result from a lesson that started
+   * strictly before `beforeStartedAt` — what `overall.delta` compares with
+   * (F19, A9). A `no_sample` lesson is skipped, since it has no score.
+   */
+  async previousAssessedFor(userId: string, beforeStartedAt: Date | null): Promise<{ pronunciation: number } | null> {
+    if (!beforeStartedAt) {
+      return null;
+    }
+    const previous = await this.prisma.lessonPronunciationResult.findFirst({
+      where: { userId, status: 'assessed', lesson: { startedAt: { lt: beforeStartedAt } } },
+      orderBy: { lesson: { startedAt: 'desc' } },
+      select: { pronunciation: true },
+    });
+    return previous?.pronunciation != null ? { pronunciation: previous.pronunciation } : null;
+  }
+
+  /** Every `assessed` lesson of the owner, oldest first, overall score only — F19's history deltas. */
+  async scoreTimelineFor(userId: string): Promise<PronunciationScorePoint[]> {
+    const rows = await this.prisma.lessonPronunciationResult.findMany({
+      where: { userId, status: 'assessed', pronunciation: { not: null }, lesson: { startedAt: { not: null } } },
+      orderBy: { lesson: { startedAt: 'asc' } },
+      select: { lessonId: true, pronunciation: true, lesson: { select: { startedAt: true } } },
+    });
+    return rows.map((row) => ({
+      lessonId: row.lessonId,
+      startedAt: row.lesson.startedAt!,
+      pronunciation: row.pronunciation!,
+    }));
+  }
 
   async forParticipant(lessonId: string, userId: string): Promise<StoredPronunciationView | null> {
     const [result, selection] = await Promise.all([
