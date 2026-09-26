@@ -26,21 +26,34 @@
 - The `content:schema` script has no `--env-file`, because it reads no environment.
 
 **Validation:** typecheck (shared, design-tokens, api, web) ✅ · lint ✅ · unit 275/275 (19 new: content-item-schema 17, content-meta-schema-snapshot 2) ✅ · integration `seed.spec.ts` 5/5 (applies every migration including 0013) ✅ · `pnpm content:schema` run, 4 files written ✅ · openapi snapshot regenerated (+2 enum values) ✅
+**Commit:** 7a9e992 "F13 stage 1 - contract and data model"
+
+## Stage 2: The Importer — ✅ done
+
+- [x] **4. Media Probe**
+- [x] **5. Folder Scanner**
+- [x] **6. Validation Chokepoint**
+- [x] **7. Persistence Repository**
+- [x] **8. Import Orchestration**
+- [x] **9. Import CLI and Reporting**
+
+**Observations:**
+- **Sizes are decimal and switch to KB below 1 MB** (`formatSize`). The PRD's `4.2 MB uploaded` reads as decimal megabytes, and a short clip would otherwise print `0.0 MB`. `MAX_AUDIO_BYTES` is `100_000_000` rather than `100 * 1024 * 1024` for the same reason, so the rejection reads `over the 100.0 MB limit`.
+- The probe runs the spec's exact ffmpeg invocation and keeps the last `out_time_us`. A sub-second clip rounds up to 1 s instead of 0, because `content_item_duration_ck` requires a positive duration and the spec sets no lower bound. ffmpeg's `[mp3 @ 0x…]` context prefix is stripped from the reason, so a curator reads `audio file could not be decoded: Failed to read frame size: …`. The probe also owns the file-name rule (`AUDIO_FILE_NAME_PATTERN`), since it is the step that looks at the media file.
+- Validation formatting beyond the spec: an `unrecognized_keys` issue is split into one line per key at that key's own pointer (`/dificulty is not a recognized field`), and a Zod type or value issue on a field that is absent from the input reads `is required` instead of `Invalid input: expected string, received undefined`. Taxonomy membership is checked on the raw input, so an unknown tag is reported even when another field fails. Tags the schema already rejects for their shape (empty, over 64 characters) are left to the schema's own issue.
+- A `meta.json` saved with a UTF-8 BOM (common with Windows editors) parses: the BOM is dropped before `JSON.parse`. The check compares char codes. A `﻿` literal in the source kept getting written back as the raw character, which fails ESLint's `no-irregular-whitespace`.
+- Two small modules not in the spec: `content-schema-guard.ts` (`assertContentSchemaExists(prisma, command)`, shared by both CLIs and `runImport`, checks `to_regclass('public.content_item')`) and `ContentSlugConflictError` in the repository, which the importer turns into a `skipped` line and Stage 3's service will turn into `CONTENT002`.
+- Repository writes are race-safe without locks: the owner check runs first, an existing row is updated by id, and a `P2002` on create re-resolves once against the row that won. The spec only requires detecting collisions before writing.
+- The importer sorts items by type folder, then slug. A slug is globally unique, so report lines use the bare slug. Only items under an unknown type folder print as `type/slug`.
+- `runImport` throws only when nothing can run (`ContentSchemaNotInitializedError`, `NothingToImportError`). Everything per item becomes a `skipped`/`failed` outcome, and an unexpected exception inside one item becomes `failed (unexpected error: …)`. `--dry-run` still calls `statObject` for unchanged media, because that is a read-only check. So an unreachable store fails the item in a dry run as well, with the same exit code.
+- Errors are shown as their first meaningful line. For Prisma's `Invalid \`prisma.x()\` invocation:` preamble, the last line is used instead, since that is where the cause is. For `StorageUnavailableError`, the wrapped cause is used (`connect ECONNREFUSED 127.0.0.1:1`, the PRD's example shape).
+- CLI output goes to stdout through `process.stdout.write` (the report is the product; ESLint only allows `console.warn`/`console.error`). Fatal errors go to `console.error`, and the exit code is set through `process.exitCode` so Prisma and the S3 client can close cleanly. Also accepted: `--` (from `pnpm x -- args`), an unknown flag (a usage error), and more than one filter (an error).
+- The root `package.json` shortcut uses `docker compose exec -w /workspace/apps/api api pnpm content:import`, so appended arguments reach the script. The `sh -c 'cd apps/api && …'` form used in the README rows would swallow them. The README rows keep the `sh -c` form, matching the existing openapi row and avoiding Git Bash path mangling of `-w /workspace/...`.
+- **Live run on an isolated stack.** Following the worktree gotchas memory, the stack is `docker compose -p eq-f13` with ports shifted (Postgres 5442, Redis 6389, MinIO 9010/9011, API 3011) and a local, gitignored `.env` with freshly generated secrets. Only `api` and its dependencies were started, nothing from the main checkout's `english-quest` project. Results: the CLI before migrations printed the guidance and exited 1. Usage errors exited 1. After the API boot applied `0013`: a VBR MP3 **without a Xing header** (7.4 s source) measured 7 s, an AAC M4A (6.2 s) 6 s, and an `AUDIO.WAV` 3 s. The upload reached `minio:9000`, proving the container's `S3_ENDPOINT` overrides `.env`'s `localhost:9010`. The objects are in MinIO under `content/listening/<slug>/`. The re-run reported `media unchanged`, the invalid answer key printed the PRD's exact line, and exit codes, dry run, single-item filter and `Nothing to import at assignment-content/grammar.` all behaved as specified. The MP3/M4A were encoded by the container's ffmpeg from a synthetic tone, not sourced by a curator. See Stage 3.
+- `.gitignore` confirmed live: `git check-ignore` lists the MP3, M4A and uppercase `AUDIO.WAV` in `assignment-content/`. The `zz-live-*` item folders used for the live run are local only and are not committed.
+
+**Validation:** typecheck ✅ · lint ✅ · unit 303/303 (28 new: media-probe 7, folder-scanner 7, item-validation 9, import-report 5) ✅ · integration `content-import.spec.ts` 19/19 (real PostgreSQL + MinIO; the spec's 18 plus `reports_nothing_to_import_for_a_filter_that_matches_no_folder`) ✅ · live CLI on the `eq-f13` stack ✅
 **Commit:** _(recorded in the next stage)_
-
-## Stage 2: The Importer — ⬜ pending
-
-- [ ] **4. Media Probe**
-- [ ] **5. Folder Scanner**
-- [ ] **6. Validation Chokepoint**
-- [ ] **7. Persistence Repository**
-- [ ] **8. Import Orchestration**
-- [ ] **9. Import CLI and Reporting**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 3: Query API, Statistics and Verification — ⬜ pending
 

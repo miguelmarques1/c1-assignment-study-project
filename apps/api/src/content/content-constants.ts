@@ -29,7 +29,7 @@ export const MAX_CANDIDATE_LIMIT = 500;
  * `StorageService.uploadFile` buffers the whole file (F07 kept it buffered on
  * purpose), so the cap bounds the importer's memory as much as the corpus.
  */
-export const MAX_AUDIO_BYTES = 100 * 1024 * 1024;
+export const MAX_AUDIO_BYTES = 100_000_000;
 
 /** The four extensions `.gitignore` keeps out of git, with the `Content-Type` F16 serves them under. */
 export const AUDIO_CONTENT_TYPES: Readonly<Record<string, string>> = {

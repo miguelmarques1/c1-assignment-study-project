@@ -65,6 +65,8 @@ Redis answer. It logs a readiness line listing every dependency with its latency
 | Regenerate the OpenAPI snapshot | `docker compose exec api sh -c 'cd apps/api && pnpm openapi:generate'` |
 | Apply migrations | `docker compose exec api pnpm db:migrate` |
 | Seed the configured accounts | `docker compose exec api pnpm db:seed` |
+| Import curated content ([assignment-content/README.md](assignment-content/README.md)) | `docker compose exec api sh -c 'cd apps/api && pnpm content:import'` |
+| Check an import without writing anything | `docker compose exec api sh -c 'cd apps/api && pnpm content:import --dry-run'` |
 | Run the API test suite | `docker compose exec api pnpm test` |
 | Lint everything | `docker compose exec api pnpm -r lint` |
 | Typecheck everything | `docker compose exec api pnpm -r typecheck` |

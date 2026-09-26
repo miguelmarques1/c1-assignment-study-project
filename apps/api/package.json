@@ -16,6 +16,7 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:seed": "node --env-file-if-exists=../../.env --import tsx src/seed/seed.ts",
     "openapi:generate": "node --env-file-if-exists=../../.env --import tsx src/openapi/generate.ts",
+    "content:import": "node --env-file-if-exists=../../.env --import tsx src/content/cli/import.ts",
     "content:schema": "node --import tsx src/content/cli/schema.ts"
   },
   "dependencies": {
