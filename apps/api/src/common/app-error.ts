@@ -112,4 +112,13 @@ export class AppError extends Error {
       retryRoute: `/lessons/${lessonId}/recording/retry`,
     });
   }
+
+  static contentItemNotFound(itemId: string): AppError {
+    return new AppError(ERROR_CODES.CONTENT_ITEM_NOT_FOUND, { itemId });
+  }
+
+  /** The slug's current owner is carried so F14 can tell a curated collision from a type mismatch. */
+  static contentSlugConflict(slug: string, existingType: string, existingProvenance: string): AppError {
+    return new AppError(ERROR_CODES.CONTENT_SLUG_CONFLICT, { slug, existingType, existingProvenance });
+  }
 }
