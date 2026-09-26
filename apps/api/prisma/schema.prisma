@@ -37,6 +37,13 @@ model User {
   pronunciationResults LessonPronunciationResult[]
   analyses             LessonAnalysis[]
   analysisErrors       LessonAnalysisError[]
+  learningProfile      LearningProfile?
+  profileSources       ProfileSource[]
+  profileMeasurements  ProfileMeasurement[]
+  profileCompetencies  ProfileCompetency[]
+  ledgerEntries        ErrorLedgerEntry[]
+  ledgerOccurrences    ErrorLedgerOccurrence[]
+  ledgerEncounters     ErrorLedgerEncounter[]
 
   @@map("users")
 }
@@ -169,6 +176,8 @@ model Lesson {
   pronunciationResults LessonPronunciationResult[]
   analyses             LessonAnalysis[]
   analysisErrors       LessonAnalysisError[]
+  profileSources       ProfileSource[]
+  ledgerOccurrences    ErrorLedgerOccurrence[]
 
   @@index([status, openedAt(sort: Desc)], map: "ix_lessons_status_opened")
   @@map("lessons")
@@ -387,6 +396,7 @@ model LessonUtterance {
   user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   excerpt    LessonExcerpt?
   analysisErrors LessonAnalysisError[]
+  ledgerOccurrences ErrorLedgerOccurrence[]
 
   @@unique([lessonId, userId, idx], map: "ux_utterances_lesson_user_idx")
   @@index([transcriptId], map: "ix_utterances_transcript")
@@ -713,4 +723,196 @@ model LessonRoleCard {
 
   @@unique([lessonId, userId], map: "ux_lesson_role_cards_lesson_user")
   @@map("lesson_role_cards")
+}
+
+/// F12: one row per user, created on first ingestion. Its only job besides
+/// `updated_at` is to be the per-user lock: every ingestion takes
+/// `SELECT … FOR UPDATE` on it first, so a lesson and an activity finishing
+/// together never fold from a stale read.
+model LearningProfile {
+  userId    String   @id @map("user_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// The last applied source.
+  updatedAt DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("learning_profiles")
+}
+
+/// F12: one applied source of profile evidence — a lesson's analysis, a
+/// lesson's pronunciation result, or an activity attempt — keyed by
+/// `(user, kind, source_key)`. The same `revision` again is skipped; a new
+/// one replaces the row, and its evidence cascades away with it.
+model ProfileSource {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String   @map("user_id") @db.Uuid
+  /// One of lesson_analysis, lesson_pronunciation, activity.
+  kind             String   @db.VarChar(24)
+  /// The lesson id, or the activity caller's idempotency key.
+  sourceKey        String   @map("source_key") @db.Uuid
+  /// The F11 or F10 row id, or the activity's revision.
+  revision         String   @db.VarChar(64)
+  /// Set for the lesson kinds (equals `source_key`).
+  lessonId         String?  @map("lesson_id") @db.Uuid
+  /// Set for `activity`. No foreign key: F16–F18's tables do not exist yet.
+  activityId       String?  @map("activity_id") @db.Uuid
+  /// The lesson's start (or opening), or the activity's completion — the fold order.
+  occurredAt       DateTime @map("occurred_at") @db.Timestamptz(6)
+  taxonomyVersion  String   @map("taxonomy_version") @db.VarChar(32)
+  measurementCount Int      @default(0) @map("measurement_count") @db.SmallInt
+  occurrenceCount  Int      @default(0) @map("occurrence_count") @db.SmallInt
+  encounterCount   Int      @default(0) @map("encounter_count") @db.SmallInt
+  /// Tags outside the taxonomy in force, rejected and logged for the curator.
+  rejectedTags     Json     @default("[]") @map("rejected_tags")
+  ingestedAt       DateTime @default(now()) @map("ingested_at") @db.Timestamptz(6)
+
+  user         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson       Lesson?                 @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  measurements ProfileMeasurement[]
+  occurrences  ErrorLedgerOccurrence[]
+  encounters   ErrorLedgerEncounter[]
+
+  @@unique([userId, kind, sourceKey], map: "ux_profile_sources_user_kind_key")
+  @@index([userId, occurredAt(sort: Desc)], map: "ix_profile_sources_user_occurred")
+  @@index([lessonId], map: "ix_profile_sources_lesson")
+  @@map("profile_sources")
+}
+
+/// F12: one competency measurement from one source. `scoreAfter` (and the
+/// sub-score columns) is the smoothed value after this row in the user's
+/// ordered log, rewritten on every refold — what F20's chart plots.
+model ProfileMeasurement {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  sourceId      String   @map("source_id") @db.Uuid
+  /// One of grammar, vocabulary, fluency, interaction, comprehension, pronunciation.
+  competency    String   @db.VarChar(16)
+  /// lesson or activity.
+  sourceKind    String   @map("source_kind") @db.VarChar(8)
+  /// 0.35 for a lesson, 0.15 for an activity — from the kind, never the caller.
+  weight        Float    @db.Real
+  value         Float    @db.Real
+  /// Raw sub-scores, pronunciation only; prosody may be null.
+  accuracy      Float?   @db.Real
+  prosody       Float?   @db.Real
+  measuredAt    DateTime @map("measured_at") @db.Timestamptz(6)
+  scoreAfter    Float    @map("score_after") @db.Real
+  accuracyAfter Float?   @map("accuracy_after") @db.Real
+  prosodyAfter  Float?   @map("prosody_after") @db.Real
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source ProfileSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, competency], map: "ux_profile_measurements_source_competency")
+  @@index([userId, competency, measuredAt, createdAt], map: "ix_profile_measurements_user_competency_time")
+  @@map("profile_measurements")
+}
+
+/// F12: the materialized current score of one competency, recomputed from
+/// the measurement log on every ingestion that touches it. A competency with
+/// no measurement has no row.
+model ProfileCompetency {
+  userId           String   @map("user_id") @db.Uuid
+  competency       String   @db.VarChar(16)
+  score            Float    @db.Real
+  /// Before the last measurement; null for the first.
+  previousScore    Float?   @map("previous_score") @db.Real
+  measurementCount Int      @map("measurement_count")
+  /// up, down or flat; set exactly when the count is at least 3.
+  trend            String?  @db.VarChar(8)
+  /// Current smoothed sub-scores, pronunciation only.
+  accuracy         Float?   @db.Real
+  prosody          Float?   @db.Real
+  /// Measurements that reported prosody.
+  prosodyCount     Int      @default(0) @map("prosody_count")
+  lastMeasuredAt   DateTime @map("last_measured_at") @db.Timestamptz(6)
+  updatedAt        DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, competency])
+  @@map("profile_competencies")
+}
+
+/// F12: one record per tag per user, aggregated from its occurrences.
+/// `state` and `due_at` are the lifecycle's: Core writes `new` and
+/// `practicing` and never a due date (the mastery lifecycle is Full scope).
+model ErrorLedgerEntry {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String    @map("user_id") @db.Uuid
+  tag             String    @db.VarChar(64)
+  family          String    @db.VarChar(16)
+  /// Label snapshot, refreshed on every write, so a retired tag keeps its name.
+  label           String    @db.VarChar(120)
+  occurrenceCount Int       @map("occurrence_count")
+  firstSeenAt     DateTime  @map("first_seen_at") @db.Timestamptz(6)
+  lastSeenAt      DateTime  @map("last_seen_at") @db.Timestamptz(6)
+  /// One of new, practicing, mastered.
+  state           String    @default("new") @db.VarChar(12)
+  /// Null (not scheduled) throughout Core.
+  dueAt           DateTime? @map("due_at") @db.Timestamptz(6)
+  taxonomyVersion String    @map("taxonomy_version") @db.VarChar(32)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, tag], map: "ux_ledger_entries_user_tag")
+  @@index([userId, lastSeenAt(sort: Desc)], map: "ix_ledger_entries_user_last_seen")
+  @@map("error_ledger_entries")
+}
+
+/// F12: one sighting of a tag in one source — one per tagged analysis
+/// error (with its quote), one per `phoneme:` tag per lesson (with F10's
+/// failing-instance count and example words), one per activity entry.
+model ErrorLedgerOccurrence {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  sourceId        String   @map("source_id") @db.Uuid
+  tag             String   @db.VarChar(64)
+  lessonId        String?  @map("lesson_id") @db.Uuid
+  activityId      String?  @map("activity_id") @db.Uuid
+  quote           String?
+  correction      String?
+  /// F11's minor, moderate or major.
+  severity        String?  @db.VarChar(8)
+  /// Up to 5 words (pronunciation).
+  exampleWords    Json     @default("[]") @map("example_words")
+  instances       Int      @default(1) @db.SmallInt
+  /// F11's error row. No foreign key: F11 replaces its rows on re-run.
+  analysisErrorId String?  @map("analysis_error_id") @db.Uuid
+  utteranceId     String?  @map("utterance_id") @db.Uuid
+  occurredAt      DateTime @map("occurred_at") @db.Timestamptz(6)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source    ProfileSource    @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  lesson    Lesson?          @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  utterance LessonUtterance? @relation(fields: [utteranceId], references: [id], onDelete: SetNull)
+
+  @@index([userId, tag, occurredAt(sort: Desc)], map: "ix_ledger_occurrences_user_tag_time")
+  @@index([sourceId], map: "ix_ledger_occurrences_source")
+  @@map("error_ledger_occurrences")
+}
+
+/// F12: a correct answer on a tag in an activity. Incorrect ones are
+/// occurrences. Recorded from day one so the mastery lifecycle (Full scope)
+/// can compute streaks and distinct days from real evidence.
+model ErrorLedgerEncounter {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String   @map("user_id") @db.Uuid
+  sourceId   String   @map("source_id") @db.Uuid
+  tag        String   @db.VarChar(64)
+  activityId String   @map("activity_id") @db.Uuid
+  occurredAt DateTime @map("occurred_at") @db.Timestamptz(6)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user   User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  source ProfileSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@unique([sourceId, tag], map: "ux_ledger_encounters_source_tag")
+  @@index([userId, tag, occurredAt], map: "ix_ledger_encounters_user_tag_time")
+  @@map("error_ledger_encounters")
 }

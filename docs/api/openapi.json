@@ -1982,6 +1982,7 @@
                   "REC002",
                   "PIPE001",
                   "PIPE002",
+                  "PROF001",
                   "HEALTH001",
                   "ERR500"
                 ]
@@ -2631,7 +2632,8 @@
                           "excerpt_selection",
                           "pronunciation_assessment",
                           "lesson_analysis",
-                          "profile_update"
+                          "profile_update",
+                          "plan_generation"
                         ]
                       },
                       "status": {
@@ -2758,7 +2760,8 @@
                       "excerpt_selection",
                       "pronunciation_assessment",
                       "lesson_analysis",
-                      "profile_update"
+                      "profile_update",
+                      "plan_generation"
                     ]
                   },
                   "status": {
@@ -2786,7 +2789,8 @@
                             "excerpt_selection",
                             "pronunciation_assessment",
                             "lesson_analysis",
-                            "profile_update"
+                            "profile_update",
+                            "plan_generation"
                           ]
                         },
                         "status": {
