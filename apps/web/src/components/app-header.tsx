@@ -5,10 +5,13 @@ import { Avatar, Logo, NavPill, ThemeToggle } from '@/components/ui';
 /**
  * The destinations that exist today. A later feature adds its own entry
  * here rather than changing NavPill itself — see design/README.md for
- * "Scenarios & Practice", deferred to F06.
+ * "Scenarios & Practice", deferred to F06. The order mirrors the mobile
+ * shell's tabs (Today, Plan, Profile, Lessons, Settings): F19's `Lessons`
+ * goes between Profile and Settings.
  */
 const DESTINATIONS = [
   { href: '/dashboard', label: 'Dashboard' },
+  { href: '/profile', label: 'Profile' },
   { href: '/settings', label: 'Settings' },
 ];
 

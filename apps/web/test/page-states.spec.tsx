@@ -62,6 +62,19 @@ describe('EmptyState', () => {
     render(<EmptyState title="No results" description="Try a different search." />);
     expect(screen.queryByRole('button')).toBeNull();
   });
+
+  it('an_action_that_goes_somewhere_is_a_link', () => {
+    render(
+      <EmptyState
+        title="No profile yet."
+        description="Your competencies appear after your first analysed lesson."
+        action={{ label: 'Open classroom', href: '/classroom' }}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: 'Open classroom' })).toHaveAttribute('href', '/classroom');
+    expect(screen.queryByRole('button')).toBeNull();
+  });
 });
 
 describe('ErrorState', () => {

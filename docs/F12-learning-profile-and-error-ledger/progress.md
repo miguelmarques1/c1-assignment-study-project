@@ -86,18 +86,28 @@
 - Runtime: the routes are exercised through the real HTTP stack (Nest + supertest + Postgres on Testcontainers). The running-stack check is in stage 7.
 
 **Validation:** typecheck ✅ · lint ✅ · `openapi.spec.ts` 4/4 ✅ · `profile-routes.spec.ts` 12/12 ✅
+**Commit:** `1372597` F12 stage 4 - routes and document
+
+## Stage 5: Web profile screen — ✅ done (browser check in stage 7)
+
+- [x] **15. Navigation and design reference**
+- [x] **16. Profile screen**
+- [x] **17. Ledger detail dialog**
+
+**Observations:**
+- `AppHeader` destinations are Dashboard, Profile, Settings; the comment names where F19's Lessons goes (between Profile and Settings, the mobile tab order). `design/README.md`'s dashboard pill row now reads "Dashboard, Profile (F12) and Settings"; the settings table's row already points at the dashboard's, so only one row changed. The F22 dated note is stage 7's step 22.
+- `lib/relative-time.ts` is new (F19 had not landed): A29's bands, formatted in the viewer's timezone against the view's `serverTime`. Minutes win over the calendar day just after midnight (23:50 → 00:10 reads "20 minutes ago"). The older `relativeTime` in `lib/credentials.ts` (settings cards) was left alone.
+- **Primitive extended, not forked:** `EmptyState`'s one action can now be `{ label, href }`, rendered as a `next/link` styled like the neutral button, because the empty profile's only action is navigation (`Open classroom` → `/classroom`); `page-states.spec.tsx` gained `an_action_that_goes_somewhere_is_a_link`.
+- **Deviation (wording):** the error states use the shared `ErrorState` primitive, whose button reads `Try again` on every page, not the spec's `Retry`.
+- The screen composes `Card`, `Meter`, `Badge`, `Button`, `EmptyState`, `ErrorState`, `LoadingState` and `Skeleton` only. The loading skeleton is shaped like six meters and two rows. Warming-up competencies use `Meter` unchanged (A30); the Pronunciation disclosure is a small neutral `Button` with `aria-expanded` and `aria-controls`, revealing Accuracy and Prosody (or "Prosody: not measured for this language"). The partial-update note is an `info` card with `role="note"`.
+- Weakness rows are one `<button>` each, with an `aria-label` reading the whole row (`Third conditional: 6 times, last seen 3 days ago, New, Rising`). The trend is arrow + word, coloured `error` for rising and `tertiary` for falling (an error rising is the bad direction), never by colour alone.
+- `LedgerEntrySheet` is a modal `dialog` labelled by the tag's label. Focus moves to its close button on open; Escape or the close button closes it; the screen returns focus to the row that opened it (asserted). It has its own loading and error-with-retry states.
+- **A27 applied: lesson sources render as plain text** (`Lesson · 3 days ago`), because F19's `/lessons/{id}` does not exist on this branch. The link is one constant, `LESSON_DETAIL_HREF` in `ledger-entry-sheet.tsx`, currently `null`; whichever of F12 and F19 lands second sets it. The spec's `lesson_examples_link_to_the_lesson` became `lesson_examples_render_as_text_until_f19_ships_lesson_detail`. Recorded as an F19 follow-up in stage 7.
+- `/profile?tag=` resolves the tag through `GET /profile/ledger?tag=` and opens its dialog (`a_tag_in_the_address_opens_its_detail`), which is where F19's error-card chip will link. F19's `error-card.tsx` does not exist here, so wiring the chip is an F19 follow-up.
+- `apps/web/AGENTS.md` lists the profile screen, `getProfileView`, `relative-time.ts` and `profile.ts`.
+
+**Validation:** web typecheck ✅ · lint ✅ · web tests 146/146 ✅ (new: `profile-screen` 11, `ledger-entry-sheet` 5, `relative-time` 2, `app-shell` +1, `page-states` +1; the token-resolution, no-raw-values and design-reference guards pass) · browser check against a running F12 API: pending, done in stage 7 on an isolated stack
 **Commit:** _(recorded in the next stage's commit)_
-
-## Stage 5: Web profile screen — ⬜ pending
-
-- [ ] **15. Navigation and design reference**
-- [ ] **16. Profile screen**
-- [ ] **17. Ledger detail dialog**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 6: Mobile profile screen — ⬜ pending
 
