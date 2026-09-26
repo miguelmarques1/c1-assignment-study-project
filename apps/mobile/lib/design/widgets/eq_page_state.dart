@@ -33,13 +33,15 @@ class EqLoading extends StatelessWidget {
   }
 }
 
-/// Names what's missing and offers exactly one action.
+/// Names what's missing and offers at most one action — none when the only
+/// thing to do happens elsewhere (the live lesson is web-only).
 class EqEmpty extends StatelessWidget {
-  const EqEmpty({super.key, required this.message, required this.actionLabel, required this.onAction});
+  const EqEmpty({super.key, required this.message, this.actionLabel, this.onAction})
+    : assert((actionLabel == null) == (onAction == null), 'An action needs both a label and a callback.');
 
   final String message;
-  final String actionLabel;
-  final VoidCallback onAction;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -50,8 +52,10 @@ class EqEmpty extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(message, style: EqTextStyles.bodyLg(dark: dark), textAlign: TextAlign.center),
-          SizedBox(height: EqSpacing.md),
-          EqButton(label: actionLabel, onPressed: onAction),
+          if (actionLabel != null && onAction != null) ...[
+            SizedBox(height: EqSpacing.md),
+            EqButton(label: actionLabel!, onPressed: onAction),
+          ],
         ],
       ),
     );

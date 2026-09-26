@@ -44,7 +44,7 @@ Stock Material widgets are the main reason a screen looks unfinished. Every widg
 
 `EqTheme` (`lib/design/eq_theme.dart`) builds on the generated `eqLightTheme()` / `eqDarkTheme()` and adds the component themes with `copyWith`: `inputDecorationTheme`, `navigationBarTheme`, `appBarTheme`, `textButtonTheme`, `outlinedButtonTheme`, `dialogTheme`, `bottomSheetTheme`, `snackBarTheme`, `chipTheme`, `dividerTheme`, `progressIndicatorTheme`, and `splashFactory: NoSplash.splashFactory`. That file is where app-level styling goes. Never edit the generated `english_quest_tokens.dart`: token changes go in `tokens.json` followed by `pnpm tokens:build`.
 
-**The widget library mirrors the web's.** Today it has `EqButton`, `EqCard`, `EqBadge`, and `EqLoading` / `EqEmpty` / `EqError` (in `eq_page_state.dart`). The web also has TextField, Chip, Meter, Avatar, NavPill, Logo, icons and Empty/Error/Loading states in `apps/web/src/components/ui/`. When a screen needs one that doesn't exist yet:
+**The widget library mirrors the web's.** Today it has `EqButton`, `EqCard`, `EqBadge`, `EqMeter`, `EqChip`, and `EqLoading` / `EqEmpty` / `EqError` (in `eq_page_state.dart`). The web also has TextField, Avatar, NavPill, Logo, icons and Empty/Error/Loading states in `apps/web/src/components/ui/`. Relative dates go through `core/format/relative_time.dart`, the twin of the web's `lib/relative-time.ts`. When a screen needs one that doesn't exist yet:
 
 1. Read the web component first.
 2. Add `Eq<Name>` in `lib/design/widgets/`, keeping the web's prop names and tone/variant vocabulary.

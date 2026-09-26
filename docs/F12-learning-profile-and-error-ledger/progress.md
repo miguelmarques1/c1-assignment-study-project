@@ -107,18 +107,27 @@
 - `apps/web/AGENTS.md` lists the profile screen, `getProfileView`, `relative-time.ts` and `profile.ts`.
 
 **Validation:** web typecheck ✅ · lint ✅ · web tests 146/146 ✅ (new: `profile-screen` 11, `ledger-entry-sheet` 5, `relative-time` 2, `app-shell` +1, `page-states` +1; the token-resolution, no-raw-values and design-reference guards pass) · browser check against a running F12 API: pending, done in stage 7 on an isolated stack
+**Commit:** `b0f5de1` F12 stage 5 - web profile screen
+
+## Stage 6: Mobile profile screen — ✅ done
+
+- [x] **18. Mobile primitives**
+- [x] **19. Profile models and controller**
+- [x] **20. Profile page and detail sheet**
+
+**Observations:**
+- **No mockup on either client** (mobile-ui section 1, case 3): the screen composes `Eq*` widgets only, with the web's copy and states. Translation decisions from the web page: the detail dialog became a modal bottom sheet (max 85% of the height, scrollable); the empty state has **no action**, because the live lesson is web-only; the error button reads `Retry` (`EqError`'s own wording, while the web primitive says `Try again`); pull-to-refresh reloads the profile, as the shell's other tabs do; weakness rows stack name, `N times · last seen …`, then badge and trend on a wrap line instead of the web's two-column row; content is capped at 560 dp and centred for tablets.
+- `EqMeter` (new) mirrors the web `Meter`: value, signed delta (zero renders nothing), `warmingUp` state with a hatched track drawn like `meter-track-warming`, and one semantics node (`Grammar: 68 out of 100, up 3` / `Interaction: warming up, not enough data yet`). It also takes `showNullDelta` for F19's `—` (A29); the profile doesn't use it. `EqChip` (new) mirrors the web's five tones and `count`; the profile screen doesn't use it yet (F19's error-card chip will).
+- **Primitive extended:** `EqEmpty`'s action is now optional (both label and callback, or neither), with a widget test.
+- **Accessibility gotcha found by the tests:** a plain `Semantics(label:)` inside a card merges into the card's node, so the meter and the row need `container: true`; and `excludeSemantics` on the row dropped the `InkWell`'s tap action, so the row's `Semantics` carries `onTap` itself.
+- `core/format/relative_time.dart` (new) uses the web's bands; both suites pin the same 12-row case table built from local date parts, so they hold in any timezone.
+- `profile_models.dart` mirrors the three views (enums for competency, trends, state and source kind; `LedgerState.newTag` because `new` is reserved in Dart) and ignores unknown fields (asserted with a Full-scope-style `recentImprovements` key). `ProfileController` loads the view and a record's detail, plus `findEntryByTag` for F19's chip; `ledger_entry_sheet.dart` exports `showLedgerEntrySheetForTag(context, controller, tag)` for F19 to call.
+- Lesson sources render as plain text (`Lesson · 3 days ago`): F19's `/app/lessons/{id}` does not exist on this branch (A27). `features/lessons/widgets/error_card.dart` does not exist either, so wiring the chip is an F19 follow-up.
+- `ProfilePage` takes an optional `controller` for tests and builds one over `inject<Dio>()` otherwise, as `SettingsPage` does. `app_module.dart` and `app_config.dart` untouched.
+- `test/helpers/pump_screen.dart` is the mobile-ui skill's small-phone snippet, added the first time a screen needed it. The skill's widget list now includes `EqMeter`, `EqChip` and the relative-time formatter.
+
+**Validation:** `flutter analyze` 0 issues ✅ · `flutter test` 54/54 ✅ (new: `eq_meter` 3, `eq_chip` 1, `relative_time` 2, `profile_models` 3, `profile_page` 6, `page_state` +1; the page is pumped at 360×690 dp and at 1.3× text with no overflow) · `flutter build apk --debug` ✅ · on-device review: left to the user, per `apps/mobile/AGENTS.md`
 **Commit:** _(recorded in the next stage's commit)_
-
-## Stage 6: Mobile profile screen — ⬜ pending
-
-- [ ] **18. Mobile primitives**
-- [ ] **19. Profile models and controller**
-- [ ] **20. Profile page and detail sheet**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 7: Verification and hand-off — ⬜ pending
 
