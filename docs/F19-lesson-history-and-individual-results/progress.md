@@ -48,22 +48,35 @@
 - Routes were exercised through the real Nest app (HTTP, session guard, Postgres, Redis, MinIO) in the integration suites; the check against the running dev stack is Stage 5's.
 
 **Validation:** typecheck ✅ · lint ✅ · api unit 284/284 (19 new: lesson-status 11, lesson-headline 6, lesson-cursor 2) ✅ · integration: `lesson-history-routes` 19/19 ✅, `lesson-scenario-route` 5/5 ✅, `lesson-privacy` 3/3 ✅, `scenario` + `scenario-generation` + `pipeline-routes` 44/44 ✅ · openapi snapshot regenerated, 27 operations (3 new), fresh ✅
+**Commit:** 8b6c735 "F19 stage 2 - lesson history API"
+
+## Stage 3: Web lesson history — ✅ done
+
+- [x] **9. Web data layer and formatting**
+- [x] **10. Primitive extensions** (visual baselines deferred to Stage 5, see below)
+- [x] **11. Lesson list, navigation and dashboard**
+- [x] **12. Lesson detail frame and result area**
+- [x] **13. Scenario and transcript areas**
+- [x] **14. Status area and retries**
+- [x] **15. Design reference update**
+
+**Observations:**
+- Web typecheck passes over the uncommitted files (2026-09-26). No web test, lint or token guard has been run on them yet.
+- Planned design for the rest of the stage (from reading the codebase): detail pages under `app/(app)/lessons/[lessonId]/` with `params` as a Promise (Next 15); each area reads its own route through `lessons-server.ts` and shows only its own error state; the result area shows the status panel when analysis is not ready but always shows the pronunciation section; transcript expansion and `#u-{id}` highlighting in a client component; retries through `lib/lessons.ts` with PIPE001 → silent refresh, PIPE002 → recording retry, REC001/REC002 → inline message. Token guard limits to remember: no `ml-auto`, no `border-dotted`, no bracket values, spacing only `xs…xl`.
+- _2026-09-26, run resumed:_ the two notes above describe the paused state; the stage was then finished and validated as below. A scheduled task (`resume-f19-lesson-history`, every 2 h at :15) now resumes this run automatically if a usage limit interrupts it again; it does nothing while any worktree file changed in the last hour or once the Status line is final.
+- **Composition for testability:** each area is a plain component (`ResultArea`, `ScenarioArea`, `TranscriptView`, `StatusArea`) taking `ServerRead<T>` results, and the `app/(app)/lessons/[lessonId]/**/page.tsx` files are thin server reads around them — so the component suites render every area with typed fixtures (`test/fixtures/lessons.ts`), including one area failing while the others render.
+- **Deviation — shared `Meter`:** negative deltas now print `▼ −N` with U+2212 (previously ASCII `-`), because the spec's result test expects `▼ −2`. F21's `meter_delta_states_its_direction_in_text` was updated to match. This also changes the gallery's `Pronunciation` meter rendering, so the meter's visual baseline changes twice over (the new null-delta row as well).
+- **Deviation — `SituationCard`:** its four reroll props became one optional `reroll` object; the classroom's `scenario-region.tsx` passes it, and the past-lesson Scenario area omits it, so the button and its notices are absent there. F06's `scenario-panel`/`scenario-visibility` suites stay green.
+- `NavPill` stays on plain `<a>` links (unchanged primitive behaviour), so switching areas is a full navigation; the header's `Lessons` destination uses `matchPrefix` so it stays active on a lesson's detail. The detail's section pill uses `label="Lesson sections"` and `alwaysVisible`.
+- Dates render through `LocalizedTime`, a client component that prints a fixed UTC form on the server's render and the viewer's local text after mount, so server HTML and hydration always agree and calendar days are the viewer's (A19). `lib/relative-time.ts` takes the time zone as a parameter; the case table pins `UTC` plus an `America/Sao_Paulo` case where the two disagree.
+- The past-lesson Scenario area shows a note instead of `RoleCardPanel` when the caller's card is missing or still `pending` — the panel's "Preparing your role card…" makes no sense after the lesson.
+- The recurrence `Badge` renders only when the API sends `recurrence` (always null until F12); the tag chip is plain text (A14).
+- The `Recent lessons` dashboard block is recorded in `design/README.md`'s dashboard table (not in the mockup; F05's and F07's Experience clauses), and the header-pill row names `Lessons` and F12's future `Profile` slot.
+- **Soft-fail (deferred to Stage 5):** the Playwright visual baselines for the gallery's meter block were not regenerated. The `visual` service runs under the default `english-quest` compose project, which the concurrent F12 session uses; it will be run under a separate `-p` project with the live check.
+- **Soft-fail (deferred to Stage 5):** the pages were not yet exercised against a running stack (that is Stage 5's live verification). `next build` compiles every lesson route (`/lessons`, `/lessons/[lessonId]` and its three sub-routes) with no server/client boundary error.
+
+**Validation:** web typecheck ✅ · lint ✅ · web 167/167 (41 new across `lesson-format` 4, `lesson-list` 7, `lesson-result` 9, `lesson-scenario-area` 3, `lesson-transcript` 5, `lesson-status-area` 8, `lesson-detail-no-audio` 1, plus 4 in `ui-primitives`/`app-shell`) ✅ · guards `no-raw-values`, `token-resolution`, `design-reference` ✅ · `next build` ✅ · visual baselines ⏭️ deferred · live pages ⏭️ Stage 5
 **Commit:** _(recorded in the next stage's commit)_
-
-## Stage 3: Web lesson history — ⬜ pending
-
-- [ ] **9. Web data layer and formatting**
-- [ ] **10. Primitive extensions**
-- [ ] **11. Lesson list, navigation and dashboard**
-- [ ] **12. Lesson detail frame and result area**
-- [ ] **13. Scenario and transcript areas**
-- [ ] **14. Status area and retries**
-- [ ] **15. Design reference update**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 4: Mobile lesson history — ⬜ pending
 

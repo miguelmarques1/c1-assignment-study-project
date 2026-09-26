@@ -1,14 +1,17 @@
 import type { CurrentUser } from '@english-quest/shared';
 
-import { Avatar, Logo, NavPill, ThemeToggle } from '@/components/ui';
+import { Avatar, Logo, NavPill, ThemeToggle, type NavDestination } from '@/components/ui';
 
 /**
  * The destinations that exist today. A later feature adds its own entry
  * here rather than changing NavPill itself — see design/README.md for
- * "Scenarios & Practice", deferred to F06.
+ * "Scenarios & Practice", deferred to F06. The order mirrors the mobile
+ * tabs: Dashboard, Profile (F12), Lessons (F19), Settings — whichever of
+ * F12 and F19 lands second inserts its entry into that order.
  */
-const DESTINATIONS = [
+const DESTINATIONS: NavDestination[] = [
   { href: '/dashboard', label: 'Dashboard' },
+  { href: '/lessons', label: 'Lessons', matchPrefix: true },
   { href: '/settings', label: 'Settings' },
 ];
 

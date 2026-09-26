@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { AppHeader } from '@/components/app-header';
 import { Avatar, NavPill } from '@/components/ui';
 
 const usePathname = vi.fn();
@@ -30,6 +31,45 @@ describe('NavPill', () => {
 
     expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Dashboard' })).not.toHaveAttribute('aria-current');
+  });
+});
+
+describe('NavPill options', () => {
+  it('a_labelled_always_visible_pill_names_its_landmark', () => {
+    usePathname.mockReturnValue('/lessons/abc/transcript');
+    render(
+      <NavPill
+        label="Lesson sections"
+        alwaysVisible
+        destinations={[
+          { href: '/lessons/abc', label: 'Result' },
+          { href: '/lessons/abc/transcript', label: 'Transcript' },
+        ]}
+      />,
+    );
+    const nav = screen.getByRole('navigation', { name: 'Lesson sections' });
+    expect(nav).not.toHaveClass('hidden');
+    expect(screen.getByRole('link', { name: 'Transcript' })).toHaveAttribute('aria-current', 'page');
+    // Result is an exact match, so it is not also active on a sub-route.
+    expect(screen.getByRole('link', { name: 'Result' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('a_prefix_destination_stays_active_below_its_path', () => {
+    usePathname.mockReturnValue('/lessons/9f1c4d7e/status');
+    render(<NavPill destinations={[...DESTINATIONS, { href: '/lessons', label: 'Lessons', matchPrefix: true }]} />);
+    expect(screen.getByRole('link', { name: 'Lessons' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('navigation')).toHaveClass('hidden');
+  });
+});
+
+describe('AppHeader', () => {
+  it('the_header_carries_the_lessons_destination_in_order', () => {
+    usePathname.mockReturnValue('/lessons');
+    render(<AppHeader user={{ id: '3f8b1a20-5c6d-4e7f-8a91-2b3c4d5e6f70', email: 'miguel@example.com', displayName: 'Miguel Marques', sessionExpiresAt: '2026-10-01T00:00:00.000Z' }} />);
+    const links = screen.getAllByRole('link').map((link) => link.textContent);
+    expect(links).toEqual(expect.arrayContaining(['Dashboard', 'Lessons', 'Settings']));
+    expect(links.indexOf('Lessons')).toBe(links.indexOf('Dashboard') + 1);
+    expect(screen.getByRole('link', { name: 'Lessons' })).toHaveAttribute('aria-current', 'page');
   });
 });
 

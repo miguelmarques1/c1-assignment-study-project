@@ -6,8 +6,25 @@ export interface MeterProps {
   state?: MeterState;
   /** The accessible name; also rendered as visible text. */
   label: string;
-  /** Signed change since the last measurement. */
-  delta?: number;
+  /**
+   * Signed change since the last measurement. `null` says there was no
+   * previous measurement (a first lesson) and renders an em dash; omitted
+   * renders nothing.
+   */
+  delta?: number | null;
+}
+
+/** `▲ +4`, `▼ −2` (U+2212), or nothing for no change. */
+function DeltaText({ delta }: { delta: number }) {
+  if (delta === 0) {
+    return null;
+  }
+  return (
+    <span className={delta > 0 ? 'text-tertiary' : 'text-error'}>
+      {' '}
+      {delta > 0 ? `▲ +${delta}` : `▼ −${Math.abs(delta)}`}
+    </span>
+  );
 }
 
 export function Meter({ value, state = 'scored', label, delta }: MeterProps) {
@@ -22,11 +39,12 @@ export function Meter({ value, state = 'scored', label, delta }: MeterProps) {
         ) : (
           <span className="text-label-lg text-on-surface">
             {value}
-            {typeof delta === 'number' && delta !== 0 ? (
-              <span className={delta > 0 ? 'text-tertiary' : 'text-error'}>
+            {typeof delta === 'number' ? <DeltaText delta={delta} /> : null}
+            {delta === null ? (
+              <span className="text-on-surface-variant">
                 {' '}
-                {delta > 0 ? '▲ +' : '▼ '}
-                {delta}
+                <span aria-hidden="true">—</span>
+                <span className="sr-only">no previous result</span>
               </span>
             ) : null}
           </span>
