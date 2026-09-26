@@ -7,9 +7,12 @@ import {
   currentUserSchema,
   healthReportSchema,
   lessonAnalysisViewSchema,
+  lessonDetailViewSchema,
+  lessonListSchema,
   lessonPipelineViewSchema,
   lessonPronunciationViewSchema,
   lessonRecordingViewSchema,
+  lessonScenarioViewSchema,
   lessonTranscriptViewSchema,
   loginSchema,
   maskedCredentialListSchema,
@@ -70,6 +73,9 @@ export const OPENAPI_COMPONENTS: Record<string, SchemaObject> = {
   LessonTranscriptView: toOpenApi(lessonTranscriptViewSchema, 'output'),
   LessonPronunciationView: toOpenApi(lessonPronunciationViewSchema, 'output'),
   LessonAnalysisView: toOpenApi(lessonAnalysisViewSchema, 'output'),
+  LessonList: toOpenApi(lessonListSchema, 'output'),
+  LessonDetailView: toOpenApi(lessonDetailViewSchema, 'output'),
+  LessonScenarioView: toOpenApi(lessonScenarioViewSchema, 'output'),
 };
 
 /** Shorthand for the error responses, which every route can return. */

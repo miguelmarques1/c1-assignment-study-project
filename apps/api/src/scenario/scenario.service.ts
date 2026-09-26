@@ -1,19 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import type { Lesson } from '@prisma/client';
-import type {
-  Register,
-  Role,
-  RoleCardStatus,
-  ScenarioStatus,
-  ScenarioView,
-  VocabularyDomain,
-} from '@english-quest/shared';
+import type { LessonScenarioStatus, LessonScenarioView, ScenarioStatus, ScenarioView } from '@english-quest/shared';
 
 import { AppError } from '../common/app-error';
 import { CLASSROOM_ROOM_NAME } from '../classroom/classroom.constants';
+import { LessonAccessService } from '../pipeline/lesson-access.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { REROLL_LIMIT } from './scenario.constants';
 import { ScenarioOrchestratorService } from './scenario-orchestrator.service';
+import { ownCardOf, situationOf } from './scenario-view';
 
 const OPEN_STATUSES = ['waiting', 'live'] as const;
 
@@ -32,6 +27,7 @@ export class ScenarioService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly orchestrator: ScenarioOrchestratorService,
+    private readonly access: LessonAccessService,
   ) {}
 
   async read(userId: string): Promise<ScenarioView> {
@@ -40,6 +36,26 @@ export class ScenarioService {
       return null;
     }
     return this.buildView(lesson, userId);
+  }
+
+  /**
+   * A past lesson's scenario, as it was on screen before the lesson (F19):
+   * the full situation and the caller's own card only. The scenario is
+   * immutable once the lesson starts, so there is nothing to reroll here.
+   */
+  async readForLesson(lessonId: string, userId: string): Promise<LessonScenarioView> {
+    await this.access.requireParticipant(lessonId, userId);
+    const [scenario, card] = await Promise.all([
+      this.prisma.lessonScenario.findUnique({ where: { lessonId } }),
+      this.prisma.lessonRoleCard.findUnique({ where: { lessonId_userId: { lessonId, userId } } }),
+    ]);
+    return {
+      lessonId,
+      status: (scenario?.status ?? 'none') as LessonScenarioStatus,
+      situation: situationOf(scenario),
+      myRoleLabel: card?.roleLabel ?? null,
+      myCard: ownCardOf(card),
+    };
   }
 
   async reroll(userId: string): Promise<ScenarioView> {
@@ -109,30 +125,11 @@ export class ScenarioService {
     return {
       lessonId: lesson.id,
       status,
-      situation:
-        status === 'ready' && scenario
-          ? {
-              title: scenario.title,
-              setting: scenario.setting!,
-              premise: scenario.premise!,
-              roles: scenario.roles as unknown as Role[],
-              vocabularyDomain: scenario.vocabularyDomain as VocabularyDomain,
-              discussionHooks: scenario.discussionHooks as unknown as string[],
-            }
-          : null,
+      situation: situationOf(scenario),
       rerollsRemaining: Math.max(REROLL_LIMIT - rerollCount, 0),
       canReroll: !lesson.startedAt && lesson.openedBy === userId && rerollCount < REROLL_LIMIT,
       myRoleLabel: card?.roleLabel ?? null,
-      myCard: card
-        ? {
-            status: card.status as RoleCardStatus,
-            background: card.background,
-            objective: card.objective,
-            constraint: card.constraintText,
-            register: card.register as Register | null,
-            targetExpressions: card.targetExpressions as unknown as string[] | null,
-          }
-        : null,
+      myCard: ownCardOf(card),
     };
   }
 }

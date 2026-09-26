@@ -967,10 +967,10 @@
         ]
       }
     },
-    "/lessons/{lessonId}/recording": {
+    "/lessons/{lessonId}/scenario": {
       "get": {
-        "description": "Caller-scoped: `mine` reflects only the caller's own recording, never another participant's.",
-        "operationId": "RecordingController_get",
+        "description": "The shared situation in full plus only the caller's own role card, as they were before the lesson — never another participant's card, in any response shape. `situation` is null unless it was ready.",
+        "operationId": "LessonScenarioController_read",
         "parameters": [
           {
             "name": "lessonId",
@@ -984,7 +984,7 @@
         ],
         "responses": {
           "200": {
-            "description": "The recording view.",
+            "description": "The lesson's scenario.",
             "content": {
               "application/json": {
                 "schema": {
@@ -994,7 +994,7 @@
                   ],
                   "properties": {
                     "data": {
-                      "$ref": "#/components/schemas/LessonRecordingView"
+                      "$ref": "#/components/schemas/LessonScenarioView"
                     }
                   }
                 }
@@ -1040,98 +1040,9 @@
             "sessionCookie": []
           }
         ],
-        "summary": "Read a lesson's recording",
+        "summary": "Read a past lesson's scenario",
         "tags": [
-          "recording"
-        ]
-      }
-    },
-    "/lessons/{lessonId}/recording/retry": {
-      "post": {
-        "description": "Moves every retryable branch of the lesson back to verifying and the lesson back to finalizing, skipping the egress settle wait.",
-        "operationId": "RecordingController_retry",
-        "parameters": [
-          {
-            "name": "lessonId",
-            "required": true,
-            "in": "path",
-            "schema": {
-              "format": "uuid",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "202": {
-            "description": "Retry accepted.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "data"
-                  ],
-                  "properties": {
-                    "data": {
-                      "$ref": "#/components/schemas/LessonRecordingView"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "VAL001: lessonId is not a valid UUID.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "AUTH003: no valid session.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "CLASS004: the caller is not a participant of that lesson.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "REC001: nothing in this lesson's recording is retryable. REC002: the recording is still being captured or finalized.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "sessionBearer": []
-          },
-          {
-            "sessionCookie": []
-          }
-        ],
-        "summary": "Retry recording verification",
-        "tags": [
-          "recording"
+          "scenario"
         ]
       }
     },
@@ -1300,6 +1211,174 @@
         "summary": "Retry the caller's failed stage",
         "tags": [
           "pipeline"
+        ]
+      }
+    },
+    "/lessons/{lessonId}/recording": {
+      "get": {
+        "description": "Caller-scoped: `mine` reflects only the caller's own recording, never another participant's.",
+        "operationId": "RecordingController_get",
+        "parameters": [
+          {
+            "name": "lessonId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The recording view.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/LessonRecordingView"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VAL001: lessonId is not a valid UUID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH003: no valid session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "CLASS004: the caller is not a participant of that lesson.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionBearer": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Read a lesson's recording",
+        "tags": [
+          "recording"
+        ]
+      }
+    },
+    "/lessons/{lessonId}/recording/retry": {
+      "post": {
+        "description": "Moves every retryable branch of the lesson back to verifying and the lesson back to finalizing, skipping the egress settle wait.",
+        "operationId": "RecordingController_retry",
+        "parameters": [
+          {
+            "name": "lessonId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Retry accepted.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/LessonRecordingView"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VAL001: lessonId is not a valid UUID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH003: no valid session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "CLASS004: the caller is not a participant of that lesson.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "REC001: nothing in this lesson's recording is retryable. REC002: the recording is still being captured or finalized.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionBearer": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Retry recording verification",
+        "tags": [
+          "recording"
         ]
       }
     },
@@ -1539,6 +1618,163 @@
           "analysis"
         ]
       }
+    },
+    "/lessons": {
+      "get": {
+        "description": "Every lesson the caller took part in that started and ended, newest first, keyset-paginated. Each row carries the caller's own processing status (never another participant's), its flags, the active stage or the reason when there is one, and — once ready — a one-line headline of the caller's own change.",
+        "operationId": "LessonsController_list",
+        "parameters": [
+          {
+            "name": "limit",
+            "required": false,
+            "in": "query",
+            "description": "Page size, 1–50 (default 20).",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "cursor",
+            "required": false,
+            "in": "query",
+            "description": "The previous page's `nextCursor`.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One page of the history.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/LessonList"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VAL001: `limit` out of range, or a cursor this API did not issue.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH003: no valid session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionBearer": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "List the caller's lessons",
+        "tags": [
+          "lessons"
+        ]
+      }
+    },
+    "/lessons/{lessonId}": {
+      "get": {
+        "description": "The same summary as a list row, plus the scenario step (the caller's own card status only) and every other participant's stages as coarse states — no reason, provider message, progress or retry for anyone but the caller.",
+        "operationId": "LessonsController_detail",
+        "parameters": [
+          {
+            "name": "lessonId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The lesson summary.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/LessonDetailView"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VAL001: lessonId is not a valid UUID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH003: no valid session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "CLASS004: the caller is not a participant of that lesson, or it is not in the history.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionBearer": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Read one lesson's summary and processing overview",
+        "tags": [
+          "lessons"
+        ]
+      }
     }
   },
   "info": {
@@ -1583,6 +1819,10 @@
     {
       "name": "analysis",
       "description": "The caller's own AI lesson analysis: competency scores, tagged errors, scenario fit and topics to practice"
+    },
+    {
+      "name": "lessons",
+      "description": "The caller's lesson history: every lesson with its own processing status, and one lesson's summary"
     }
   ],
   "servers": [
@@ -3982,6 +4222,679 @@
           "lessonId",
           "status",
           "analysis"
+        ],
+        "additionalProperties": false
+      },
+      "LessonList": {
+        "type": "object",
+        "properties": {
+          "lessons": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "lessonId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "startedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                },
+                "endedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "durationSeconds": {
+                  "anyOf": [
+                    {
+                      "type": "integer",
+                      "minimum": -9007199254740991,
+                      "maximum": 9007199254740991
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "participants": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "userId": {
+                        "type": "string",
+                        "format": "uuid",
+                        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                      },
+                      "displayName": {
+                        "type": "string"
+                      },
+                      "isMe": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "userId",
+                      "displayName",
+                      "isMe"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "scenarioTitle": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "vocabularyDomain": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "travel",
+                        "workplace negotiation",
+                        "healthcare",
+                        "housing",
+                        "technology ethics",
+                        "education",
+                        "food and hospitality",
+                        "media and news",
+                        "environment",
+                        "personal finance",
+                        "culture and the arts",
+                        "law and rights",
+                        "sport",
+                        "relationships",
+                        "science"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "processing",
+                    "ready",
+                    "blocked",
+                    "failed",
+                    "too_short",
+                    "recording_failed"
+                  ]
+                },
+                "flags": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "partial",
+                      "no_scenario",
+                      "ended_unexpectedly"
+                    ]
+                  }
+                },
+                "activeStage": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "recording",
+                        "transcription",
+                        "excerpt_selection",
+                        "pronunciation_assessment",
+                        "lesson_analysis",
+                        "profile_update"
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "statusReason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "headline": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "storageBytes": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "lessonId",
+                "startedAt",
+                "endedAt",
+                "durationSeconds",
+                "participants",
+                "scenarioTitle",
+                "vocabularyDomain",
+                "status",
+                "flags",
+                "activeStage",
+                "statusReason",
+                "headline",
+                "storageBytes"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "totalStorageBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "lessons",
+          "nextCursor",
+          "totalStorageBytes"
+        ],
+        "additionalProperties": false
+      },
+      "LessonDetailView": {
+        "type": "object",
+        "properties": {
+          "lessonId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "endedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "durationSeconds": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": -9007199254740991,
+                "maximum": 9007199254740991
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "participants": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "userId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "displayName": {
+                  "type": "string"
+                },
+                "isMe": {
+                  "type": "boolean"
+                }
+              },
+              "required": [
+                "userId",
+                "displayName",
+                "isMe"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "scenarioTitle": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "vocabularyDomain": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "travel",
+                  "workplace negotiation",
+                  "healthcare",
+                  "housing",
+                  "technology ethics",
+                  "education",
+                  "food and hospitality",
+                  "media and news",
+                  "environment",
+                  "personal finance",
+                  "culture and the arts",
+                  "law and rights",
+                  "sport",
+                  "relationships",
+                  "science"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "processing",
+              "ready",
+              "blocked",
+              "failed",
+              "too_short",
+              "recording_failed"
+            ]
+          },
+          "flags": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "partial",
+                "no_scenario",
+                "ended_unexpectedly"
+              ]
+            }
+          },
+          "activeStage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "recording",
+                  "transcription",
+                  "excerpt_selection",
+                  "pronunciation_assessment",
+                  "lesson_analysis",
+                  "profile_update"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "statusReason": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "headline": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "storageBytes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "scenario": {
+            "type": "object",
+            "properties": {
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "ready",
+                  "failed",
+                  "no_scenario",
+                  "none"
+                ]
+              },
+              "myCardStatus": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "ready",
+                      "failed"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "status",
+              "myCardStatus"
+            ],
+            "additionalProperties": false
+          },
+          "others": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "userId": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                },
+                "displayName": {
+                  "type": "string"
+                },
+                "stages": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "stage": {
+                        "type": "string",
+                        "enum": [
+                          "recording",
+                          "transcription",
+                          "excerpt_selection",
+                          "pronunciation_assessment",
+                          "lesson_analysis",
+                          "profile_update"
+                        ]
+                      },
+                      "state": {
+                        "type": "string",
+                        "enum": [
+                          "not_started",
+                          "pending",
+                          "completed",
+                          "unavailable"
+                        ]
+                      },
+                      "startedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "finishedAt": {
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      }
+                    },
+                    "required": [
+                      "stage",
+                      "state",
+                      "startedAt",
+                      "finishedAt"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "userId",
+                "displayName",
+                "stages"
+              ],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "lessonId",
+          "startedAt",
+          "endedAt",
+          "durationSeconds",
+          "participants",
+          "scenarioTitle",
+          "vocabularyDomain",
+          "status",
+          "flags",
+          "activeStage",
+          "statusReason",
+          "headline",
+          "storageBytes",
+          "scenario",
+          "others"
+        ],
+        "additionalProperties": false
+      },
+      "LessonScenarioView": {
+        "type": "object",
+        "properties": {
+          "lessonId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "ready",
+              "failed",
+              "no_scenario",
+              "none"
+            ]
+          },
+          "situation": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "setting": {
+                    "type": "string"
+                  },
+                  "premise": {
+                    "type": "string"
+                  },
+                  "roles": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "relationship": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "relationship"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "vocabularyDomain": {
+                    "type": "string",
+                    "enum": [
+                      "travel",
+                      "workplace negotiation",
+                      "healthcare",
+                      "housing",
+                      "technology ethics",
+                      "education",
+                      "food and hospitality",
+                      "media and news",
+                      "environment",
+                      "personal finance",
+                      "culture and the arts",
+                      "law and rights",
+                      "sport",
+                      "relationships",
+                      "science"
+                    ]
+                  },
+                  "discussionHooks": {
+                    "minItems": 3,
+                    "maxItems": 5,
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "title",
+                  "setting",
+                  "premise",
+                  "roles",
+                  "vocabularyDomain",
+                  "discussionHooks"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "myRoleLabel": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "myCard": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "pending",
+                      "ready",
+                      "failed"
+                    ]
+                  },
+                  "background": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "objective": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "constraint": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "register": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "formal",
+                          "neutral",
+                          "informal"
+                        ]
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "targetExpressions": {
+                    "anyOf": [
+                      {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "status",
+                  "background",
+                  "objective",
+                  "constraint",
+                  "register",
+                  "targetExpressions"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "lessonId",
+          "status",
+          "situation",
+          "myRoleLabel",
+          "myCard"
         ],
         "additionalProperties": false
       }
