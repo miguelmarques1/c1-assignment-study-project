@@ -280,7 +280,7 @@ describe('content:import', () => {
   it('slug_used_by_a_generated_item_is_rejected', async () => {
     const generated = validateGeneratedInput(generatedInput({ slug: 'gen-reading-1' }), taxonomy);
     if (!generated.ok) {
-      throw new Error(generated.issues.join('; '));
+      throw new Error(generated.issues.map((issue) => issue.message).join('; '));
     }
     await new ContentItemRepository(prisma).upsertGenerated(generated.value);
     await content.writeItem('reading', 'gen-reading-1', readingMeta());

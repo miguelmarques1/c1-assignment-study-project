@@ -13,11 +13,22 @@ import type { LoadedErrorTaxonomy } from '../taxonomy/error-taxonomy';
  * The one door every content item passes through, whichever way it enters
  * the bank: the importer's `meta.json` and F14's `saveGenerated` input. Each
  * runs its shared Zod schema, then has every target tag checked against the
- * taxonomy in force, which only the API can load. Issues come back as
- * `<json-pointer> <message>` lines, every one of them rather than the first.
+ * taxonomy in force, which only the API can load. Every issue comes back,
+ * not just the first, each as a JSON pointer and a message.
  */
 
-export type ValidationResult<T> = { ok: true; value: T } | { ok: false; issues: string[] };
+/** `path` is a JSON pointer, or empty for an issue about the file as a whole (unparsable JSON). */
+export interface ContentIssue {
+  path: string;
+  message: string;
+}
+
+export type ValidationResult<T> = { ok: true; value: T } | { ok: false; issues: ContentIssue[] };
+
+/** `/questions/2/answer must be one of /questions/2/options`, as a report line shows it. */
+export function formatIssue(issue: ContentIssue): string {
+  return issue.path ? `${issue.path} ${issue.message}` : issue.message;
+}
 
 type Path = ReadonlyArray<PropertyKey>;
 
@@ -40,21 +51,21 @@ function valueAt(raw: unknown, path: Path): unknown {
   return current;
 }
 
-function formatIssues(issues: z.core.$ZodIssue[], raw: unknown): string[] {
-  const lines: string[] = [];
+function schemaIssues(issues: z.core.$ZodIssue[], raw: unknown): ContentIssue[] {
+  const result: ContentIssue[] = [];
   for (const issue of issues) {
     if (issue.code === 'unrecognized_keys') {
       for (const key of issue.keys) {
-        lines.push(`${toJsonPointer([...issue.path, key])} is not a recognized field`);
+        result.push({ path: toJsonPointer([...issue.path, key]), message: 'is not a recognized field' });
       }
       continue;
     }
     // Zod's "expected string, received undefined" is a missing field; say so.
     const missing =
       (issue.code === 'invalid_type' || issue.code === 'invalid_value') && valueAt(raw, issue.path) === undefined;
-    lines.push(`${toJsonPointer(issue.path)} ${missing ? 'is required' : issue.message}`);
+    result.push({ path: toJsonPointer(issue.path), message: missing ? 'is required' : issue.message });
   }
-  return lines;
+  return result;
 }
 
 /**
@@ -62,13 +73,13 @@ function formatIssues(issues: z.core.$ZodIssue[], raw: unknown): string[] {
  * when some other field failed. Entries the schema already rejects for their
  * shape are left to the schema's own issue.
  */
-function taxonomyIssues(raw: unknown, key: 'target_tags' | 'targetTags', taxonomy: LoadedErrorTaxonomy): string[] {
+function taxonomyIssues(raw: unknown, key: 'target_tags' | 'targetTags', taxonomy: LoadedErrorTaxonomy): ContentIssue[] {
   const tags = valueAt(raw, [key]);
   if (!Array.isArray(tags)) {
     return [];
   }
   const inForce = new Set(taxonomy.tags.map((entry) => entry.tag));
-  const lines: string[] = [];
+  const issues: ContentIssue[] = [];
   tags.forEach((tag: unknown, index) => {
     if (typeof tag !== 'string') {
       return;
@@ -77,9 +88,12 @@ function taxonomyIssues(raw: unknown, key: 'target_tags' | 'targetTags', taxonom
     if (trimmed.length === 0 || trimmed.length > 64 || inForce.has(trimmed)) {
       return;
     }
-    lines.push(`${toJsonPointer([key, index])} "${trimmed}" is not in the error taxonomy (v${taxonomy.version})`);
+    issues.push({
+      path: toJsonPointer([key, index]),
+      message: `"${trimmed}" is not in the error taxonomy (v${taxonomy.version})`,
+    });
   });
-  return lines;
+  return issues;
 }
 
 function validate<T>(
@@ -90,7 +104,7 @@ function validate<T>(
 ): ValidationResult<T> {
   const parsed = schema.safeParse(raw);
   const issues = [
-    ...(parsed.success ? [] : formatIssues(parsed.error.issues, raw)),
+    ...(parsed.success ? [] : schemaIssues(parsed.error.issues, raw)),
     ...taxonomyIssues(raw, tagsKey, taxonomy),
   ];
   if (issues.length > 0 || !parsed.success) {
@@ -108,7 +122,7 @@ export function parseMetaJson(text: string): ValidationResult<unknown> {
     return { ok: true, value: JSON.parse(text.charCodeAt(0) === BYTE_ORDER_MARK ? text.slice(1) : text) as unknown };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, issues: [`invalid JSON: ${message}`] };
+    return { ok: false, issues: [{ path: '', message: `invalid JSON: ${message}` }] };
   }
 }
 

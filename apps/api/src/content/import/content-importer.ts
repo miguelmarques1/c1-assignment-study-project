@@ -8,7 +8,7 @@ import type { LoadedErrorTaxonomy } from '../../taxonomy/error-taxonomy';
 import { StorageUnavailableError } from '../../storage/storage.service';
 import { contentMediaKey, IMPORTABLE_CONTENT_TYPES } from '../content-constants';
 import { ContentItemRepository, ContentSlugConflictError, type StoredMedia } from '../content-item.repository';
-import { parseMetaJson, validateCuratedMeta } from '../content-item.validation';
+import { formatIssue, parseMetaJson, validateCuratedMeta } from '../content-item.validation';
 import { assertContentSchemaExists } from '../content-schema-guard';
 import { describeFilter, scanContentRoot, type ContentFilter, type ScannedItem } from './folder-scanner';
 import {
@@ -122,7 +122,7 @@ async function importItem(item: ScannedItem, context: ItemContext): Promise<Item
   const parsed = parseMetaJson(text);
   const validated = parsed.ok ? validateCuratedMeta(type, parsed.value, context.taxonomy) : parsed;
   if (!validated.ok) {
-    const [first, ...rest] = validated.issues;
+    const [first, ...rest] = validated.issues.map(formatIssue);
     return skipped(item, `meta.json: ${first}`, rest);
   }
 

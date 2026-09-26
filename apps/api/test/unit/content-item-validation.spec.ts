@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  formatIssue,
   parseMetaJson,
   toJsonPointer,
   validateCuratedMeta,
   validateGeneratedInput,
+  type ValidationResult,
 } from '../../src/content/content-item.validation';
 import {
   FIXTURE_TAGS,
@@ -18,8 +20,8 @@ import {
 
 const taxonomy = fixtureTaxonomy();
 
-function issuesOf(result: { ok: boolean; issues?: string[] }): string[] {
-  return result.ok ? [] : (result.issues ?? []);
+function issuesOf(result: ValidationResult<unknown>): string[] {
+  return result.ok ? [] : result.issues.map(formatIssue);
 }
 
 describe('content item validation chokepoint', () => {

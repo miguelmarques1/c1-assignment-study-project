@@ -53,15 +53,32 @@
 - `.gitignore` confirmed live: `git check-ignore` lists the MP3, M4A and uppercase `AUDIO.WAV` in `assignment-content/`. The `zz-live-*` item folders used for the live run are local only and are not committed.
 
 **Validation:** typecheck ✅ · lint ✅ · unit 303/303 (28 new: media-probe 7, folder-scanner 7, item-validation 9, import-report 5) ✅ · integration `content-import.spec.ts` 19/19 (real PostgreSQL + MinIO; the spec's 18 plus `reports_nothing_to_import_for_a_filter_that_matches_no_folder`) ✅ · live CLI on the `eq-f13` stack ✅
-**Commit:** _(recorded in the next stage)_
+**Commit:** 846a335 "F13 stage 2 - the importer"
 
-## Stage 3: Query API, Statistics and Verification — ⬜ pending
+## Stage 3: Query API, Statistics and Verification — ✅ done
 
-- [ ] **10. Content Bank Service and Module**
-- [ ] **11. Usage Statistics CLI**
-- [ ] **12. Live Verification on the Real Stack**
+- [x] **10. Content Bank Service and Module**
+- [x] **11. Usage Statistics CLI**
+- [x] **12. Live Verification on the Real Stack** (with synthetic-tone MP3/M4A, not curator-sourced files; see below)
 
-**Observations:** _(none yet)_
+**Observations:**
+- The validation chokepoint now returns structured issues (`ContentIssue { path, message }`, plus `formatIssue` for report lines) instead of plain strings. `ValidationDetail` is `{ path, message }`, so `saveGenerated`'s `VAL001` carries the issues as its details directly, with JSON-pointer paths (`/questions/1/answer`), as the spec's "pointer details" asks. Splitting a string on its first space would have broken on unknown keys that contain spaces. The Stage 2 importer and its tests were adjusted in this commit.
+- `ContentBankService` behaviour the spec leaves open:
+  - `findCandidates` validates its own query with a local Zod schema (`userId` a UUID, `limit` 1–500, window ≥ 0 integer) and raises `VAL001` on misuse. An **empty filter list is treated like an omitted one**: Prisma's `in: []`/`hasSome: []` would otherwise silently return nothing.
+  - `getPayload` and `existingIds` treat a non-UUID id as absent (`CONTENT001` / not in the set) instead of letting Prisma throw a UUID parse error.
+  - `recordServed` de-duplicates ids, so an item appearing twice in one plan gets one serving row.
+- `CONTENT002`'s details carry `{ slug, existingType, existingProvenance }`, so F14 can tell "curated owns it" from "another generated type owns it".
+- `ContentModule` is `@Global()` and imports `TaxonomyModule`. Nest de-duplicates the module, so `ErrorTaxonomyService` stays a singleton. The injectability test compiles a module graph of `PrismaModule + ContentModule + ConsumerModule`, where the consumer never imports `ContentModule`. Compilation only succeeds because the module is global.
+- `content-stats.ts`: inventory through Prisma `groupBy`/`aggregate`, per-item usage through one SQL aggregate (`COUNT(DISTINCT user_id)`, `MAX(served_at)`), never-served items through `servings: { none: {} }`, and taxonomy drift through `NOT (target_tags <@ $inForce::text[])` with the offending tags worked out in code. Output is plain aligned text. The corpus target prints three ✓/✗ lines. The drift section appears only when there is drift.
+- **Live verification on the isolated `eq-f13` stack (step 12).** In the spec's order:
+  1. **Import:** real MinIO objects under `content/listening/<slug>/` and matching rows, with only key, checksum and bytes stored (see Stage 2).
+  2. **Re-run, edit, replace:** the re-run printed `media unchanged` for all three. A title edit updated the row in place. Replacing the MP3 printed `↻ zz-live-mp3-vbr (updated, 39.9 KB re-uploaded)`, stored a new checksum and measured 10 s (9.6 s source).
+  3. **MinIO stopped** (`docker compose -p eq-f13 stop minio`): the new listening item printed `✗ zz-live-new (upload failed: getaddrinfo ENOTFOUND minio)` and wrote **no row**. The existing listening items printed `storage unavailable: …` with their rows untouched. A new reading item in the same batch still imported. Exit 1, with all four counts. After `start minio`, the re-run imported `zz-live-new`.
+  4. **Dry run and filter:** the dry run printed `would update` lines, the orphan warning for a removed folder, and the banner, with exit 0. `listening/zz-live-new` ran only that item.
+  5. **`content:stats`:** after `db:seed` and three SQL-inserted servings, the report showed the inventory, the corpus target (✗ 4 listening items, ✓ 3 accents, ✓ difficulties 3–5), usage (served count, distinct users, `3 days ago` / `just now`) and the never-served list.
+  - The API dev server in the same stack rebooted on the code change with `ContentModule dependencies initialized` and `Nest application successfully started`, which proves the global module wires into the real app.
+- **Soft-fail: no curator-sourced MP3/M4A was available.** The plan asks for real files from the curator. The live MP3 (libmp3lame VBR, written with `-write_xing 0` to hit the no-Xing-header case the spec cites) and M4A (AAC) were encoded by the container's own ffmpeg from a synthetic tone. They are real codec streams that ffmpeg-static decoded and measured correctly (7.4→7 s, 6.2→6 s, 9.6→10 s), but they don't replace a pass over real-world files with odd frames or metadata. Follow-up: import a few curator files on the main stack.
+- The live items (`assignment-content/*/zz-live-*`) were local only and are deleted after the run. Nothing about them is committed.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** typecheck ✅ · lint ✅ · unit 303/303 ✅ · integration `content-import` 19/19, `content-bank.service` 16/16, `content-stats` 4/4 ✅ · live sequence on `eq-f13` ✅ (synthetic audio, see soft-fail)
+**Commit:** _(recorded in the final verification)_
