@@ -112,4 +112,9 @@ export class AppError extends Error {
       retryRoute: `/lessons/${lessonId}/recording/retry`,
     });
   }
+
+  /** An unknown entry id and another user's are the same answer, so existence never leaks. */
+  static ledgerEntryNotFound(): AppError {
+    return new AppError(ERROR_CODES.PROFILE_LEDGER_ENTRY_NOT_FOUND);
+  }
 }

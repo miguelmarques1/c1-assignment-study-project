@@ -7,6 +7,8 @@ import { LearningProfileReader } from './learning-profile.reader';
 import { ProfileIngestionService } from './profile-ingestion.service';
 import { ProfileSummaryService } from './profile-summary.service';
 import { ProfileTagsPort } from './profile-tags.port';
+import { ProfileController } from './profile.controller';
+import { ProfileService } from './profile.service';
 import { PronunciationFocusPort } from './pronunciation-focus.port';
 
 /** Everything other features read or call; each is exported as well as provided. */
@@ -25,14 +27,16 @@ const SHARED = [
  * source goes through (lessons through `ProfileUpdateModule`, activities
  * through the outcome ingestion contract F16–F18 call), the readers and the
  * compact summary, and the seams earlier features call: `ProfileTagsPort`
- * (F06, F11), `PronunciationFocusPort` (F09) and `ErrorLedgerPort` (F19).
+ * (F06, F11), `PronunciationFocusPort` (F09) and `ErrorLedgerPort` (F19),
+ * plus the caller-only routes `GET /profile` and `GET /profile/ledger[/:id]`.
  * Imports only the taxonomy (and the global Prisma), so `AnalysisModule`
  * and `ExcerptSelectionModule` can import it without a cycle — which is why
  * the stage that reads F11's analysis lives in `ProfileUpdateModule`.
  */
 @Module({
   imports: [TaxonomyModule],
-  providers: SHARED,
+  controllers: [ProfileController],
+  providers: [...SHARED, ProfileService],
   exports: SHARED,
 })
 export class ProfileModule {}

@@ -71,17 +71,22 @@
 - The fault test was strengthened beyond the spec: a persistent trigger fault → 3 attempts → `failed` / `internal_error` with no partial rows and no lock row → the owner's retry through `PipelineService.retry` completes at run 2.
 
 **Validation:** typecheck ✅ · lint ✅ · API unit 292/292 ✅ · full API integration suite 343/344 on the first run, the one failure being the pre-existing race above; `pipeline-routes.spec.ts` 12/12 ✅ three times after the fix. New suites: `profile-pipeline.spec.ts` 13/13, `profile-seams.spec.ts` 6/6, `lesson-profile-sources.spec.ts` 4/4.
+**Commit:** `444940d` F12 stage 3 - lesson ingestion and seams
+
+## Stage 4: Routes and document — ✅ done
+
+- [x] **13. Profile routes**
+- [x] **14. OpenAPI document**
+
+**Observations:**
+- `ProfileService` maps the readers to the three views: `roundScore` for scores and sub-scores, `scoreDelta` for deltas, ISO dates, `serverTime`. `subScores` is present only for Pronunciation with a measured accuracy; `prosody` inside it stays null when never measured. `AppError.ledgerEntryNotFound()` → `PROF001`; an unknown id and another user's give byte-identical bodies (asserted).
+- `ProfileController`: `GET /profile`, `GET /profile/ledger` (`tag` through `ledgerListQuerySchema`, 3–64 characters → `VAL001`), `GET /profile/ledger/:entryId` (UUID pipe → `VAL001`), tag `profile`, one `@ApiResponse` per status and code. It lives in `ProfileModule` (controllers + `ProfileService`, the latter not exported); Nest registers the controller once even though four modules import `ProfileModule`.
+- `openapi/components.ts` registers `LearningProfileView`, `LedgerEntryListView`, `LedgerEntryDetailView`; `setup.ts` adds the `profile` tag. Regenerated through `pnpm build` + `node dist/openapi/generate.js` (the `tsx` script's silent crash is still there): 27 operations, the three new ones.
+- `profile-routes.spec.ts` covers the spec's 11 cases plus `renders_the_partial_update_note` (a pronunciation-only lesson whose `lesson_analysis` stage row is blocked → the blocked sentence in `notes`). Privacy is asserted on all three response shapes by absence: the other user's tag, quote, entry id, lesson id and user id.
+- Runtime: the routes are exercised through the real HTTP stack (Nest + supertest + Postgres on Testcontainers). The running-stack check is in stage 7.
+
+**Validation:** typecheck ✅ · lint ✅ · `openapi.spec.ts` 4/4 ✅ · `profile-routes.spec.ts` 12/12 ✅
 **Commit:** _(recorded in the next stage's commit)_
-
-## Stage 4: Routes and document — ⬜ pending
-
-- [ ] **13. Profile routes**
-- [ ] **14. OpenAPI document**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 5: Web profile screen — ⬜ pending
 
