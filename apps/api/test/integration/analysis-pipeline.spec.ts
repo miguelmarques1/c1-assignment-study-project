@@ -428,12 +428,12 @@ describe('lesson analysis pipeline', () => {
     await startAnalysis(pipeline, branchId);
     await waitForStage(pipeline.ctx, branchId, 'lesson_analysis', ['completed']);
 
-    const nextRow = await pipeline.ctx.prisma.lessonPipelineStage.findUniqueOrThrow({
-      where: { branchId_stage: { branchId, stage: 'profile_update' } },
-    });
-    expect(nextRow).toMatchObject({ status: 'queued', run: 1 });
+    // F12 registered the profile_update handler, so the queued stage runs at
+    // once; the branch then rests at plan_generation, F15's stage.
+    const nextRow = await waitForStage(pipeline.ctx, branchId, 'profile_update', ['completed']);
+    expect(nextRow).toMatchObject({ run: 1 });
     const branch = await pipeline.ctx.prisma.lessonPipelineBranch.findUniqueOrThrow({ where: { id: branchId } });
-    expect(branch).toMatchObject({ stage: 'profile_update', status: 'queued' });
+    expect(branch).toMatchObject({ stage: 'plan_generation', status: 'queued' });
   }, 60_000);
 
   it('the_analysis_stamps_prompt_id_version_model_and_usage', async () => {

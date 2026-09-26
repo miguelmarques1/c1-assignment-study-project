@@ -3,7 +3,7 @@
 **Status:** in progress
 **Branch:** claude/learning-profile-error-ledger-44d9aa
 **Started:** 2026-09-25
-**Last updated:** 2026-09-25
+**Last updated:** 2026-09-26
 
 **Run setup:** the worktree branch was fast-forwarded to `main` (`f90378a`, F11 closed) before the run, and `spec.md` / `plan.md` were copied in from the main checkout, where they were untracked. F19 is implemented concurrently in another worktree on the same base, so this run takes F12's "F19 has not landed" path everywhere the spec offers one, and leaves the shared `english-quest` compose stack (which bind-mounts the main checkout) untouched: integration suites run on Testcontainers, and live checks use an isolated stack or read-only queries.
 
@@ -50,20 +50,28 @@
 - Fixtures: `helpers/pipeline-fixtures.ts` gained `seedUser`, `seedLesson`, `lessonSourceInput`, `seedProfileSource` and `makeProfiledLesson` now rather than in step 12, since the engine suite needs them. The engine suite uses the plain `createTestContext()` (no MinIO): the test app never calls `ensureBucket`, so it touches nothing outside its own containers.
 
 **Validation:** typecheck ✅ · lint ✅ · API unit 287/287 ✅ (29 new: fold 10, ledger rules 8, summary 6, contract 5) · `profile-ingestion.spec.ts` 15/15 ✅ (Testcontainers)
+**Commit:** `72ff79d` F12 stage 2 - profile engine
+
+## Stage 3: Lesson ingestion and seams — ✅ done
+
+- [x] **8. Lesson source mapping**
+- [x] **9. Profile update stage and pipeline order**
+- [x] **10. Reconciliation job**
+- [x] **11. Profile seams**
+- [x] **12. Adapting earlier suites** — F11's `completion_advances_to_profile_update` now waits for `profile_update` completed and the branch at `plan_generation`; the drain's no-handler test moved to `plan_generation`; F09's focus fake is structural; `FAST_PROFILE_UPDATE_RETRY_POLICY` in the fixtures; the backoff unit test pins 5 s / 30 s; `pipeline-routes.spec.ts`'s `retry_reruns_downstream_stages` race fixed (below).
+
+**Observations (2026-09-26, interrupted run):**
+- The run was interrupted by a usage limit after this stage's code was written and resumed the same day; the full integration suite then ran to completion before the commit.
+- **Pre-existing flaky test fixed:** `pipeline-routes.spec.ts > retry_reruns_downstream_stages` failed 3/3 in this worktree with 409 instead of 202. Running it on the pre-F12 main checkout (read-only, Testcontainers) showed it also fails there intermittently (1 of 3): it waited for `pronunciation_assessment` to complete, then failed transcription by hand, but F11's `lesson_analysis` job still ran afterwards (blocking at once, Ana holds no Gemini key) and moved the pointer off the hand-made failure. The test now also waits for `lesson_analysis` to reach `blocked_missing_key`, which is what its own comment ("let every downstream stage's first run settle") intended. 3/3 green after the fix. Not an F12 regression, but recorded here because F12 is where it got fixed.
+- F10's `StoredPronunciationResultSummary` gained `id` and F11's `StoredAnalysisError` gained `id` (additive): the result row and the analysis row are the sources' revisions, and the error id is `analysis_error_id`.
+- `profile-update/`: `lesson-profile-sources.ts`, `profile-update-stage.handler.ts` (both sources applied inside `context.complete`; missing inputs throw → `internal_error` after retries), `profile-reconciliation.job.ts` (`run()` takes no `now`: the sweep is time-independent; anti-join on `revision = r.id::text`, oldest lesson first, 50 per tick), `profile-update.module.ts`; `plan_generation` appended to `PIPELINE_STAGE_ORDER`; `ProfileUpdateModule` in `AppModule`.
+- Seams: `ProfileTagsPort` real (recurring, analysis families, top 10); `PronunciationFocusPort` moved to `profile/` (old file deleted, F09 imports repointed, `ExcerptSelectionModule` imports `ProfileModule`), source `ledger@1` even with no tags (the ledger was consulted); `ErrorLedgerPort` created (F19 not landed) counting occurrences with `occurred_at <= lesson start`.
+- `apps/api/AGENTS.md`'s neutral-port example now points at `recording/study-plan-fallback.port.ts`.
+- Suites that delete intervals for determinism: `profile-pipeline.spec.ts` (reconciliation) and `profile-seams.spec.ts` (reconciliation and drain), following `recording-finalization.spec.ts`.
+- The fault test was strengthened beyond the spec: a persistent trigger fault → 3 attempts → `failed` / `internal_error` with no partial rows and no lock row → the owner's retry through `PipelineService.retry` completes at run 2.
+
+**Validation:** typecheck ✅ · lint ✅ · API unit 292/292 ✅ · full API integration suite 343/344 on the first run, the one failure being the pre-existing race above; `pipeline-routes.spec.ts` 12/12 ✅ three times after the fix. New suites: `profile-pipeline.spec.ts` 13/13, `profile-seams.spec.ts` 6/6, `lesson-profile-sources.spec.ts` 4/4.
 **Commit:** _(recorded in the next stage's commit)_
-
-## Stage 3: Lesson ingestion and seams — ⬜ pending
-
-- [ ] **8. Lesson source mapping**
-- [ ] **9. Profile update stage and pipeline order**
-- [ ] **10. Reconciliation job**
-- [ ] **11. Profile seams**
-- [ ] **12. Adapting earlier suites**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 4: Routes and document — ⬜ pending
 

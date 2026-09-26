@@ -53,6 +53,9 @@ export const FAST_EXCERPT_RETRY_DELAYS = [10, 10];
 /** Lesson analysis's own stage retries (1, 5 and 15 minutes in production), shortened the same way. */
 export const FAST_ANALYSIS_RETRY_POLICY = { attempts: 4, delaysMs: [40, 40, 40] };
 
+/** The profile update's retries (5 s and 30 s in production), shortened the same way. */
+export const FAST_PROFILE_UPDATE_RETRY_POLICY = { attempts: 3, delaysMs: [40, 40] };
+
 export interface PipelineTestContext {
   ctx: TestContext;
   minio: StartedMinio;
@@ -122,6 +125,7 @@ export async function createPipelineTestContext(
           excerpt_selection: FAST_SELECTION_RETRY_POLICY,
           pronunciation_assessment: FAST_PRONUNCIATION_RETRY_POLICY,
           lesson_analysis: FAST_ANALYSIS_RETRY_POLICY,
+          profile_update: FAST_PROFILE_UPDATE_RETRY_POLICY,
         },
       },
       ...(typeof extra.overrides === 'function' ? extra.overrides() : (extra.overrides ?? [])),
@@ -532,6 +536,8 @@ export interface AnalysisReadyPronunciation {
     exampleExcerptId: string;
     exampleUtteranceId: string;
   }>;
+  /** F10's ledger tags, what F12 ingests. */
+  phonemeTags?: Array<{ tag: string; phoneme: string; occurrences: number; meanAccuracy: number; exampleWords: string[] }>;
 }
 
 export interface AnalysisReadyParticipant {
@@ -682,7 +688,7 @@ export async function makeAnalysisReadyLesson(
             assessedAudioMs: 5_000,
             worstPhonemes: pron.worstPhonemes ?? [],
             worstWords: [],
-            phonemeTags: [],
+            phonemeTags: pron.phonemeTags ?? [],
             provider: 'azure_pronunciation_assessment',
             locale: 'en-US',
             phonemeAlphabet: 'IPA',
@@ -723,6 +729,103 @@ export async function makeAnalysisReadyLesson(
   }
 
   return { lessonId: lesson.id, startedAt, branches, audioBytes: new Map() };
+}
+
+/** Adds the profile update job for a branch waiting at `profile_update`, as F11's completion does. */
+export async function startProfileUpdate(pipeline: PipelineTestContext, branchId: string, run = 1): Promise<void> {
+  await pipeline.ctx.app.get(PipelineQueueService).enqueue(branchId, 'profile_update', run);
+}
+
+export interface SeededAnalysis {
+  scores?: Partial<Record<'grammar' | 'vocabulary' | 'fluency' | 'interaction' | 'comprehension', number>>;
+  /** Each quoted from the owner's utterance at `utteranceIdx`, when given. */
+  errors?: Array<{ tag: string; quote: string; correction?: string; severity?: 'minor' | 'moderate' | 'major'; utteranceIdx?: number }>;
+}
+
+/** An analysis row with its errors, as F11's completing transaction writes it. */
+export async function seedAnalysis(
+  ctx: TestContext,
+  lessonId: string,
+  userId: string,
+  analysis: SeededAnalysis = {},
+): Promise<string> {
+  const scores = { grammar: 65, vocabulary: 70, fluency: 72, interaction: 68, comprehension: 75, ...analysis.scores };
+  const utterances = await ctx.prisma.lessonUtterance.findMany({ where: { lessonId, userId }, orderBy: { idx: 'asc' } });
+  const row = await ctx.prisma.lessonAnalysis.create({
+    data: {
+      lessonId,
+      userId,
+      ...scores,
+      justifications: { grammar: 'x', vocabulary: 'x', fluency: 'x', interaction: 'x', comprehension: 'x' },
+      strengths: ['a', 'b', 'c'],
+      recurringTags: [],
+      topics: ['a', 'b', 'c'],
+      scenarioContext: 'none',
+      pronunciationContext: 'no_sample',
+      transcriptTokensEstimated: 100,
+      transcriptTruncated: false,
+      taxonomyVersion: '2',
+      promptId: 'lesson-analysis',
+      promptVersion: '2',
+      model: 'gemini-test',
+      latencyMs: 1_000,
+      schemaRetried: false,
+    },
+  });
+  for (const [idx, error] of (analysis.errors ?? []).entries()) {
+    await ctx.prisma.lessonAnalysisError.create({
+      data: {
+        analysisId: row.id,
+        lessonId,
+        userId,
+        idx,
+        quote: error.quote,
+        tag: error.tag,
+        correction: error.correction ?? 'a corrected sentence',
+        explanation: 'why',
+        severity: error.severity ?? 'moderate',
+        utteranceId: error.utteranceIdx === undefined ? null : (utterances[error.utteranceIdx]?.id ?? null),
+      },
+    });
+  }
+  return row.id;
+}
+
+/**
+ * What F11's completing transaction leaves behind: everything
+ * `makeAnalysisReadyLesson` builds, plus each participant's analysis row,
+ * `lesson_analysis` completed and the branch waiting at `profile_update` /
+ * `queued` — F12's own resting point — with no job yet. A participant whose
+ * `analysis` is null stays waiting at `lesson_analysis` instead.
+ */
+export async function makeProfileUpdateReadyLesson(
+  pipeline: PipelineTestContext,
+  participants: Array<AnalysisReadyParticipant & { analysis?: SeededAnalysis | null }>,
+  options: { durationSeconds?: number } = {},
+): Promise<RecordedLesson> {
+  const { ctx } = pipeline;
+  const lesson = await makeAnalysisReadyLesson(pipeline, participants, options);
+  for (const participant of participants) {
+    if (participant.analysis === null) {
+      continue;
+    }
+    const userId = participant.speaker.id;
+    const branchId = lesson.branches.get(userId)!;
+    await seedAnalysis(ctx, lesson.lessonId, userId, participant.analysis);
+    const now = new Date();
+    await ctx.prisma.lessonPipelineStage.update({
+      where: { branchId_stage: { branchId, stage: 'lesson_analysis' } },
+      data: { status: 'completed', startedAt: now, finishedAt: now, attempts: 1 },
+    });
+    await ctx.prisma.lessonPipelineStage.create({
+      data: { branchId, stage: 'profile_update', status: 'queued', queuedAt: now },
+    });
+    await ctx.prisma.lessonPipelineBranch.update({
+      where: { id: branchId },
+      data: { stage: 'profile_update', status: 'queued' },
+    });
+  }
+  return lesson;
 }
 
 /** Polls a branch's stage row until it reaches one of `statuses`. The worker is asynchronous; tests wait on its end state. */

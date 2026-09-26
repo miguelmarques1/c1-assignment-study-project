@@ -72,6 +72,8 @@ export interface StoredPronunciationExcerpt {
 }
 
 export interface StoredPronunciationResultSummary {
+  /** The result row, replaced whenever the stage re-runs — F12's revision for this lesson's pronunciation source. */
+  id: string;
   status: 'assessed' | 'no_sample';
   scores: StoredPronunciationScores | null;
   excerptCount: number;
@@ -147,6 +149,7 @@ export class PronunciationResultReader {
 
     return {
       result: {
+        id: result.id,
         status: result.status as 'assessed' | 'no_sample',
         scores:
           result.status === 'assessed'

@@ -14,7 +14,7 @@ import { ExcerptRulesService } from './excerpt-rules.service';
 import { EXCERPT_SELECTION_RETRY_POLICY } from './excerpt-selection.constants';
 import { selectExcerpts } from './excerpt-selector';
 import { ExcerptWriter } from './excerpt-writer.service';
-import { PronunciationFocusPort } from './pronunciation-focus.port';
+import { PronunciationFocusPort } from '../profile/pronunciation-focus.port';
 
 const wordsSchema = z.array(transcriptWordSchema);
 

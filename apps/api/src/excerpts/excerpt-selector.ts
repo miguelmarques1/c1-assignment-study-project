@@ -1,6 +1,6 @@
 import type { ExcerptRules } from './excerpt-rules';
 import { tokenize } from './excerpt-tokens';
-import type { PronunciationFocus } from './pronunciation-focus.port';
+import type { PronunciationFocus } from '../profile/pronunciation-focus.port';
 
 /** One stored utterance, as the selection reads it (F08's shape, file offsets). */
 export interface SelectableUtterance {
