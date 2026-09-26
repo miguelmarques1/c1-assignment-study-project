@@ -76,19 +76,28 @@
 - **Soft-fail (deferred to Stage 5):** the pages were not yet exercised against a running stack (that is Stage 5's live verification). `next build` compiles every lesson route (`/lessons`, `/lessons/[lessonId]` and its three sub-routes) with no server/client boundary error.
 
 **Validation:** web typecheck ✅ · lint ✅ · web 167/167 (41 new across `lesson-format` 4, `lesson-list` 7, `lesson-result` 9, `lesson-scenario-area` 3, `lesson-transcript` 5, `lesson-status-area` 8, `lesson-detail-no-audio` 1, plus 4 in `ui-primitives`/`app-shell`) ✅ · guards `no-raw-values`, `token-resolution`, `design-reference` ✅ · `next build` ✅ · visual baselines ⏭️ deferred · live pages ⏭️ Stage 5
+**Commit:** 931033f "F19 stage 3 - web lesson history"
+
+## Stage 4: Mobile lesson history — ✅ done
+
+- [x] **16. Mobile design widgets**
+- [x] **17. Dart models and transport**
+- [x] **18. Lesson list screen**
+- [x] **19. Lesson detail screen**
+
+**Observations:**
+- **No mockup** exists for either screen (spec A24); both compose from `Eq*` widgets per `mobile-ui` case 3. Generating a Stitch mockup for the list and the result area is still recommended before the user's on-device review.
+- **New primitives:** `EqMeter` (web `Meter`'s props; the web's `delta: null` becomes `noPreviousResult: true`, since Dart can't tell an omitted named argument from an explicit null — the one prop-shape deviation) and `EqChip` (tones and `count`). F12 has not landed, so F19 created both, plus `EqTheme.tabBarTheme` (outlined active tab like `NavPill`, no underline, tint or ripple); `EqTheme.light()/dark()` now apply it through `copyWith`.
+- **Models** mirror every composed view with F19's extensions. `PipelineStage` is a value class over the wire string, so an unknown stage (F12's `plan_generation`) parses and renders humanized (`Plan generation`) instead of throwing — tested. `LessonRecordingView` keeps only the three fields the Status tab reads.
+- `core/format/relative_time.dart` (shared with F12, A19) takes an optional `utcOffset` so the case table can pin the viewer's calendar day, exactly as the web's formatter takes a time zone; `lesson_format.dart` mirrors the web's formatters and both suites run the same case table.
+- **Navigation:** `lessonsModule` replaces the placeholder route in `shell_module.dart`; the detail is `/app/lessons/:lessonId`, pushed with `context.pushNamed` inside the Lessons tab so the bottom navigation stays. The blocked stage's settings link switches tab with `context.navigate('/app/settings')`. Both pages take an optional `LessonsApi` and navigation callbacks so widget tests run without a Modular router.
+- **Detail layout decision:** the header is the first item of every tab's scroll view (it scrolls away) and the four areas are a scrollable `TabBar` in the `AppBar` — instead of a `NestedScrollView` with a pinned header, which would take a fixed chunk of a 690 dp screen at 1.3× text and complicate scroll-to-utterance. The Transcript tab uses a `SingleChildScrollView` + `Column` (not a lazy list) so `Scrollable.ensureVisible` can always reach the anchored line from an error, a worst word or an assessed excerpt.
+- **A real bug the widget tests caught:** the detail's `TabController` was `late final` with an initializer, so a detail that never showed its tabs (`CLASS004`) created it inside `dispose()` — "Looking up a deactivated widget's ancestor is unsafe". It is now created in `initState`.
+- Polling (10 s) runs only while `TickerMode` is enabled (the tab is on screen) and something is pending; pull-to-refresh on every list and tab. Offline shows the `ApiException` message (`No connection`), any other failure names what could not be loaded.
+- The tab bar scrolls on a 360 dp phone (four labels do not fit at 1.3× text); the tests bring a tab into view before tapping it.
+
+**Validation:** `flutter analyze` 0 issues ✅ · `flutter test` 63/63 (new: `eq_meter` 3, `eq_chip` 1, `lesson_models` 2, `lesson_format` 3, `lessons_page` 6, `lesson_detail_page` 9) ✅ · `flutter build apk --debug` ✅ (271 s) · on-device review left to the user, per `apps/mobile/AGENTS.md`
 **Commit:** _(recorded in the next stage's commit)_
-
-## Stage 4: Mobile lesson history — ⬜ pending
-
-- [ ] **16. Mobile design widgets**
-- [ ] **17. Dart models and transport**
-- [ ] **18. Lesson list screen**
-- [ ] **19. Lesson detail screen**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 5: Verification and hand-off — ⬜ pending
 
