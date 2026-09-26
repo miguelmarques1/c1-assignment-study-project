@@ -37,6 +37,7 @@ model User {
   pronunciationResults LessonPronunciationResult[]
   analyses             LessonAnalysis[]
   analysisErrors       LessonAnalysisError[]
+  contentServings      ContentItemServing[]
 
   @@map("users")
 }
@@ -713,4 +714,73 @@ model LessonRoleCard {
 
   @@unique([lessonId, userId], map: "ux_lesson_role_cards_lesson_user")
   @@map("lesson_role_cards")
+}
+
+/// F13: the content bank. One row per activity item of every type, curated
+/// (imported from `assignment-content/`) or generated (F14), keyed by a slug
+/// that is unique across both. Audio lives in MinIO; only its key, checksum
+/// and size are stored. Questions carry their own `answer` and `explanation`
+/// in one JSONB array, so an answer can never drift from its question.
+///
+/// Every type-, provenance- and media-dependent rule is also a CHECK
+/// constraint in `0013_content_bank`, so a direct insert cannot create an
+/// item F16 could never answer correctly. Prisma does not model CHECKs.
+model ContentItem {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slug            String   @unique(map: "content_item_slug_key") @db.VarChar(80)
+  /// One of listening, reading, vocabulary, grammar, error_review.
+  type            String   @db.VarChar(16)
+  /// One of curated, generated.
+  provenance      String   @db.VarChar(16)
+  cefrLevel       String   @map("cefr_level") @db.VarChar(2)
+  title           String   @db.VarChar(200)
+  topic           String   @db.VarChar(80)
+  /// Listening only, from a controlled vocabulary.
+  accent          String?  @db.VarChar(24)
+  /// Listening only, measured by decoding the audio at import.
+  durationSeconds Int?     @map("duration_seconds")
+  /// Derived from `body`, so F15 can estimate reading time without loading bodies.
+  wordCount       Int?     @map("word_count")
+  skills          String[]
+  difficulty      Int      @db.SmallInt
+  sourceName      String?  @map("source_name") @db.VarChar(200)
+  sourceUrl       String?  @map("source_url") @db.VarChar(2048)
+  body            String?
+  /// Exactly five question objects, each with its format fields, `answer` and `explanation`.
+  questions       Json
+  targetTags      String[] @map("target_tags")
+  /// `content/{type}/{slug}/{filename}`.
+  mediaObjectKey  String?  @map("media_object_key") @db.VarChar(512)
+  /// SHA-256 hex of the uploaded file; re-upload happens only when it changes.
+  mediaChecksum   String?  @map("media_checksum") @db.Char(64)
+  mediaBytes      Int?     @map("media_bytes")
+  promptId        String?  @map("prompt_id") @db.VarChar(64)
+  promptVersion   String?  @map("prompt_version") @db.VarChar(16)
+  /// F14's difficulty-gate measurements, opaque to F13.
+  gateMetrics     Json?    @map("gate_metrics")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  servings ContentItemServing[]
+
+  @@index([type, cefrLevel], map: "ix_content_item_type_level")
+  @@index([targetTags], map: "ix_content_item_target_tags", type: Gin)
+  @@map("content_item")
+}
+
+/// F13: one row per item per activated plan (F15 calls `recordServed`). The
+/// candidate query excludes what the requesting user was served in the last
+/// 30 days, and `content:stats` reads usage from here.
+model ContentItemServing {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  contentItemId String   @map("content_item_id") @db.Uuid
+  servedAt      DateTime @default(now()) @map("served_at") @db.Timestamptz(6)
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contentItem ContentItem @relation(fields: [contentItemId], references: [id], onDelete: Cascade)
+
+  @@index([userId, contentItemId, servedAt(sort: Desc)], map: "ix_content_item_serving_user_item_time")
+  @@index([contentItemId], map: "ix_content_item_serving_item")
+  @@map("content_item_serving")
 }
