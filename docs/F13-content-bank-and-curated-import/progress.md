@@ -1,6 +1,6 @@
 # Implementation Progress: Content Bank and Curated Import
 
-**Status:** in progress
+**Status:** success
 **Branch:** claude/content-bank-curated-import-044f65
 **Started:** 2026-09-26
 **Last updated:** 2026-09-26
@@ -59,7 +59,7 @@
 
 - [x] **10. Content Bank Service and Module**
 - [x] **11. Usage Statistics CLI**
-- [x] **12. Live Verification on the Real Stack** (with synthetic-tone MP3/M4A, not curator-sourced files; see below)
+- [ ] **12. Live Verification on the Real Stack**: the whole sequence ran on the isolated `eq-f13` stack with ffmpeg-encoded MP3/M4A. Still missing is the plan's pass with **curator-sourced** MP3 and M4A files, since none were available to this run. See the soft-fail below and the follow-ups.
 
 **Observations:**
 - The validation chokepoint now returns structured issues (`ContentIssue { path, message }`, plus `formatIssue` for report lines) instead of plain strings. `ValidationDetail` is `{ path, message }`, so `saveGenerated`'s `VAL001` carries the issues as its details directly, with JSON-pointer paths (`/questions/1/answer`), as the spec's "pointer details" asks. Splitting a string on its first space would have broken on unknown keys that contain spaces. The Stage 2 importer and its tests were adjusted in this commit.
@@ -81,4 +81,37 @@
 - The live items (`assignment-content/*/zz-live-*`) were local only and are deleted after the run. Nothing about them is committed.
 
 **Validation:** typecheck ✅ · lint ✅ · unit 303/303 ✅ · integration `content-import` 19/19, `content-bank.service` 16/16, `content-stats` 4/4 ✅ · live sequence on `eq-f13` ✅ (synthetic audio, see soft-fail)
-**Commit:** _(recorded in the final verification)_
+**Commit:** 1ff74fc "F13 stage 3 - query API and statistics"
+
+## Final verification
+
+**Full suite (whole repository, 2026-09-26):**
+- `pnpm -r typecheck` ✅ (shared, design-tokens, api, web) · `pnpm lint` ✅ (zero warnings)
+- API `pnpm --filter @english-quest/api test`: **66/66 files, 652/652 tests** ✅, with every integration suite on Testcontainers. The 9 F13 files: content-item-schema 17, content-item-validation 9, content-folder-scanner 7, content-media-probe 7, content-import-report 5, content-meta-schema-snapshot 2, content-import 19, content-bank.service 16, content-stats 4. `openapi.spec.ts` 4/4.
+- Web `pnpm --filter @english-quest/web test`: 19/19 files, 126/126 tests ✅
+- Mobile (untouched by F13): `flutter analyze` no issues, `flutter test` 39/39 ✅
+- `pnpm -r test` itself exits 1, because design-tokens runs first and fails (see pre-existing failures) and pnpm stops at the first failing package. That is why API and web ran per package.
+
+**Component Overview walk-through:** every file in spec §4 exists and is tracked, with its described exports: the 16 shared contract exports, the 5 service methods, both `AppError` factories, `ContentModule` in `AppModule`, the three `content:*` scripts, the two root shortcuts and three README rows, `0013_content_bank`, the curator guide and the four `meta.schema.json` files, and all 9 test files plus `content-fixtures.ts`. **Missing from spec: none.** Additions beyond the spec, listed in the stage observations: `meta-schema.ts`, `content-schema-guard.ts`, `curatedItemMetaJsonSchema`, `answerKeyIssues`.
+
+**Acceptance criteria (PRD F13), re-run fresh in the full suite above:** all 10 pass through their mapped tests (spec §7), and the three cross-feature criteria pass on F13's side (`save_generated_persists_with_provenance_generated_and_prompt_stamp` with its `findCandidates` follow-up, `filters_candidates_by_type_level_skills_tags_and_provenance` plus `existing_ids_returns_only_ids_that_exist`, and `get_payload_returns_questions_answers_explanations_and_media_key`).
+
+**Smoke check (final code, `eq-f13` stack):** `content:import --dry-run` (orphan warning, banner, exit 0), `content:stats` (inventory, corpus target, usage), and `content:schema` (regenerated files identical to the committed ones). The API booted with `ContentModule dependencies initialized`.
+
+**Regressions:** none.
+
+**Soft-fails:**
+- **Curator-sourced audio.** The plan's step 12 asks for real MP3 and M4A files from the curator. None were available, so the live sequence used a libmp3lame VBR MP3 without a Xing header and an AAC M4A, both encoded by the container's ffmpeg from a synthetic tone. They are real codec streams and decoded and measured correctly. Real-world files (odd frames, ID3 tags, long durations) are still unverified.
+- The live runs used an isolated `eq-f13` compose project, not the main checkout's `english-quest` stack, so as not to disturb the concurrent sessions that stack serves.
+
+**Pre-existing failures:**
+- `packages/design-tokens` `tokens.spec.ts > generation drift guard > generated_files_match_a_fresh_generation` fails in this worktree. `core.autocrlf=true` checks the generated files out with CRLF (`git ls-files --eol`: `i/lf w/crlf`), and the generator emits LF. F13 did not touch the package (`git diff main -- packages/design-tokens` is empty).
+- `pnpm openapi:generate` (the `tsx` script) still exits 1 silently. This is the gap F10 recorded. The snapshot was regenerated through `pnpm build` + `node dist/openapi/generate.js`.
+
+**Follow-ups:**
+1. Import a few curator-sourced MP3 and M4A files on the main stack (`docker compose exec api sh -c 'cd apps/api && pnpm content:import'`) and check the measured durations against a player. This closes step 12.
+2. The initial corpus (at least 20 listening items, 3 or more accents, difficulties 3–5) is curator work. `pnpm content:stats` reports each condition.
+3. F14 must bump the four `*-generate.yaml` prompts (or map their output) before calling `saveGenerated`, which rejects `correct_option_index`, missing `format`/`explanation` and non-taxonomy tags. F15 must call `recordServed` inside its plan-activation transaction. F16 must strip `answer`/`explanation` and serve audio from `mediaObjectKey`. (Spec §5, "Downstream notes".)
+4. F12's taxonomy v2 must run `pnpm content:schema` in its own diff, or `content-meta-schema-snapshot.spec.ts` fails. Note that F11's tag regex (`^[a-z]+:[a-z0-9-]+$`) does not yet accept the spec's `phoneme:/θ/` spelling. That is F12's call. F13's membership check accepts whatever the taxonomy lists.
+5. Migration numbering: F13 took `0013`, leaving `0012_learning_profile` to F12. Either merge order applies cleanly, since the tables are unrelated.
+6. The design-tokens CRLF drift failure makes `pnpm -r test` stop before API and web on Windows checkouts. A `.gitattributes` `eol=lf` rule for the generated files would fix it. That is out of F13's scope.
