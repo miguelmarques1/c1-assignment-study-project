@@ -17,6 +17,8 @@ import { PIPELINE_RETRY_OVERRIDES } from '../../../src/pipeline/pipeline-stage.r
 import { PIPELINE_QUEUE } from '../../../src/pipeline/pipeline.constants';
 import { PipelineQueueService } from '../../../src/pipeline/pipeline-queue.service';
 import { PipelineService } from '../../../src/pipeline/pipeline.service';
+import type { IngestionResult, ProfileSourceInput } from '../../../src/profile/profile-ingestion.contract';
+import { ProfileIngestionService } from '../../../src/profile/profile-ingestion.service';
 import { PromptRegistryService } from '../../../src/prompts/prompt-registry.service';
 import {
   PRONUNCIATION_EXCERPT_RETRY_DELAYS_OVERRIDE,
@@ -771,4 +773,139 @@ export async function resetPipelineTables(ctx: TestContext): Promise<void> {
   await ctx.prisma.credentialUsage.deleteMany();
   await ctx.prisma.userCredential.deleteMany();
   await ctx.prisma.user.deleteMany();
+}
+
+/** A bare account: no session and no keys — all the profile engine needs, since it never calls a provider. */
+export async function seedUser(ctx: TestContext, displayName: string): Promise<string> {
+  const user = await ctx.prisma.user.create({
+    data: { email: `${displayName.toLowerCase()}@example.com`, displayName, passwordHash: 'x'.repeat(60) },
+  });
+  return user.id;
+}
+
+/** An ended lesson the users took part in, started at `startedAt` — the anchor a lesson source is keyed by. */
+export async function seedLesson(ctx: TestContext, userIds: string[], startedAt: Date): Promise<string> {
+  const lesson = await ctx.prisma.lesson.create({
+    data: {
+      room: 'classroom-main',
+      openedBy: userIds[0]!,
+      maxParticipants: 4,
+      status: 'ended',
+      startedAt,
+      endedAt: new Date(startedAt.getTime() + 30 * 60_000),
+      endReason: 'ended_by_participant',
+      durationSeconds: 1_800,
+      recordingStatus: 'recorded',
+    },
+  });
+  for (const userId of userIds) {
+    await ctx.prisma.lessonParticipant.create({
+      data: { lessonId: lesson.id, userId, identity: userId, joinedAt: startedAt },
+    });
+  }
+  return lesson.id;
+}
+
+export interface ProfileOccurrenceSeed {
+  tag: string;
+  quote?: string | null;
+  correction?: string | null;
+  severity?: 'minor' | 'moderate' | 'major' | null;
+  exampleWords?: string[];
+  instances?: number;
+  utteranceId?: string | null;
+}
+
+/** A lesson source as `lesson-profile-sources.ts` builds it, from plain values. */
+export function lessonSourceInput(options: {
+  kind: 'lesson_analysis' | 'lesson_pronunciation';
+  userId: string;
+  lessonId: string;
+  occurredAt: Date;
+  revision?: string;
+  scores?: Partial<Record<'grammar' | 'vocabulary' | 'fluency' | 'interaction' | 'comprehension', number>>;
+  pronunciation?: { value: number; accuracy: number; prosody: number | null } | null;
+  occurrences?: ProfileOccurrenceSeed[];
+}): ProfileSourceInput {
+  const measurements =
+    options.kind === 'lesson_pronunciation'
+      ? options.pronunciation
+        ? [{ competency: 'pronunciation' as const, ...options.pronunciation }]
+        : []
+      : Object.entries(options.scores ?? {}).map(([competency, value]) => ({
+          competency: competency as 'grammar',
+          value: value!,
+          accuracy: null,
+          prosody: null,
+        }));
+  return {
+    userId: options.userId,
+    kind: options.kind,
+    sourceKey: options.lessonId,
+    revision: options.revision ?? `${options.kind}-${options.lessonId}`.slice(0, 64),
+    lessonId: options.lessonId,
+    activityId: null,
+    occurredAt: options.occurredAt,
+    label: null,
+    measurements,
+    occurrences: (options.occurrences ?? []).map((occurrence) => ({
+      tag: occurrence.tag,
+      quote: occurrence.quote ?? null,
+      correction: occurrence.correction ?? null,
+      severity: occurrence.severity ?? null,
+      exampleWords: occurrence.exampleWords ?? [],
+      instances: occurrence.instances ?? 1,
+      analysisErrorId: null,
+      utteranceId: occurrence.utteranceId ?? null,
+    })),
+    encounters: [],
+  };
+}
+
+/** Applies one source through the real engine, in its own transaction, as the stage or the job would. */
+export async function seedProfileSource(ctx: TestContext, input: ProfileSourceInput): Promise<IngestionResult> {
+  const ingestion = ctx.app.get(ProfileIngestionService);
+  return ctx.prisma.$transaction((tx) => ingestion.applySource(tx, input));
+}
+
+/**
+ * A lesson whose profile update already ran: a lesson row, then its
+ * pronunciation and analysis sources applied through the engine. For the
+ * suites that need a profile to exist rather than to be built by the stage.
+ */
+export async function makeProfiledLesson(
+  ctx: TestContext,
+  userId: string,
+  options: {
+    startedAt: Date;
+    scores?: Partial<Record<'grammar' | 'vocabulary' | 'fluency' | 'interaction' | 'comprehension', number>>;
+    pronunciation?: { value: number; accuracy: number; prosody: number | null } | null;
+    errors?: ProfileOccurrenceSeed[];
+    phonemes?: ProfileOccurrenceSeed[];
+  },
+): Promise<string> {
+  const lessonId = await seedLesson(ctx, [userId], options.startedAt);
+  await seedProfileSource(
+    ctx,
+    lessonSourceInput({
+      kind: 'lesson_pronunciation',
+      userId,
+      lessonId,
+      occurredAt: options.startedAt,
+      pronunciation: options.pronunciation ?? null,
+      occurrences: options.phonemes ?? [],
+    }),
+  );
+  await seedProfileSource(
+    ctx,
+    lessonSourceInput({
+      kind: 'lesson_analysis',
+      userId,
+      lessonId,
+      occurredAt: options.startedAt,
+      scores: options.scores ?? { grammar: 70, vocabulary: 70, fluency: 70, interaction: 70, comprehension: 70 },
+      occurrences: options.errors ?? [],
+    }),
+  );
+  return lessonId;
 }

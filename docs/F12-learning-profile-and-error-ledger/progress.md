@@ -28,18 +28,29 @@
 - Setup noise: `pnpm --filter @english-quest/design-tokens tokens:build` (needed in a fresh worktree) rewrites the three generated token files with LF endings; they were restored, not committed.
 
 **Validation:** typecheck ✅ (all 4 projects) · lint ✅ · API unit 258/258 ✅ (`openapi.spec.ts` failed once on the stale snapshot, green after regenerating) · `error-taxonomy.spec.ts` 13/13 ✅ · `health.spec.ts` (Testcontainers, applies `0012` from scratch) 4/4 ✅
+**Commit:** `c3d73ba` F12 spec/plan and stage 1 - contracts, taxonomy and data model
+
+## Stage 2: Profile engine — ✅ done
+
+- [x] **5. Scoring and ledger rules**
+- [x] **6. Ingestion contract and service**
+- [x] **7. Readers and compact summary**
+
+**Observations:**
+- `profile.constants.ts` holds A32's values plus what the engine needed alongside them: `PROFILE_UPDATE_RETRY_POLICY` (A12, kept here rather than a separate profile-update constants file the spec doesn't list), `PROFILE_TRANSACTION_TIMEOUT_MS` (30 s, the runner's own completing-transaction timeout), `PROFILE_TAGS_LIMIT`, the competency order and labels, the source kinds with `weightOf` / `measurementSourceKindOf`, and both partial-update sentences verbatim from the spec.
+- `profile-fold.ts`: `foldCompetency` sorts by `measured_at`, `created_at`, `id` and folds A4's formula, clamping to 0–100. Sub-scores fold at the row's weight and skip nulls; a row without a sub-score **carries the previous smoothed sub-score forward** into `accuracy_after` / `prosody_after` (null until one exists) — the spec leaves that column's meaning open for such rows, and carry-forward is what F20's chart can plot without gaps. `roundScore` (half up) and `scoreDelta` are exported for the route.
+- **Gotcha:** `weight` round-trips through a `real` column as 0.3499999940…, so the refold snaps it back (`Math.round(w·1e6)/1e6`) before folding; otherwise a refold would drift from the fold that wrote the row. The refold rewrites only rows whose after-values moved by more than 1e-4, so an in-order arrival updates one row, not the whole log.
+- `ledger-rules.ts`: the spec's `selectRecurring(entries, now, isRetired)` became `selectRecurring(entries, isRetired)` over entries that already carry `recentOccurrenceCount`; the window arithmetic lives in `windowCounts(occurredAt[], now)` (recent = within 30 days inclusive, previous = the 30 before), which `tagTrend` and the reader share, so the arrow and the count can't disagree.
+- `profile-summary.ts`: `renderCompactSummary(competencies, weaknesses, examples, budget?)` — the snapshot argument is its competency list, and `budget` is a parameter so the drop order is testable. Maximal input (120-char labels, 500-char quotes, 77 tags) renders under the budget with nothing dropped. Example lines are only for tags in the included weakness list, so an example can never smuggle in history beyond the caps.
+- `profile-ingestion.contract.ts`: `activityOutcomeSchema` accepts `occurredAt` as a `Date` or an ISO string (in-process callers will pass dates; the spec's example is JSON). `profileSourceInputSchema` also enforces the origin coherence the table's CHECK enforces, and that correct encounters come only from activities. `activitySource` maps an outcome to a source; the caller never supplies a weight.
+- `ProfileIngestionService`: lock = `INSERT … ON CONFLICT DO NOTHING` + `SELECT … FOR UPDATE` on `learning_profiles`, then the spec's steps. Found while writing it: a replaced source's **encounter** tags must be re-aggregated too, not only its occurrence tags — an encounter that goes away can take a record from `practicing` back to `new`. Rejected tags are logged with user, kind, key and the activity type, never a quote (asserted). `rebuild` refolds the union of logged and materialized competencies and re-aggregates the union of logged and recorded tags, so hand-deleted evidence leaves nothing stale.
+- `LearningProfileReader.snapshotFor` also returns `empty`, which the view needs; `updatedAt` is null unless at least one source exists (the lock row alone doesn't count). `measurementHistory`'s `limit` keeps the most recent points, still returned oldest first. The partial-update note follows A10 exactly: the most recent lesson source is pronunciation-only and that lesson's `lesson_analysis` stage row is `blocked_missing_key` or `failed`.
+- `ErrorLedgerReader` gained `latestExamples(userId, tags)` for the summary service (one quote or word list per tag, in rank order) and a public `isRetired`. `dueEntries` is a real query (`due_at <= now`, not mastered, not retired), empty in Core because nothing sets `due_at`.
+- `ProfileModule` provides and exports the engine, both readers, the summary service and the (still neutral) tags port; it imports `TaxonomyModule` only.
+- Fixtures: `helpers/pipeline-fixtures.ts` gained `seedUser`, `seedLesson`, `lessonSourceInput`, `seedProfileSource` and `makeProfiledLesson` now rather than in step 12, since the engine suite needs them. The engine suite uses the plain `createTestContext()` (no MinIO): the test app never calls `ensureBucket`, so it touches nothing outside its own containers.
+
+**Validation:** typecheck ✅ · lint ✅ · API unit 287/287 ✅ (29 new: fold 10, ledger rules 8, summary 6, contract 5) · `profile-ingestion.spec.ts` 15/15 ✅ (Testcontainers)
 **Commit:** _(recorded in the next stage's commit)_
-
-## Stage 2: Profile engine — ⬜ pending
-
-- [ ] **5. Scoring and ledger rules**
-- [ ] **6. Ingestion contract and service**
-- [ ] **7. Readers and compact summary**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 3: Lesson ingestion and seams — ⬜ pending
 
