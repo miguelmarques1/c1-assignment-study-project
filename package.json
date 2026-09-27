@@ -20,6 +20,7 @@
     "db:seed": "docker compose exec api pnpm db:seed",
     "content:import": "docker compose exec -w /workspace/apps/api api pnpm content:import",
     "content:stats": "docker compose exec -w /workspace/apps/api api pnpm content:stats",
+    "content:generate": "docker compose exec -w /workspace/apps/api api pnpm content:generate",
     "lint": "eslint apps/api/src apps/api/test apps/web/src apps/web/test apps/web/e2e apps/web/playwright.config.ts packages/shared/src packages/design-tokens/src packages/design-tokens/test --max-warnings 0",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",

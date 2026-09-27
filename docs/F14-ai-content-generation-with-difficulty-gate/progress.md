@@ -81,15 +81,31 @@
 - `generation-boot.spec.ts` sits under `test/integration` as the spec lists it, but needs no container. It swaps the constants module's paths with `vi.doMock` and runs Nest's own `moduleRef.init()`. A rules file that fails the Zod schema reports only schema issues, never semantic ones, the same as the excerpt rules. The test asserts that and nothing more.
 
 **Validation:** typecheck ✅ · lint ✅ · unit: 60 files, 478 tests ✅ (367 baseline + 111 from F14 so far, including batch-planner 13, genre-picker 4, generation-error 6) · integration `content-generation.spec.ts` 20/20 ✅ · `generation-boot.spec.ts` 4/4 ✅
-**Commit:** _(recorded in the next stage)_
+**Commit:** aba0394 "F14 stage 4 - generation runs"
 
-## Stage 5: Curator Surfaces and Verification — ⬜ pending
+## Stage 5: Curator Surfaces and Verification — ✅ done (step 18 partial, see soft-fail)
 
-- [ ] **16. Generation CLI**
-- [ ] **17. Generation Statistics**
-- [ ] **18. Live Verification on the Real Stack**
+- [x] **16. Generation CLI**
+- [x] **17. Generation Statistics**
+- [ ] **18. Live Verification on the Real Stack**: everything that needs no real Gemini key ran live (below). The real-model runs (a small batch, a same-key repeat against real calls, a full batch with pass rates) did **not** run: see the soft-fail.
 
-**Observations:** _(none yet)_
+**Observations:**
+- **CLI as built:** `content:generate <email> [--max N] [--run-key K] [--dry-run]` on `GenerationCliModule` (Prisma, Credentials, Prompts, Taxonomy, Profile, Content, Generation; no BullMQ and no scheduler, and without `ScheduleModule.forRoot` the vault's `@Cron` stays inert). `NestFactory.createApplicationContext` runs with `abortOnError: false`, so a boot refusal reaches the CLI's own catch as one message. The CLI guards the schema with a check on `content_generation_runs`, reusing F13's `ContentSchemaNotInitializedError` wording, and loads and verifies the prompts itself, since `createApplicationContext` does not run `main.ts`.
+- **Deviation, streaming:** the spec asked for "streamed lines" per slot. `generateForPlan` returns once, and per-slot detail (attempt failures, item slug) is read after the run. So the CLI streams one progress line per settled slot (`… 3/11 slots settled`, from `onProgress`) and prints the per-slot lines and the summary at the end.
+- **Boot order, observed live:** `NestFactory.create` does not run `onModuleInit`. `main.ts`'s prompt checks read the rules and the taxonomy lazily (`current()`), and `app.listen()` → `init()` loads them again, so both log their load line twice at boot. The pattern predates F14 (the taxonomy already did it) and is harmless. A missing frequency list therefore stops the process at `listen`, still before the API serves anything.
+- `generation-stats.ts` counts a slot under the version of its **first** attempt, and leaves out slots that never reached a gate verdict (abandoned before a call, or only transport failures), as the spec's "≤1 regen" definition says. It is plain Prisma with no decorators, so `content:stats` stays a `tsx` script.
+- README gained rows for the dry run, the real run and `frequency:build`. The root `package.json` gained `content:generate` in the same `docker compose exec -w` form F13 used.
+- **Live verification (step 18), on an isolated compose project `english-quest-f14`** (API 3121, Postgres 5462, Redis 6399, MinIO 9130/9131, no LiveKit), started from this worktree with a gitignored worktree `.env` derived from the main one with the ports shifted. The shared `english-quest` stack was not touched. It was only read, once, see the soft-fail. Results:
+  1. **Boot:** migrations applied from scratch through `0014`; the four v2 prompts loaded; rules `v1 (4747a6f77f20)` and list `en-lemmas-top5000@e03e7791da88 (5000 lemmas)` loaded; `verifyGenerationPrompts` passed; the API listened (`degraded` only because this stack has no LiveKit).
+  2. **Synthetic user** `live-f14@example.test`, inserted with a throwaway hash and no Gemini key. Its ledger was seeded through F12's `ingestActivityOutcome` by a compiled throwaway script, which also proves `GenerationCliModule` wires from compiled code.
+  3. **Dry run:** 11 slots, R/G/V/E round-robin, each tag in at most 2 items, the 11th (a vocabulary slot with no `vocab:` tag left) turned into a reading, and planning stopped at the 12th. Genres and topic domains were distinct, and exemplars rotated 1, 2, 3. Exit 0.
+  4. **Keyless run** (`--run-key live-1`): zero `prompt_execution` rows (no Gemini call), 11 slots `dropped/credential_missing` with the PRD note, and progress lines 1/11…11/11. The **same run key again** returned the identical summary, and `content_generation_runs` stayed at 1. An unknown email printed `No user with email nobody@example.test.` with exit 1.
+  5. **Curated fallback:** one temporary curated reading imported with `content:import`, then `--run-key live-2 --max 5`. Reading 1 → `curated zz-live-f14-reading`, and reading 5 → dropped because the only curated reading was already standing in for slot 1 (A6).
+  6. **`content:stats`:** the Generation section printed `No slot reached the gate yet.` and `Runs: 2 (abandoned: 2 credential missing)`.
+  7. **Boot refusal:** with the list renamed away, the restarted API printed exactly `Frequency list not found — the difficulty gate cannot run.` and never logged `API listening`. The file was restored in the same command, with no git diff.
+  8. **OpenAPI:** regenerated from the container build (`node dist/openapi/generate.js`, 30 operations). The only diff was line endings, and the committed snapshot is unchanged in content.
+  - The stack, its volumes, its local images, the worktree `.env`, the temporary content folder and the throwaway script were removed afterwards.
+- **Soft-fail: no run against the real Gemini API.** The plan's step 18 asks for a real batch, a real same-key repeat and a full batch's pass rates. The isolated database has no user with a Gemini key, and the two ways to give it one both involve a real credential: copying `you@example.com`'s stored (encrypted) key from the shared database, which is F12's recipe, or storing the main `.env`'s `TEST_GEMINI_API_KEY`. Attempting the first, a read-only `pg_dump` of `users` and `user_credentials` into the session scratchpad, was stopped by the environment's safety classifier as personal-data handling. The dump was deleted unused and nothing was imported. So what the real model produces is still unmeasured: the first-pass and within-one-regeneration rates, and whether the thresholds (TTR ≥ 0.45 at up to 700 words is the likeliest to bite) are reachable in practice. The deterministic parts of that path (gate, regeneration, fallback, persistence, key routing) are proven against the fake at the SDK boundary.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** typecheck ✅ (`pnpm -r typecheck`) · lint ✅ (`pnpm lint`, zero warnings) · unit `generate-report.spec.ts` 3/3 ✅ · integration `generation-stats.spec.ts` 5/5 ✅ · live on `english-quest-f14`: boot, migration, dry run, keyless run, idempotent repeat, curated fallback, stats, boot refusal, OpenAPI unchanged ✅ · live real-Gemini runs: ⚠️ soft-fail (above)
+**Commit:** _(recorded in the final verification)_

@@ -19,6 +19,7 @@
     "content:import": "node --env-file-if-exists=../../.env --import tsx src/content/cli/import.ts",
     "content:schema": "node --import tsx src/content/cli/schema.ts",
     "content:stats": "node --env-file-if-exists=../../.env --import tsx src/content/cli/stats.ts",
+    "content:generate": "node --env-file-if-exists=../../.env dist/generation/cli/generate.js",
     "frequency:build": "node --import tsx src/generation/cli/build-frequency-list.ts"
   },
   "dependencies": {
