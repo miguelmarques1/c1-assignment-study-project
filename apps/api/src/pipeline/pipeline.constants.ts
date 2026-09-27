@@ -14,8 +14,10 @@ export const PIPELINE_QUEUE = 'lesson-pipeline';
  * A stage is appended one feature early, so the stage before it has
  * somewhere to leave the branch: F09 added `pronunciation_assessment`,
  * where a selected branch waits for F10's handler, F10 added
- * `lesson_analysis`, where an assessed branch waits for F11's, and F11
- * adds `profile_update`, where an analysed branch waits for F12's.
+ * `lesson_analysis`, where an assessed branch waits for F11's, F11 added
+ * `profile_update`, where an analysed branch waits for F12's, and F12 adds
+ * `plan_generation`, where a profiled branch waits for F15's (which also
+ * adds the pipeline's terminal status).
  */
 export const PIPELINE_STAGE_ORDER: readonly PipelineStage[] = [
   'recording',
@@ -24,6 +26,7 @@ export const PIPELINE_STAGE_ORDER: readonly PipelineStage[] = [
   'pronunciation_assessment',
   'lesson_analysis',
   'profile_update',
+  'plan_generation',
 ];
 
 /** Stages that are rows in `lesson_pipeline_stages` and run through a handler. */

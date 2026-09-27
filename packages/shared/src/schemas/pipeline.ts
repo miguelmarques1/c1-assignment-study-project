@@ -15,6 +15,7 @@ export const pipelineStageSchema = z.enum([
   'pronunciation_assessment',
   'lesson_analysis',
   'profile_update',
+  'plan_generation',
 ]);
 export type PipelineStage = z.infer<typeof pipelineStageSchema>;
 

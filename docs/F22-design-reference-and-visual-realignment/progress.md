@@ -132,3 +132,7 @@
 - Re-run the 5 API integration suites once Docker is available (expected to pass — confirmed nothing in `apps/api` changed since before this feature started).
 - The Full Scope addition this feature deliberately deferred: making the settings help card's guide link real (Google AI Studio and Azure Portal console links), replacing the static Core Scope card.
 - The five dashboard regions this feature explicitly did not build, each deferred to its owning feature per `design/README.md`: the hero banner and its CTA (F05), the module cards (F05/F06/F15/F18), the recommended-scenario card (F06), the two statistic cards (F20), and the `Scenarios & Practice` nav-pill destination (F06).
+
+## F12 follow-up (2026-09-26)
+
+- The header pill now carries Dashboard, Profile and Settings (F12). This feature's criterion "a pill navigation containing exactly Dashboard and Settings" described the destinations of its time; the PRD's own Header sentence already says "a later feature adds its destination to the same pill", which is what F12 did through `AppHeader`'s `DESTINATIONS`. `app-shell.spec.tsx`'s `the_pill_renders_exactly_the_existing_destinations` still passes (it renders `NavPill` with its own two destinations); `the_header_carries_the_profile_destination` covers the real header. `design/README.md`'s dashboard pill row was updated to match. F19's Lessons will go between Profile and Settings.

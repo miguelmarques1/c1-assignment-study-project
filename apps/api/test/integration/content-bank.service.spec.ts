@@ -278,7 +278,13 @@ describe('ContentBankService', () => {
     });
     await expect(service.saveGenerated(generatedInput({ targetTags: ['remote-work'] }))).rejects.toMatchObject({
       code: 'VAL001',
-      details: [{ path: '/targetTags/0', message: '"remote-work" is not in the error taxonomy (v1)' }],
+      // The version in force, not a pinned one: the taxonomy's version moves with it (v2 since F12).
+      details: [
+        {
+          path: '/targetTags/0',
+          message: `"remote-work" is not in the error taxonomy (v${ctx.app.get(ErrorTaxonomyService).current().version})`,
+        },
+      ],
     });
     await expect(service.saveGenerated(generatedInput({ type: 'listening' }))).rejects.toMatchObject({ code: 'VAL001' });
     expect(await ctx.prisma.contentItem.count()).toBe(0);

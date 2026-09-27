@@ -4,6 +4,7 @@ import { ANALYSIS_RETRY_POLICY } from '../../src/analysis/analysis.constants';
 import { EXCERPT_SELECTION_RETRY_POLICY } from '../../src/excerpts/excerpt-selection.constants';
 import { retryDelayFor, type PipelineStageHandler } from '../../src/pipeline/pipeline-stage.handler';
 import { PipelineStageRegistry } from '../../src/pipeline/pipeline-stage.registry';
+import { PROFILE_UPDATE_RETRY_POLICY } from '../../src/profile/profile.constants';
 import { PRONUNCIATION_RETRY_POLICY } from '../../src/pronunciation/pronunciation.constants';
 import { TRANSCRIPTION_RETRY_POLICY } from '../../src/transcription/transcription.constants';
 
@@ -43,6 +44,13 @@ describe('pipeline retry policy', () => {
     expect(retryDelayFor(ANALYSIS_RETRY_POLICY, 2)).toBe(300_000);
     expect(retryDelayFor(ANALYSIS_RETRY_POLICY, 3)).toBe(900_000);
     expect(retryDelayFor(ANALYSIS_RETRY_POLICY, 4)).toBeNull();
+  });
+
+  it('profile_update_retries_at_5s_and_30s', () => {
+    expect(PROFILE_UPDATE_RETRY_POLICY.attempts).toBe(3);
+    expect(retryDelayFor(PROFILE_UPDATE_RETRY_POLICY, 1)).toBe(5_000);
+    expect(retryDelayFor(PROFILE_UPDATE_RETRY_POLICY, 2)).toBe(30_000);
+    expect(retryDelayFor(PROFILE_UPDATE_RETRY_POLICY, 3)).toBeNull();
   });
 
   it('the_backoff_reads_the_policy_of_the_jobs_stage', () => {

@@ -200,6 +200,37 @@ export {
 } from './schemas/analysis';
 
 export {
+  competencySnapshotViewSchema,
+  competencySubScoresViewSchema,
+  competencyTrendSchema,
+  learningProfileViewSchema,
+  ledgerEntryDetailViewSchema,
+  ledgerEntryListViewSchema,
+  ledgerEntryViewSchema,
+  ledgerExampleViewSchema,
+  ledgerListQuerySchema,
+  ledgerSourceKindSchema,
+  ledgerSourceViewSchema,
+  ledgerStateSchema,
+  profileCompetencySchema,
+  tagTrendSchema,
+  type CompetencySnapshotView,
+  type CompetencySubScoresView,
+  type CompetencyTrend,
+  type LearningProfileView,
+  type LedgerEntryDetailView,
+  type LedgerEntryListView,
+  type LedgerEntryView,
+  type LedgerExampleView,
+  type LedgerListQuery,
+  type LedgerSourceKind,
+  type LedgerSourceView,
+  type LedgerState,
+  type ProfileCompetency,
+  type TagTrend,
+} from './schemas/profile';
+
+export {
   answerKeyIssues,
   CONTENT_BODY_MAX_LENGTH,
   CONTENT_SLUG_MAX_LENGTH,

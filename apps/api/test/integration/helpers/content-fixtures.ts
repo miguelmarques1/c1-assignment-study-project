@@ -29,6 +29,7 @@ function loaded(taxonomy: ErrorTaxonomy): LoadedErrorTaxonomy {
     ...taxonomy,
     fingerprint: taxonomyFingerprint(taxonomy),
     analysisTags: taxonomy.tags.map((tag) => tag.tag),
+    familyOf: new Map(taxonomy.tags.map((tag) => [tag.tag, tag.family])),
   };
 }
 
@@ -55,14 +56,16 @@ export function fixtureTaxonomy(version = 'fixture-1'): LoadedErrorTaxonomy {
 
 /**
  * The fixture taxonomy plus an extra family, built directly rather than
- * through F11's parser, whose tag regex predates F12's `phoneme:/θ/` spelling.
+ * through the parser, so any tag spelling can be tried. An IPA-shaped tag
+ * (`phoneme:/θ/`) gets an `ipa` family, as F12's taxonomy declares it.
  * Membership must accept whatever the taxonomy in force lists.
  */
 export function fixtureTaxonomyWith(extraTag: string, family: string): LoadedErrorTaxonomy {
   const base = fixtureTaxonomy();
+  const format = /:\/.+\/$/u.test(extraTag) ? ('ipa' as const) : ('slug' as const);
   return loaded({
     version: base.version,
-    families: [...base.families, { id: family, label: family, analysis: false }],
+    families: [...base.families, { id: family, label: family, analysis: false, format }],
     tags: [...base.tags, { tag: extraTag, label: extraTag, family, description: 'x' }].sort((a, b) =>
       a.tag.localeCompare(b.tag),
     ),

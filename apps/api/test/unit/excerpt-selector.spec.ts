@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { loadExcerptRulesFile, type ExcerptRules } from '../../src/excerpts/excerpt-rules';
 import { EXCERPT_RULES_PATH } from '../../src/excerpts/excerpt-selection.constants';
 import { excerptReason, selectExcerpts, type SelectableUtterance } from '../../src/excerpts/excerpt-selector';
-import { NO_PRONUNCIATION_FOCUS, type PronunciationFocus } from '../../src/excerpts/pronunciation-focus.port';
+import { NO_PRONUNCIATION_FOCUS, type PronunciationFocus } from '../../src/profile/pronunciation-focus.port';
 
 /** The committed version 1 rules, so these boundaries are the ones in force. */
 const RULES: ExcerptRules = loadExcerptRulesFile(EXCERPT_RULES_PATH).rules;

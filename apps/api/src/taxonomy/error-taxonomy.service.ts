@@ -39,4 +39,21 @@ export class ErrorTaxonomyService implements OnModuleInit {
   isAnalysisTag(tag: string): boolean {
     return this.current().analysisTags.includes(tag);
   }
+
+  /** Whether `tag` is in the taxonomy in force. Anything else is rejected at ingestion, or retired history (F12). */
+  has(tag: string): boolean {
+    return this.current().familyOf.has(tag);
+  }
+
+  /** The family of a tag in force, or null for an unknown or retired one. */
+  familyOf(tag: string): string | null {
+    return this.current().familyOf.get(tag) ?? null;
+  }
+
+  /** Every tag in force of one family, in the file's sorted order. */
+  tagsInFamily(family: string): string[] {
+    return this.current()
+      .tags.filter((entry) => entry.family === family)
+      .map((entry) => entry.tag);
+  }
 }

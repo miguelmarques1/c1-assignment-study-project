@@ -139,18 +139,18 @@ describe('pipeline drain', () => {
     const ana = await seedSpeaker(pipeline.ctx, 'Ana');
     const lesson = await makeRecordedLesson(pipeline, [{ speaker: ana }]);
     const branchId = lesson.branches.get(ana.id)!;
-    // profile_update is F11's next stage, appended one feature early exactly
-    // like every earlier stage was — F12 has not registered its handler
+    // plan_generation is F12's next stage, appended one feature early exactly
+    // like every earlier stage was — F15 has not registered its handler
     // yet, so a branch that reaches it just waits.
-    await pipeline.ctx.app.get(PipelineStateService).queueStage(branchId, 'profile_update', new Date());
+    await pipeline.ctx.app.get(PipelineStateService).queueStage(branchId, 'plan_generation', new Date());
 
     await drain().run();
 
     const waiting = await pipeline.ctx.prisma.lessonPipelineStage.findUniqueOrThrow({
-      where: { branchId_stage: { branchId, stage: 'profile_update' } },
+      where: { branchId_stage: { branchId, stage: 'plan_generation' } },
     });
     expect(waiting.status).toBe('queued');
-    expect(await queue().getJob(pipelineJobId('profile_update', branchId, 1))).toBeUndefined();
+    expect(await queue().getJob(pipelineJobId('plan_generation', branchId, 1))).toBeUndefined();
   }, 60_000);
 
   it('a_stage_whose_job_died_mid_run_is_failed_not_rerun', async () => {

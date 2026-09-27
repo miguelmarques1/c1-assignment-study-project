@@ -23,6 +23,13 @@ void main() {
       expect(find.byWidgetPredicate((w) => w is InkWell), findsOneWidget);
     });
 
+    testWidgets('empty_can_have_no_action_when_the_way_forward_is_elsewhere', (tester) async {
+      await tester.pumpWidget(_wrap(const EqEmpty(message: 'No profile yet.')));
+
+      expect(find.text('No profile yet.'), findsOneWidget);
+      expect(find.byWidgetPredicate((w) => w is InkWell), findsNothing);
+    });
+
     testWidgets('error_names_the_cause_and_offers_a_retry', (tester) async {
       var retried = false;
 

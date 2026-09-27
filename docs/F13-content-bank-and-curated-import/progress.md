@@ -115,3 +115,10 @@
 4. F12's taxonomy v2 must run `pnpm content:schema` in its own diff, or `content-meta-schema-snapshot.spec.ts` fails. Note that F11's tag regex (`^[a-z]+:[a-z0-9-]+$`) does not yet accept the spec's `phoneme:/θ/` spelling. That is F12's call. F13's membership check accepts whatever the taxonomy lists.
 5. Migration numbering: F13 took `0013`, leaving `0012_learning_profile` to F12. Either merge order applies cleanly, since the tables are unrelated.
 6. The design-tokens CRLF drift failure makes `pnpm -r test` stop before API and web on Windows checkouts. A `.gitattributes` `eol=lf` rule for the generated files would fix it. That is out of F13's scope.
+
+## F12 follow-up (2026-09-27)
+
+- F12 shipped error taxonomy v2: the `phoneme` family (49 tags, `analysis: false`, `format: ipa`), 85 tags in all. `assignment-content/*/meta.schema.json` was regenerated with `pnpm content:schema`, as this feature's CLI asks after a taxonomy change, so curated items can now target `phoneme:/θ/`-style tags.
+- `LoadedErrorTaxonomy` gained `familyOf`, and `TaxonomyFamily` a `format` (`slug` or `ipa`). `helpers/content-fixtures.ts` builds the loaded taxonomy by hand, so it now supplies both. `fixtureTaxonomyWith` gives an IPA-shaped extra tag an `ipa` family. The loader itself accepts `phoneme:/θ/` now, so the comment about the parser predating that spelling was updated.
+- `content-bank.service.spec.ts > save_generated_rejects_invalid_input_with_val001` expected the message `(v1)` verbatim. It now reads the version in force from `ErrorTaxonomyService`, so the next taxonomy bump doesn't break it again.
+

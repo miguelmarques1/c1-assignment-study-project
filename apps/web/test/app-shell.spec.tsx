@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
+import { AppHeader } from '@/components/app-header';
 import { Avatar, NavPill } from '@/components/ui';
 
 const usePathname = vi.fn();
@@ -61,5 +62,26 @@ describe('header', () => {
 
     expect(screen.queryByText(/streak/i)).toBeNull();
     expect(screen.queryByText(/\bXP\b/)).toBeNull();
+  });
+
+  it('the_header_carries_the_profile_destination', () => {
+    usePathname.mockReturnValue('/profile');
+    render(
+      <AppHeader
+        user={{
+          id: '4e5f6a7b-8c9d-4e0f-a1b2-c3d4e5f6a7b8',
+          email: 'miguel@example.com',
+          displayName: 'Miguel Marques',
+          sessionExpiresAt: '2026-09-26T10:00:00.000Z',
+        }}
+      />,
+    );
+
+    const nav = screen.getByRole('link', { name: 'Profile' }).closest('nav') ?? document.body;
+    const labels = Array.from(nav.querySelectorAll('a')).map((link) => link.textContent);
+    // F19's Lessons slots in between Profile and Settings, mirroring the mobile tabs.
+    expect(labels).toEqual(['Dashboard', 'Profile', 'Settings']);
+    expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('href', '/profile');
+    expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('aria-current', 'page');
   });
 });

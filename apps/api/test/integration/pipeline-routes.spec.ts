@@ -173,8 +173,11 @@ describe('POST /lessons/:lessonId/pipeline/retry', () => {
     // Let every downstream stage's first run settle, so none of them can
     // move the pointer after the hand-made failure below. The fake speech
     // client's default phrases are under F09's word-count floor, so F10
-    // completes at once as no_sample.
+    // completes at once as no_sample, and F11's analysis then blocks at once
+    // (Ana holds no Gemini key) — the last stage to touch the pointer.
+    // Waiting only for F10 raced that block, which overwrote the failure.
     await waitForStage(pipeline.ctx, branchId, 'pronunciation_assessment', ['completed']);
+    await waitForStage(pipeline.ctx, branchId, 'lesson_analysis', ['blocked_missing_key']);
     // A later stage that had already been reached once, and a transcription failed by hand after it.
     await pipeline.ctx.prisma.lessonPipelineStage.update({
       where: { branchId_stage: { branchId, stage: 'transcription' } },

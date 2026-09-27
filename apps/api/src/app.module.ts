@@ -13,6 +13,7 @@ import { CredentialsModule } from './credentials/credentials.module';
 import { ExcerptSelectionModule } from './excerpts/excerpt-selection.module';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { ProfileUpdateModule } from './profile-update/profile-update.module';
 import { PromptsModule } from './prompts/prompts.module';
 import { PronunciationModule } from './pronunciation/pronunciation.module';
 import { RedisModule } from './redis/redis.module';
@@ -43,6 +44,7 @@ import { TranscriptionModule } from './transcription/transcription.module';
     PronunciationModule,
     TaxonomyModule,
     AnalysisModule,
+    ProfileUpdateModule,
     ContentModule,
   ],
   providers: [

@@ -3,7 +3,7 @@ import type { Prisma } from '@prisma/client';
 
 import type { LoadedExcerptRules } from './excerpt-rules';
 import type { ExcerptSelection } from './excerpt-selector';
-import type { PronunciationFocus } from './pronunciation-focus.port';
+import type { PronunciationFocus } from '../profile/pronunciation-focus.port';
 
 export interface ExcerptWrite {
   lessonId: string;
