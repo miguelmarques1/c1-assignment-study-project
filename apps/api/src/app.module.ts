@@ -11,6 +11,7 @@ import { ContentModule } from './content/content.module';
 import { env } from './config/env';
 import { CredentialsModule } from './credentials/credentials.module';
 import { ExcerptSelectionModule } from './excerpts/excerpt-selection.module';
+import { GenerationModule } from './generation/generation.module';
 import { HealthModule } from './health/health.module';
 import { LessonsModule } from './lessons/lessons.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -48,6 +49,7 @@ import { TranscriptionModule } from './transcription/transcription.module';
     LessonsModule,
     ProfileUpdateModule,
     ContentModule,
+    GenerationModule,
   ],
   providers: [
     // Authentication is global: a route is protected unless it opts out with

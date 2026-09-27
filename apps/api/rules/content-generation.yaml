@@ -1,0 +1,228 @@
+# Content generation rules (F14).
+#
+# Everything the difficulty gate measures generated items against, and the
+# choices that shape what the four *-generate prompts are asked for: the
+# thresholds per item type, the batch mix, the ten genres, the shared
+# banned-phrase list, and the structure markers a target-structure quote must
+# match. The numeric thresholds are also rendered into the prompts as
+# variables, so the prompt asks for exactly what the gate checks.
+#
+# Changing any value below changes what passes, so bump `version` with it:
+# every generated item and every attempt stores the version it was checked
+# under, and test/unit/generation-rules.spec.ts pins the fingerprint of each
+# version, so a change without a bump fails CI. Changing the frequency list
+# (rules/frequency/) changes the gate too: bump the version for that as well.
+#
+# Markers are case-insensitive regular expressions matched against a
+# normalised quote (lowercase, straight apostrophes, single spaces). `{name}`
+# expands to the lexicon of that name as an alternation. A marker is a
+# necessary condition, not proof: a quote tagged grammar:conditional-3 that
+# has no `had … have` is rejected, one that has them is trusted.
+#
+# Read only when the API boots: restart it after editing this file.
+version: "1"
+
+# Words ranked beyond this in the frequency list count as outside the
+# frequent vocabulary (PRD: "outside the 3,000 most frequent English words").
+frequency_rank_cutoff: 3000
+
+# A required structure's occurrences must start in at least this many of the
+# text's three equal thirds, so they are spread rather than clustered.
+min_occurrence_thirds: 2
+
+# An item reproducing this many consecutive words of a learner quote or
+# correction sent in its prompt fails: generated items are shared.
+learner_quote_run_words: 6
+
+questions:
+  count: 5
+  # F16 Core runs these two; ordering and matching wait for F16 Full.
+  formats: [multiple_choice, fill_blank]
+
+item_types:
+  reading:
+    words: { min: 450, max: 700 }
+    mean_sentence_length: { min: 18, max: 26 }
+    min_type_token_ratio: 0.45
+    min_out_of_frequency_ratio: 0.12
+    min_structure_occurrences: 3
+    target_tags: { min: 1, max: 2 }
+    difficulty: 4
+  vocabulary:
+    words: { min: 250, max: 450 }
+    mean_sentence_length: { min: 18, max: 26 }
+    min_type_token_ratio: 0.45
+    min_out_of_frequency_ratio: 0.12
+    min_structure_occurrences: 3
+    target_tags: { min: 1, max: 1 }
+    difficulty: 4
+  grammar:
+    words: { min: 250, max: 450 }
+    mean_sentence_length: { min: 18, max: 26 }
+    min_type_token_ratio: 0.45
+    min_out_of_frequency_ratio: 0.12
+    min_structure_occurrences: 3
+    target_tags: { min: 1, max: 1 }
+    difficulty: 4
+  error_review:
+    words: { min: 250, max: 450 }
+    mean_sentence_length: { min: 18, max: 26 }
+    min_type_token_ratio: 0.45
+    min_out_of_frequency_ratio: 0.12
+    min_structure_occurrences: 3
+    target_tags: { min: 1, max: 1 }
+    difficulty: 4
+
+batch:
+  # Allocated round-robin in the order reading, grammar, vocabulary,
+  # error_review. The sum may not exceed the PRD's 12 items per run.
+  mix: { reading: 3, grammar: 3, vocabulary: 3, error_review: 3 }
+  max_items_per_tag: 2
+
+# PRD F14: one is drawn per reading, and none repeats within the user's last
+# five generated readings.
+genres:
+  - opinion column
+  - book review
+  - interview excerpt
+  - letter to the editor
+  - popular-science explainer
+  - obituary
+  - product teardown
+  - travel dispatch
+  - conference talk transcript
+  - historical vignette
+
+# The recognisable filler of generated prose, lowercase with straight
+# apostrophes. Matched as whole words in the title and body, together with
+# each prompt's own `banned_phrases`.
+banned_phrases:
+  - a beacon of
+  - a myriad of
+  - a pivotal role
+  - a rich tapestry
+  - a sense of belonging
+  - a testament to
+  - at the end of the day
+  - cutting-edge
+  - deep dive
+  - delve into
+  - delves into
+  - delving into
+  - dive into
+  - embark on a journey
+  - ever-changing landscape
+  - ever-evolving
+  - first and foremost
+  - fostering a sense of
+  - game-changer
+  - harness the power
+  - in a world where
+  - in conclusion
+  - in summary
+  - in the realm of
+  - in today's fast-paced world
+  - in today's world
+  - it goes without saying
+  - it is important to note
+  - it is worth noting
+  - it's important to note
+  - it's worth noting
+  - let's dive in
+  - navigate the complexities
+  - navigating the complexities
+  - paradigm shift
+  - play a crucial role
+  - plays a crucial role
+  - serves as a reminder
+  - shed light on
+  - stands as a
+  - tapestry
+  - treasure trove
+  - unleash the power
+  - unlock the potential
+
+lexicons:
+  participle: [
+    been, begun, bent, bet, bitten, bled, blown, born, borne, bought, bound, broken, brought, built, burnt, caught,
+    chosen, come, cost, cut, dealt, done, drawn, dreamt, driven, dug, eaten, fallen, fed, felt, fled, flown,
+    forbidden, forgiven, forgotten, fought, found, frozen, given, gone, got, gotten, grown, had, heard, held,
+    hidden, hit, hung, hurt, kept, knelt, known, laid, leapt, learnt, led, left, lent, let, lit, lost, made,
+    meant, met, overcome, paid, put, quit, read, ridden, risen, run, rung, said, sat, seen, sent, set, shaken,
+    shot, shown, shut, slept, sold, sought, spent, spoken, spread, stolen, stood, struck, sung, sunk, swum,
+    sworn, taken, taught, thought, thrown, told, torn, understood, upheld, withdrawn, withheld, woken, won,
+    worn, written,
+  ]
+  particle: [about, along, around, away, back, down, forward, in, into, off, on, out, over, through, up]
+  modal: [
+    can, "can't", cannot, could, "couldn't", may, might, "mightn't", must, "mustn't", need to, "needn't",
+    ought to, shall, should, "shouldn't", will, "won't", would, "wouldn't",
+  ]
+  reporting_verb: [
+    acknowledged, added, admits, admitted, announced, argued, argues, asked, asks, claimed, claims, complained,
+    conceded, concluded, confirmed, denied, explained, explains, insisted, insists, maintained, mentioned,
+    noted, promised, recalled, replied, reported, revealed, said, says, stated, suggested, suggests, tell,
+    tells, told, warned, wondered,
+  ]
+  connector: [
+    accordingly, admittedly, after all, although, as a result, because, besides, by contrast, consequently,
+    conversely, despite, even so, even though, furthermore, hence, however, in addition, in contrast,
+    in fact, in spite of, indeed, instead, likewise, meanwhile, moreover, nevertheless, nonetheless,
+    on the other hand, otherwise, similarly, since, so that, therefore, though, thus, unless, whereas,
+    while, yet,
+  ]
+  hedge: [
+    apparently, appear to, appears to, approximately, arguably, conceivably, could be, generally,
+    in a sense, it is possible, it seems, largely, likely, may, might, more or less, perhaps, possibly,
+    presumably, probably, relatively, roughly, seem to, seemingly, seems to, somewhat, suggest, suggests,
+    tend to, tended to, tends to, to a degree, to some extent, unlikely, would seem,
+  ]
+
+structure_markers:
+  grammar:conditional-2:
+    - "\\b(?:if|unless|suppose|supposing|imagine|provided)\\b.*\\b(?:would|could|might)(?!n't\\s+have\\b)(?:n't)?\\b(?!\\s+(?:not\\s+)?have\\b)"
+    - "\\bwere\\s+\\w+\\s+to\\b"
+  grammar:conditional-3:
+    - "(?:\\bhad|'d)\\s+(?:\\w+\\s+){0,2}?(?:\\w+ed|\\w+en|{participle})\\b.*\\b(?:would|could|might|should)(?:\\s+not|n't)?\\s+have\\b"
+    - "\\b(?:would|could|might|should)(?:\\s+not|n't)?\\s+have\\b.*(?:\\bhad|'d)\\s+(?:\\w+\\s+){0,2}?(?:\\w+ed|\\w+en|{participle})\\b"
+  grammar:conditional-mixed:
+    - "(?:\\bhad|'d)\\s+(?:\\w+\\s+){0,2}?(?:\\w+ed|\\w+en|{participle})\\b.*\\b(?:would|could|might)(?!n't\\s+have\\b)(?:n't)?\\b(?!\\s+(?:not\\s+)?have\\b)"
+    - "\\b(?:if|unless)\\b.*\\b(?:were|was|did|\\w+ed)\\b.*\\b(?:would|could|might)(?:\\s+not|n't)?\\s+have\\b"
+  grammar:present-perfect:
+    - "\\b(?:have|has|haven't|hasn't)\\b(?:\\s+(?:not|never|already|just|ever|always|long|recently|also|since|finally))*\\s+(?:\\w+ed|\\w+en|{participle})\\b"
+    - "'(?:ve|s)\\s+(?:(?:not|never|already|just|ever|always|also)\\s+)*(?:\\w+ed|\\w+en|{participle})\\b"
+  grammar:past-perfect:
+    - "(?:\\bhad|\\bhadn't|'d)(?:\\s+(?:not|never|already|just|ever|long|since|also|finally))*\\s+(?:\\w+ed|\\w+en|{participle})\\b"
+  grammar:passive-voice:
+    - "(?:\\b(?:am|is|are|was|were|be|been|being|get|gets|got|gotten|getting|isn't|aren't|wasn't|weren't)|'s|'re)(?:\\s+(?:not|never|also|often|always|still|widely|largely|rarely|already|then|now|increasingly|being|been))*\\s+(?:\\w+ed|\\w+en|{participle})\\b"
+  grammar:modal-verb:
+    - "\\b(?:{modal})\\b"
+  grammar:future-forms:
+    - "\\b(?:will|won't|shall|shan't)\\b"
+    - "'ll\\b"
+    - "\\b(?:going|about|due)\\s+to\\s+\\w+"
+  grammar:reported-speech:
+    - "\\b(?:{reporting_verb})\\b(?:\\s+\\w+){0,3}?\\s+(?:that|if|whether|what|why|how|when|where|who|to)\\b"
+  grammar:relative-clause:
+    - "\\b(?:who|whom|whose|which|that|where|when)\\b"
+  grammar:gerund-infinitive:
+    - "\\b\\w+ing\\b"
+    - "\\bto\\s+\\w+"
+  grammar:comparison:
+    - "\\b(?:more|less|fewer)\\b.*\\bthan\\b"
+    - "\\b\\w+er\\s+than\\b"
+    - "\\bas\\s+\\w+(?:\\s+\\w+)?\\s+as\\b"
+    - "\\bthe\\s+(?:most|least)\\b"
+    - "\\b\\w+est\\b"
+  grammar:article-definite:
+    - "\\bthe\\b"
+  grammar:article-indefinite:
+    - "\\b(?:a|an)\\b"
+  grammar:question-form:
+    - "\\?"
+  vocab:phrasal-verb:
+    - "\\b\\w+\\s+(?:\\w+\\s+)?(?:{particle})\\b"
+  discourse:connector:
+    - "\\b(?:{connector})\\b"
+  discourse:hedging:
+    - "\\b(?:{hedge})\\b"
