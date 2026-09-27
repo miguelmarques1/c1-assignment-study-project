@@ -1,6 +1,6 @@
 # Implementation Progress: AI Content Generation with Difficulty Gate
 
-**Status:** in progress
+**Status:** success
 **Branch:** claude/spec-writer-docs-prd-6105c2
 **Started:** 2026-09-27
 **Last updated:** 2026-09-27
@@ -108,4 +108,74 @@
 - **Soft-fail: no run against the real Gemini API.** The plan's step 18 asks for a real batch, a real same-key repeat and a full batch's pass rates. The isolated database has no user with a Gemini key, and the two ways to give it one both involve a real credential: copying `you@example.com`'s stored (encrypted) key from the shared database, which is F12's recipe, or storing the main `.env`'s `TEST_GEMINI_API_KEY`. Attempting the first, a read-only `pg_dump` of `users` and `user_credentials` into the session scratchpad, was stopped by the environment's safety classifier as personal-data handling. The dump was deleted unused and nothing was imported. So what the real model produces is still unmeasured: the first-pass and within-one-regeneration rates, and whether the thresholds (TTR ≥ 0.45 at up to 700 words is the likeliest to bite) are reachable in practice. The deterministic parts of that path (gate, regeneration, fallback, persistence, key routing) are proven against the fake at the SDK boundary.
 
 **Validation:** typecheck ✅ (`pnpm -r typecheck`) · lint ✅ (`pnpm lint`, zero warnings) · unit `generate-report.spec.ts` 3/3 ✅ · integration `generation-stats.spec.ts` 5/5 ✅ · live on `english-quest-f14`: boot, migration, dry run, keyless run, idempotent repeat, curated fallback, stats, boot refusal, OpenAPI unchanged ✅ · live real-Gemini runs: ⚠️ soft-fail (above)
-**Commit:** _(recorded in the final verification)_
+**Commit:** 1167c4e "F14 stage 5 - curator surfaces and verification"
+
+## Final verification
+
+**Full suite (whole repository, fresh, 2026-09-27):**
+- `pnpm -r typecheck` ✅ (design-tokens, shared, web, api) · `pnpm lint` ✅ (zero warnings)
+- API `npx vitest run` from `apps/api`: **100/100 files, 937/937 tests** ✅, every integration suite on Testcontainers. Baseline before F14 was 48 unit files / 367 unit tests. The F14 files: generation-rules 13, frequency-list 6, frequency-list-builder 6, text-metrics 13, target-structures 7, difficulty-gate 17, gate-feedback 4, generated-item.mapper 8, generation-prompts 8, batch-planner 13, genre-picker 4, generation-error 6, generate-report 3, template-renderer 11 (+4), prompt-execution.service 12 (+2), content-generation 20, generation-boot 4, generation-stats 5. `prompt-boot` 6/6 and `content-bank.service` 16/16 are unaffected.
+- Web `pnpm --filter @english-quest/web test`: 29/29 files, 188/188 tests ✅ (untouched by F14)
+- Mobile (untouched by F14): `flutter analyze` no issues, `flutter test` 79/79 ✅
+
+**Component Overview walk-through:** all 49 paths in spec §4 exist with their described contents, including the four prompts at version `"2"`, the rules file, the frequency list and its README, migration `0014`, the F04 files, `main.ts`, `app.module.ts`, `content/cli/stats.ts`, both `package.json` files, the README, `.claude/rules/prompts.md` and F04's progress note. So do all 18 test files in §7 and the fixtures folder. **Missing from spec: none.** Additions beyond the spec, listed in the stage observations: `text/frequency-list-builder.ts`, the `GENERATION_NOTES`/`SLOT_*` constants, `generationRequestSchema` and the result types in the contract, `apps/api/test/fixtures/generation/fixtures.ts`, `test/integration/helpers/generation-fixtures.ts`, and the fake's `generationResponder`.
+
+**Acceptance criteria (PRD F14), re-run fresh in the full suite above:**
+
+| Criterion | Result |
+|---|---|
+| Generation produces reading, vocabulary, grammar and error-review items, and never listening items | ✓ `content-generation::generates_reading_vocabulary_grammar_and_error_review_and_never_listening`, `batch-planner::every_slot_tag_is_unmastered_and_never_listening` |
+| A generation run is capped at 12 items and happens once per study plan | ✓ `batch-planner::never_plans_more_than_twelve_slots`, `content-generation::rejects_more_than_twelve_items`, `::a_second_call_with_the_same_run_key_makes_no_model_call` (also live: same run key, one run row) |
+| Generated readings that pass the gate are 450–700 words with mean sentence length between 18 and 26 words | ✓ `difficulty-gate::reading_word_count_boundaries`, `::reading_mean_sentence_length_boundaries` |
+| A generated reading with fewer than 12% of tokens outside the top-3,000 frequency list fails the gate | ✓ `difficulty-gate::fails_below_12_percent_outside_the_top_3000` |
+| A generated item containing a banned phrase fails the gate | ✓ `difficulty-gate::fails_on_a_banned_phrase_from_the_rules_or_the_prompt` |
+| A generated item with fewer than 3 occurrences of its required target structure fails the gate | ✓ `difficulty-gate::fails_with_fewer_than_three_occurrences_of_a_required_structure`, `target-structures::requires_a_marker_match_when_the_tag_has_markers` |
+| A generated item with other than exactly 5 questions, or a question without exactly one correct answer, fails the gate | ✓ `difficulty-gate::fails_when_questions_are_not_exactly_five`, `::fails_when_a_question_has_no_single_correct_answer` |
+| A failing item is regenerated exactly once with the failed checks appended to the prompt | ✓ `content-generation::regenerates_a_failing_item_once_with_the_failed_checks_appended`, `gate-feedback::lists_each_failed_check_with_measured_and_required_values` |
+| An item failing twice is discarded and replaced by a curated bank item of the same type | ✓ `content-generation::an_item_failing_twice_is_replaced_by_a_curated_item_of_the_same_type` |
+| No genre repeats within a user's last 5 generated readings | ✓ `genre-picker::never_picks_a_genre_from_the_last_five_generated_readings`, `content-generation::no_genre_repeats_within_the_last_five_generated_readings_across_runs` |
+| Every generated item is persisted with provenance `generated`, its target tags, its gate metrics and the prompt id and version | ✓ `content-generation::persists_each_passing_item_with_provenance_tags_metrics_and_prompt_stamp` |
+| The API refuses to boot when the frequency list file is missing | ✓ `frequency-list::refuses_a_missing_file_with_the_prd_message`, `generation-boot::refuses_to_initialise_when_the_frequency_list_is_missing`, and live on `english-quest-f14` |
+
+**Cross-feature criteria, F14's side:**
+- F04's prompt stamp is on every generated item ✓ (`persists_each_passing_item_…`).
+- F02's key is used only on its owner's data ✓ (`uses_only_the_owners_gemini_key`, `error_review_prompt_carries_only_the_owners_quotes_and_no_summary`).
+- F12's snapshot and ledger decide the target tags, and all of them are unmastered ✓ (`every_generated_items_target_tags_are_unmastered_for_its_owner`, `batch-planner::ranks_due_then_recurring_then_other_unmastered_tags`).
+- Items are persisted through F13 and retrievable as candidates ✓ (`generated_items_are_returned_as_bank_candidates`).
+- Every item id in a result exists ✓ (same test, `existingIds`). The composition half of the last two criteria is F15's.
+
+**Smoke checks (6.4):** everything that needs no real Gemini key ran live on the isolated `english-quest-f14` stack (Stage 5):
+- boot, with migration `0014` and the list, rules and prompts loaded;
+- the CLI's dry run, keyless run, same-key repeat and unknown-email exit;
+- the curated fallback, through a real `content:import`;
+- `content:stats`'s Generation section;
+- the boot refusal without the list;
+- an unchanged OpenAPI snapshot.
+
+**Regressions:** none.
+
+**Soft-fails:**
+- **No run against the real Gemini API** (plan step 18, items 2–4 of the spec's live list). Giving the isolated database a Gemini key means handling a real credential. Copying the shared database's `users` and `user_credentials` (F12's recipe) was stopped by the environment's safety classifier as personal-data handling. The dump was deleted unused, and the `.env`'s `TEST_GEMINI_API_KEY` route was not attempted either. Still unmeasured as a result:
+  - whether the real model reaches the thresholds;
+  - the first-pass and within-one-regeneration rates against the PRD's 95%;
+  - prose quality;
+  - whether Gemini accepts the v2 response schemas (their keywords are the ones already proven live).
+
+  Everything deterministic around the model call is proven against the fake at the SDK boundary.
+- The live checks ran on the isolated stack, not the shared `english-quest` one, so migration `0014` is not applied to the shared dev database. It applies on the next boot of an API running this code.
+
+**Pre-existing failures:**
+- `packages/design-tokens` `tokens.spec.ts > generation drift guard > generated_files_match_a_fresh_generation` fails because the CRLF checkout (`core.autocrlf=true`) differs from the LF generator output, as F13 recorded. F14 does not touch the package (`git diff c5d5a69 -- packages/design-tokens` is empty). Because of it, `pnpm -r test` stops at design-tokens, so API, web and mobile ran per package.
+
+**Follow-ups:**
+1. **Run the real-model check yourself** (it needs a real key). On a stack running this branch:
+   - `pnpm content:generate <your email> --max 4 --run-key live-1`;
+   - the same command again, expecting no new `prompt_execution` rows;
+   - a full batch;
+   - `pnpm content:stats`.
+
+   Read one item of each type. If the within-one-regeneration rate is far from 95%, look at which checks fail. Tune the prompts first (bump their `version`), and the rules only if a threshold proves unreachable. TTR ≥ 0.45 at up to 700 words is the likeliest to be unreachable.
+2. **F15** (spec §5 "Downstream notes"): call `generateForPlan` once per plan with a plan-unique `runKey`, and wire `onProgress` to `reportProgress`. Draw on the `generated` and `fallback` ids, fill `dropped` slots from the bank, show `notes`, and call `recordServed`. A run takes minutes (about 36 in the worst case) and can be resumed.
+3. **F16:** generated items carry only `multiple_choice` and `fill_blank` questions. A difficulty rating is stored against the payload's `promptVersion`.
+4. The pre-existing design-tokens CRLF drift is still open. A `.gitattributes` `eol=lf` rule for the generated files would fix it.
+5. The shared dev database gains migration `0014` the next time its API boots with this code merged.
