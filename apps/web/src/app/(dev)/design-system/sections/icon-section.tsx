@@ -12,8 +12,11 @@ import {
   MailIcon,
   MicrophoneIcon,
   MicrophoneOffIcon,
+  PencilIcon,
+  PuzzleIcon,
   SettingsIcon,
   SignalIcon,
+  TextIcon,
   TrashIcon,
   VerifiedIcon,
   type IconProps,
@@ -39,6 +42,9 @@ const ICONS: { name: string; Icon: (props: IconProps) => React.JSX.Element }[] =
   { name: 'Signal', Icon: SignalIcon },
   { name: 'Verified', Icon: VerifiedIcon },
   { name: 'CloudCheck', Icon: CloudCheckIcon },
+  { name: 'Pencil', Icon: PencilIcon },
+  { name: 'Text', Icon: TextIcon },
+  { name: 'Puzzle', Icon: PuzzleIcon },
 ];
 
 export function IconSection() {

@@ -106,19 +106,26 @@
 - The full unit suite is now **603/603 green with zero known-pending failures** — the `openapi.spec.ts` snapshot gap open since Stage 1 is closed as of this stage's regeneration.
 
 **Validation:** typecheck ✅ · lint ✅ (zero warnings) · `pnpm build` ✅ (real `nest build`) · `docs/api/openapi.json` regenerated and verified: `test/unit/openapi.spec.ts` 4/4 (snapshot up to date, 3.1.0, every route documented, every protected route declares its session transport). New integration suite `plan-routes.spec.ts`: 9/9 (current empty/populated, history ordering, detail 404 and ownership, cross-participant privacy, retry rejected/accepted, session required on every route). Full API unit suite re-run: 603/603.
-**Commit:** _(pending — see below; combined with Stage 4's files, see note there)_
+**Commit:** `0ec2b20` "F15 stage 4 and 5 - triggers, activity state and the HTTP surface"
 
-## Stage 6: Web — ⬜ pending
+## Stage 6: Web — ✅ done
 
-- [ ] **19. Web Data and Selection Helpers**
-- [ ] **20. Plan Components and Icons**
-- [ ] **21. Plan Pages and Navigation**
-- [ ] **22. Dashboard Today Card and Design Reference**
+- [x] **19. Web Data and Selection Helpers**
+- [x] **20. Plan Components and Icons**
+- [x] **21. Plan Pages and Navigation**
+- [x] **22. Dashboard Today Card and Design Reference**
 
-**Observations:** _(none yet)_
+**Observations:**
+- Icons: only `writing`, `vocabulary` and `grammar` needed new glyphs (`pencil-icon.tsx`, `text-icon.tsx`, `puzzle-icon.tsx`); `listening`, `reading`, `pronunciation`, `speaking` and `error_review` reuse the existing `HeadphonesIcon`, `BookIcon`, `VolumeIcon`, `MicrophoneIcon` and `RefreshIcon` via `activity-kind-icon.tsx`'s map, matching the "existing `IconProps` style" instruction rather than drawing eight new icons.
+- `TodaySessionCard` shows the current session's activities as compact rows (kind icon, title, minutes, `ActivityStateBadge`) rather than full `PlanActivityCard`s with their rationale disclosure — the dashboard card is a summary, not the `/plan` page.
+- `Start session` only renders when `activityHref(activity)` is non-null. Since `ACTIVITY_ROUTES` is still empty (F16–F18 not built), the button never actually appears yet on either the dashboard card or an activity's title link — verified in both the component tests and a live browser check. This is the intended seam behaviour (spec A22), not a bug.
+- Hydration-safety pattern: `PlanScreen` and `TodaySessionCard` need the viewer's own device date for A16/A22's "today" selection, which a server component can't know. Both start with the day/session unresolved (`null`, matching what SSR renders) and correct it in a `useEffect` right after mount, the same SSR-then-correct dance `LocalizedTime` already uses for the same reason elsewhere in this app. `PlanDay` originally only used its `isToday` prop as `useState`'s initial value, which doesn't react to that later correction — a `plan-screen.spec.tsx` test caught the resulting bug (the correct day never actually opened), fixed by adding an effect that opens the day once `isToday` turns true, without ever auto-closing a day the viewer toggled themselves.
+- Token-scanner gotcha (fixed, not a scanner change): `test/token-resolution.spec.ts` and `test/no-raw-values.spec.ts` extract "quoted chunks" with a regex that doesn't know about JSX vs. plain text — a literal ASCII apostrophe in visible copy (`Today's session`, used six times in one file) pairs with the *next* apostrophe anywhere later in the same file and swallows everything between them as one fake string, corrupting extraction. Existing files avoid this by keeping such apostrophes inside stripped JSDoc comments; new UI copy here uses the typographic apostrophe (’) instead of `'` wherever it appears in JSX text or prop strings.
+- Infra gotcha, unrelated to F15's code but blocking its runtime verification: the committed `docker-compose.yml`'s `api` service reads `API_PORT` from `.env` for both the host-side port mapping (`${API_PORT:-3001}:3001`) and, via `env_file`, the app's own `app.listen(config.API_PORT)` call. Shifting `API_PORT` for this worktree's isolated stack (project `eq-f13`, per the existing "shifted ports" convention) made the app bind to the shifted port *inside* the container too, while the container-side of the port mapping stays hardcoded at `3001` — so the host port pointed at nothing. Worked around locally with an untracked `docker-compose.override.yml` (not committed) pinning `API_PORT=3001` inside the container, plus `NEXT_PUBLIC_API_URL` and a new `WEB_ORIGIN` entry in this worktree's own `.env` (also untracked) so the browser could reach the API and pass CORS. No tracked file changed for this; flagged here so a future worktree run isn't surprised by the same empty-reply symptom.
+- `design/README.md`: "Lições Diárias" is `implemented` as `TodaySessionCard`, standalone under the hero — not as a member of the still-`deferred` module grid, whose header row now says explicitly that it's still waiting on a second grid module.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** typecheck ✅ · lint ✅ (zero warnings) · web test suite 209/209 across 32 files, including new `today-session-card.spec.tsx` (7/7) and `plan-screen.spec.tsx` (7/7), plus the updated `app-shell.spec.tsx` (9/9) and pre-existing `plan-today.spec.ts` (7/7). One re-run of the full suite hit a single `no_inline_style_attribute_carries_a_dimension_or_colour` timeout under this container's CPU contention when every suite runs in parallel; the same test passes standalone in ~2.6s (well under its 5s budget) and is unrelated to any file this stage touched — treated as environmental flake, not a regression. Runtime smoke check: brought up this worktree's isolated Docker stack (`docker compose -p eq-f13`, since the plain `docker compose` command was pointing at the main checkout's containers, not this one), applied `0015_study_plans`, seeded, regenerated the Prisma client, and logged in through the real browser as a seeded user — the dashboard's `TodaySessionCard` and the `/plan` page's `PlanScreen` both render their empty state correctly against the real API with no console errors, the `Plan` nav pill links to `/plan`, and the three new icons render correctly in the design-system gallery.
+**Commit:** _(pending — recorded with Stage 7's commit, per the skill's convention of not amending)_
 
 ## Stage 7: Mobile and Follow-Ups — ⬜ pending
 

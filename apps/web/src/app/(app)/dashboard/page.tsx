@@ -1,7 +1,9 @@
 import { ClassroomHero } from '@/components/dashboard/classroom-hero';
 import { RecentLessons } from '@/components/dashboard/recent-lessons';
 import { RecommendedScenarioCard } from '@/components/dashboard/recommended-scenario-card';
+import { TodaySessionCard } from '@/components/dashboard/today-session-card';
 import { getLessonList } from '@/lib/lessons-server';
+import { getCurrentPlan } from '@/lib/plans-server';
 import { getClassroomSession, getScenarioView } from '@/lib/server-session';
 
 export const metadata = {
@@ -14,18 +16,19 @@ export const metadata = {
  * attach here.
  */
 export default async function DashboardPage() {
-  const [session, scenario, lessons] = await Promise.all([getClassroomSession(), getScenarioView(), getLessonList()]);
+  const [session, scenario, lessons, currentPlan] = await Promise.all([
+    getClassroomSession(),
+    getScenarioView(),
+    getLessonList(),
+    getCurrentPlan(),
+  ]);
 
   return (
     <main className="flex flex-col gap-md">
       <ClassroomHero session={session} />
+      <TodaySessionCard current={currentPlan} />
       <RecommendedScenarioCard scenario={scenario} />
       <RecentLessons result={lessons} />
-      <h2 className="text-headline-sm text-on-surface">Dashboard</h2>
-      <p className="text-body-md text-on-surface-variant">
-        You are signed in. Your study plan and your progress will appear here as the remaining
-        features land.
-      </p>
     </main>
   );
 }
