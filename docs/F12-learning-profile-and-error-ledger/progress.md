@@ -1,9 +1,9 @@
 # Implementation Progress: Learning Profile and Error Ledger
 
-**Status:** in progress
+**Status:** success
 **Branch:** claude/learning-profile-error-ledger-44d9aa
 **Started:** 2026-09-25
-**Last updated:** 2026-09-26
+**Last updated:** 2026-09-27
 
 **Run setup:** the worktree branch was fast-forwarded to `main` (`f90378a`, F11 closed) before the run, and `spec.md` / `plan.md` were copied in from the main checkout, where they were untracked. F19 is implemented concurrently in another worktree on the same base, so this run takes F12's "F19 has not landed" path everywhere the spec offers one, and leaves the shared `english-quest` compose stack (which bind-mounts the main checkout) untouched: integration suites run on Testcontainers, and live checks use an isolated stack or read-only queries.
 
@@ -155,4 +155,59 @@
 - **Spec notes for F14–F20, re-read against the build:** they match. `unmasteredTags`, `dueEntries` (empty in Core) and `compactSummaryFor` exist as described (F14, F15). `plan_generation` is where every profiled branch waits (F15). `ingestActivityOutcome(outcome, tx?)` takes the described shape, and `occurredAt` accepts a `Date` or an ISO string (F16–F18). `measurementHistory` returns `scoreAfter` and `sourceKind` per point, and `limit` keeps the most recent (F20). The one addition is that F18's `phoneme:` occurrences can now use the eight compound units.
 
 **Validation:** every live check above passed. The one real finding, the taxonomy gap, was fixed and re-verified live. `error-taxonomy.spec.ts` + `profile-summary.spec.ts` 19/19 ✅ after the fix · lint ✅
-**Commit:** _(recorded in the final verification commit)_
+**Commit:** `1bec419` F12 stage 7 - live verification and hand-off
+
+## Final verification
+
+**Status: success.** Every Core acceptance criterion's tests pass in a fresh run, every Component Overview file exists with its contract, the full suite is green, and every runtime surface was exercised live. The three Full-scope criteria are deferred by the spec's Core-only decision (A1), not failed.
+
+**Full suite (6.1), fresh, on the final commit:**
+- lint ✅ (zero warnings) · typecheck ✅ (shared, design-tokens, api, web)
+- API unit 292/292 ✅ · API integration 356/356 ✅ (30 files, Testcontainers)
+- web 146/146 ✅ · design-tokens 17/17 ✅ (see below) · mobile `flutter analyze` 0 issues, `flutter test` 55/55 ✅
+
+**Component Overview (6.2):** all 52 listed files exist with the described role; `excerpts/pronunciation-focus.port.ts` is gone; `plan_generation` is in the shared enum and the pipeline order; `ProfileUpdateModule` is in `AppModule`; `PROF001` is defined; the three routes are in `docs/api/openapi.json`. The two F19-conditional rows (`components/lessons/error-card.tsx`, `features/lessons/widgets/error_card.dart`) do not apply because F19 had not landed; their wiring is F19 follow-up 2 in stage 7. **Missing from spec:** none.
+
+**Acceptance criteria (6.3):**
+- ✓ Six competency scores, pronunciation from Azure and five from the LLM: `six_competencies_come_from_their_own_sources`, `lesson_scores_update_the_six_competencies_from_their_own_sources`, `returns_six_competencies_in_order_with_rounding_and_deltas`, and live (lesson A).
+- ✓ A lesson moves a score at 0.35, never overwriting it: `a_lesson_measurement_moves_the_score_at_0_35`, `a_lesson_moves_scores_at_0_35_and_an_activity_at_0_15`.
+- ✓ An activity moves a score at 0.15: `an_activity_measurement_moves_the_score_at_0_15`, `a_lesson_moves_scores_at_0_35_and_an_activity_at_0_15`.
+- ✓ Under 3 measurements, `Warming up` and no trend: `fewer_than_three_measurements_have_no_trend`, `warming_up_competencies_carry_no_trend`, `warming_up_competencies_show_the_marker` (web), `warming_up_hides_the_value_and_announces_it` (mobile), and live.
+- ✓ One record per tag per user, with counts, first and last seen, sources and up to 5 examples: `each_tag_has_one_record_with_counts_seen_sources_and_examples`, `the_detail_returns_up_to_five_examples_and_every_source`.
+- — `mastered` after 3 correct encounters on 2 distinct days: deferred (Full scope). Core keeps the evidence and never masters early (`correct_encounters_are_recorded_and_move_a_tag_to_practicing`, `core_never_writes_mastered_or_a_due_date`).
+- — A new occurrence returns a mastered tag to `practicing`: deferred (Full scope); no tag is mastered in Core.
+- — Due dates at 1, 3, 7, 16 and 35 days: deferred (Full scope); `dueAt` is always null in Core (`core_never_writes_mastered_or_a_due_date`).
+- ✓ Recurring weaknesses are exactly the unmastered tags with at least 3 occurrences in 30 days: `recurring_needs_three_occurrences_in_thirty_days`, `recurring_excludes_mastered_and_retired_tags`, `recurring_weaknesses_list_exactly_the_qualifying_tags`.
+- ✓ The compact summary never exceeds 1,500 tokens: `never_exceeds_1500_estimated_tokens` (with 85 maximal tags).
+- ✓ Re-running a lesson's profile update changes no occurrence count: `rerunning_the_profile_update_does_not_change_any_occurrence_count`, `reapplying_the_same_revision_changes_nothing`, and live (`lesson_pronunciation skipped`).
+- ✓ Unknown tags are rejected and logged while known ones are ingested: `unknown_tags_are_rejected_and_logged_while_known_ones_are_ingested`, and live (`phoneme:/ɛɹ/` before the taxonomy fix).
+
+**Cross-feature (F12's halves):**
+- ✓ F10/F11 → F12 weights: `lesson_scores_update_the_six_competencies_from_their_own_sources`.
+- ✓ F11 → F12 ledger with quotes, counts across lessons: `analysis_errors_reach_the_ledger_with_their_quotes`, `counts_increment_across_consecutive_lessons_carrying_the_same_tag`.
+- ✓ F12 → F14 readers: `recurring_weaknesses_list_exactly_the_qualifying_tags`, `a_retired_tag_keeps_its_record_as_history`.
+- ✓ F12 → F15 summary and due list: `never_exceeds_1500_estimated_tokens`, `core_never_writes_mastered_or_a_due_date`.
+- ✓ F16–F18 → F12 within 5 seconds: `activity_outcomes_update_scores_and_ledger_synchronously`, `an_activity_joins_the_callers_transaction`, `a_duplicate_activity_submission_writes_nothing_twice`.
+- ✓ F10 → F18 shared ledger: `phoneme_tags_from_f10_reach_the_ledger`, `activity_phoneme_tags_join_the_lesson_ledger_record`.
+- ✓ F12/F15 → F20 one reader: `the_profile_view_and_the_reader_agree`.
+- ✓ F02 credentials only: `profile_update_calls_no_provider`.
+- ✓ F06 card targets a weakness tag, F12's half: `the_role_card_request_carries_the_owners_weakness_tags`, plus the live card, whose expressions target `grammar:preposition`.
+
+**Smoke checks (6.4):** all exercised live on the isolated stack (stage 7): the pipeline stage end to end, the reconciliation job (blocked analysis and re-apply), the three routes, the web page (light, dark, empty, ready, disclosure, dialog by keyboard), and `rebuild`. Mobile: analyze, tests and a debug APK build. The on-device review is the user's, per `apps/mobile/AGENTS.md`.
+
+**Regressions:** none.
+
+**Deviations** (details in each stage's observations): FK names left to the codebase's inline convention (stage 1). Taxonomy v2 has 49 phoneme tags, not 41: Azure's compound r-coloured units and `/ju/`, found live (stage 7). `selectRecurring` takes precomputed window counts, and `renderCompactSummary` takes a `budget` (stage 2). The reconciliation job's `run()` takes no `now` (stage 3). `focus_source` is `ledger@1` even with no phoneme tags (stage 3). `EmptyState` / `EqEmpty` were extended rather than forked (stages 5 and 6). The web error button says `Try again` (the shared primitive) and the mobile one `Retry` (stage 5). Lesson sources are plain text until F19 ships lesson detail (A27). `ErrorLedgerPort` was created by F12 (F19 not landed). The F19 follow-ups live in this log, not in F19's spec.
+
+**Soft-fails:** none blocking. On-device mobile review is left to the user by project rule.
+
+**Pre-existing failures:**
+- `pipeline-routes.spec.ts > retry_reruns_downstream_stages`: a race that also fails intermittently on the pre-F12 main (1 of 3). Fixed in stage 3 by waiting for `lesson_analysis` to settle.
+- `packages/design-tokens` `generated_files_match_a_fresh_generation` fails in any `core.autocrlf=true` checkout whose generated files were checked out with CRLF (this worktree, after stage 1's `git checkout --` restore); the index holds LF and there is no content difference. `pnpm tokens:build` restores LF, and it then passes 17/17. It was not a code change and was not committed.
+
+**Open follow-ups:**
+- The six F19 wiring items listed in stage 7, for whichever of F12 and F19 merges second.
+- Full scope: the mastery lifecycle (streaks, distinct days, `mastered`, the 1/3/7/16/35 schedule and `due_at`) from the recorded `error_ledger_encounters`, and recent improvements on the snapshot, summary and both screens.
+- Rejected tags are queryable in `profile_sources.rejected_tags`, but a later taxonomy that adds a tag does not re-ingest it from sources already applied. A curator tool (or a new revision of the source) would be needed; the live run did it by deleting the source so the job re-applied it.
+- The `tsx`-based `openapi:generate` script still exits 1 silently (the `emitDecoratorMetadata` gap first recorded by F10); the snapshot was generated through `pnpm build` + `node dist/openapi/generate.js`.
+- Merge note: this branch was fast-forwarded to `f90378a`; `main` has since gained `e8932bd` (F13 spec and plan, docs only).
