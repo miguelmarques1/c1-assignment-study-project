@@ -19,6 +19,21 @@ export const pipelineStageSchema = z.enum([
 ]);
 export type PipelineStage = z.infer<typeof pipelineStageSchema>;
 
+/**
+ * How each stage reads in a stepper (F19): `title` once it has happened,
+ * `active` while it runs. A `Record`, so no stage can be added without its
+ * labels. The mobile client mirrors this table by hand.
+ */
+export const pipelineStageLabels: Record<PipelineStage, { title: string; active: string }> = {
+  recording: { title: 'Recorded', active: 'Recording' },
+  transcription: { title: 'Transcribed', active: 'Transcribing' },
+  excerpt_selection: { title: 'Excerpts selected', active: 'Selecting excerpts' },
+  pronunciation_assessment: { title: 'Pronunciation assessed', active: 'Assessing pronunciation' },
+  lesson_analysis: { title: 'Analyzed', active: 'Analyzing' },
+  profile_update: { title: 'Profile updated', active: 'Updating profile' },
+  plan_generation: { title: 'Plan generated', active: 'Generating plan' },
+};
+
 /** A stage row's own lifecycle — see the state diagram in the F08 spec. */
 export const pipelineStageStatusSchema = z.enum([
   'queued',

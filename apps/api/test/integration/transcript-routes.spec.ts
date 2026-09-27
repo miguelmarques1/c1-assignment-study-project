@@ -1,6 +1,7 @@
 import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
+import { audioObjectKey } from '../../src/recording/recording.constants';
 import {
   createPipelineTestContext,
   launchAll,
@@ -9,6 +10,7 @@ import {
   resetPipelineTables,
   seedSpeaker,
   startSelection,
+  uploadAudio,
   waitForStage,
   type PipelineTestContext,
   type SeedUtterance,
@@ -72,6 +74,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   pipeline.speech.reset();
+  pipeline.pronunciation.reset();
   await resetPipelineTables(pipeline.ctx);
 });
 
@@ -179,6 +182,7 @@ describe('GET /lessons/:lessonId/transcript', () => {
       ruleVersion: '1',
       // F10 has not assessed anything yet in this suite.
       pronunciation: { status: 'pending', scores: null },
+      assessedWords: null,
     });
     expect(byText.get(said(1, 0.83).text)!.excerpt).toMatchObject({ rank: 2 });
     expect(byText.get('Yeah, right.')).not.toHaveProperty('excerpt');
@@ -226,6 +230,58 @@ describe('GET /lessons/:lessonId/transcript', () => {
       expect(view.myExcerptSelection.utteranceCount).not.toBe(otherSelection.utteranceCount);
     }
   }, 60_000);
+
+  it('own_excerpts_carry_assessed_words_with_bands', async () => {
+    pipeline.pronunciation.defaultStep = {
+      kind: 'ok',
+      words: [
+        { word: 'moved', accuracy: 54.4, errorTypes: ['Mispronunciation'] },
+        { word: 'whole', accuracy: 71.2 },
+        { word: 'meeting', accuracy: 92.6 },
+      ],
+    };
+    const ana = await seedSpeaker(pipeline.ctx, 'Ana');
+    const bruno = await seedSpeaker(pipeline.ctx, 'Bruno');
+    // Both of Ana's turns fall inside the first 30 seconds, so the uploaded audio covers them.
+    const early = (startMs: number, confidence: number): SeedUtterance => ({ ...said(0, confidence), startMs, endMs: startMs + 5_000 });
+    const lesson = await makeTranscribedLesson(pipeline, [
+      { speaker: ana, utterances: [early(2_000, 0.83), early(15_000, 0.62)] },
+      { speaker: bruno, utterances: [said(2, 0.7), said(9, 0.5)] },
+    ]);
+    // Only Ana's audio exists, so only her excerpts get assessed; Bruno's stay unassessed.
+    await uploadAudio(pipeline.storage, audioObjectKey(lesson.lessonId, ana.id), 30);
+    for (const speaker of [ana, bruno]) {
+      await startSelection(pipeline, lesson.branches.get(speaker.id)!);
+    }
+    await waitForStage(pipeline.ctx, lesson.branches.get(ana.id)!, 'pronunciation_assessment', ['completed']);
+    await waitForStage(pipeline.ctx, lesson.branches.get(bruno.id)!, 'pronunciation_assessment', ['failed']);
+
+    const asAna = (await readTranscript(lesson.lessonId, ana)).body.data.utterances as Utterance[];
+    const anaBadges = asAna.filter((entry) => entry.excerpt).map((entry) => entry.excerpt!);
+    expect(anaBadges).toHaveLength(2);
+    for (const badge of anaBadges) {
+      expect(badge.pronunciation).toMatchObject({ status: 'assessed' });
+      expect(badge.assessedWords).toEqual([
+        { text: 'moved', accuracy: 54, errorTypes: ['Mispronunciation'], band: 'poor' },
+        { text: 'whole', accuracy: 71, errorTypes: [], band: 'fair' },
+        { text: 'meeting', accuracy: 93, errorTypes: [], band: 'good' },
+      ]);
+    }
+    // Another participant's lines never carry a badge, words or not.
+    for (const entry of asAna.filter((u) => u.userId === bruno.id)) {
+      expect(entry).not.toHaveProperty('excerpt');
+    }
+
+    // An excerpt that was not assessed carries no words.
+    const asBruno = (await readTranscript(lesson.lessonId, bruno)).body.data.utterances as Utterance[];
+    const brunoBadges = asBruno.filter((entry) => entry.excerpt).map((entry) => entry.excerpt!);
+    expect(brunoBadges.length).toBeGreaterThan(0);
+    for (const badge of brunoBadges) {
+      expect((badge.pronunciation as { status: string }).status).not.toBe('assessed');
+      expect(badge.assessedWords).toBeNull();
+    }
+    expect(JSON.stringify(asBruno)).not.toContain('Mispronunciation');
+  }, 90_000);
 
   it('my_excerpt_selection_is_null_until_selection_runs', async () => {
     const ana = await seedSpeaker(pipeline.ctx, 'Ana');

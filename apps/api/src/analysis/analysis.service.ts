@@ -9,9 +9,15 @@ import type {
 
 import { LessonAccessService } from '../pipeline/lesson-access.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { ErrorLedgerPort } from '../profile/error-ledger.port';
 import { ErrorTaxonomyService } from '../taxonomy/error-taxonomy.service';
 import { LessonAnalysisReader, type StoredAnalysis } from './analysis-result.reader';
 import { ANALYSIS_MISSING_CARD_NOTE } from './analysis.constants';
+import { correctionSegments } from './correction-diff';
+import { ordinalTimes } from './recurrence-label';
+
+/** The ledger count from which an error card shows its recurrence badge (F19). */
+const RECURRENCE_BADGE_MIN = 2;
 
 /** Major first, then moderate, then minor — ties keep the stored (returned) order, since `Array.sort` is stable. */
 const SEVERITY_ORDER: Record<ErrorSeverity, number> = { major: 0, moderate: 1, minor: 2 };
@@ -32,6 +38,7 @@ export class AnalysisService {
     private readonly reader: LessonAnalysisReader,
     private readonly prisma: PrismaService,
     private readonly taxonomy: ErrorTaxonomyService,
+    private readonly ledger: ErrorLedgerPort,
   ) {}
 
   async getView(lessonId: string, callerId: string): Promise<LessonAnalysisView> {
@@ -65,11 +72,18 @@ export class AnalysisService {
       return { lessonId, status: 'unavailable', analysis: null };
     }
 
-    const previous = await this.reader.previousFor(callerId, lesson.startedAt);
-    return { lessonId, status: 'ready', analysis: this.toView(stored, previous) };
+    const [previous, occurrences] = await Promise.all([
+      this.reader.previousFor(callerId, lesson.startedAt),
+      this.ledger.occurrencesThrough(callerId, lessonId, [...new Set(stored.errors.map((error) => error.tag))]),
+    ]);
+    return { lessonId, status: 'ready', analysis: this.toView(stored, previous, occurrences) };
   }
 
-  private toView(stored: StoredAnalysis, previous: StoredAnalysis | null): LessonAnalysisResult {
+  private toView(
+    stored: StoredAnalysis,
+    previous: StoredAnalysis | null,
+    occurrences: Map<string, number>,
+  ): LessonAnalysisResult {
     const competencies: AnalysisCompetencyView[] = COMPETENCY_ORDER.map((competency) => {
       const current = stored.competencies[competency];
       const before = previous?.competencies[competency];
@@ -84,16 +98,21 @@ export class AnalysisService {
     const recurringSet = new Set(stored.recurringTags);
     const errors = [...stored.errors]
       .sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity])
-      .map((error) => ({
-        quote: error.quote,
-        correction: error.correction,
-        explanation: error.explanation,
-        severity: error.severity,
-        tag: error.tag,
-        tagLabel: this.taxonomy.labelOf(error.tag),
-        recurring: recurringSet.has(error.tag),
-        utteranceId: error.utteranceId,
-      }));
+      .map((error) => {
+        const count = occurrences.get(error.tag) ?? 0;
+        return {
+          quote: error.quote,
+          correction: error.correction,
+          correctionSegments: correctionSegments(error.quote, error.correction),
+          explanation: error.explanation,
+          severity: error.severity,
+          tag: error.tag,
+          tagLabel: this.taxonomy.labelOf(error.tag),
+          recurring: recurringSet.has(error.tag),
+          recurrence: count >= RECURRENCE_BADGE_MIN ? { count, label: ordinalTimes(count) } : null,
+          utteranceId: error.utteranceId,
+        };
+      });
 
     const notes: string[] = [];
     if (stored.transcriptTruncated) {

@@ -12,7 +12,7 @@ const { fetchProfile, fetchLedgerEntry, findLedgerEntryByTag } = vi.hoisted(() =
 
 vi.mock('@/lib/profile', () => ({ fetchProfile, fetchLedgerEntry, findLedgerEntryByTag }));
 
-import { LedgerEntrySheet, LESSON_DETAIL_HREF } from '@/components/profile/ledger-entry-sheet';
+import { LedgerEntrySheet } from '@/components/profile/ledger-entry-sheet';
 import { ProfileScreen } from '@/components/profile/profile-screen';
 
 const SERVER_TIME = '2026-09-25T10:00:00.000Z';
@@ -104,16 +104,21 @@ describe('LedgerEntrySheet', () => {
     expect(within(dialog).getByText('2 times')).toBeInTheDocument();
   });
 
-  it('lesson_examples_render_as_text_until_f19_ships_lesson_detail', async () => {
+  it('lesson_examples_link_to_the_lesson', async () => {
     fetchLedgerEntry.mockResolvedValue(detail());
     render(<Harness onClose={() => undefined} />);
 
     const dialog = screen.getByRole('dialog');
     await within(dialog).findByText('“if I would have known”');
 
-    // A27: F19 owns `/lessons/{id}`. Until it ships, a lesson source is plain text, never a dead link.
-    expect(LESSON_DETAIL_HREF).toBeNull();
-    expect(within(dialog).queryAllByRole('link')).toHaveLength(0);
+    // A27: a lesson source opens F19's lesson detail; an activity source has no page yet.
+    const links = within(dialog).getAllByRole('link');
+    expect(links.length).toBeGreaterThan(0);
+    for (const link of links) {
+      expect(link).toHaveTextContent('Lesson · 3 days ago');
+      expect(link).toHaveAttribute('href', `/lessons/${LESSON_ID}`);
+    }
+    expect(within(dialog).getAllByText('Activity · Yesterday')[0]!.closest('a')).toBeNull();
   });
 
   it('phoneme_examples_show_their_words', async () => {

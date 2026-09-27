@@ -32,14 +32,37 @@ export const analysisCompetencyViewSchema = z.object({
 });
 export type AnalysisCompetencyView = z.infer<typeof analysisCompetencyViewSchema>;
 
+/**
+ * One span of a correction (F19). `changed` marks the words the correction
+ * introduced relative to the quote: the span a client emphasizes. Built on
+ * the server so web and mobile emphasize exactly the same words.
+ */
+export const correctionSegmentSchema = z.object({
+  text: z.string(),
+  changed: z.boolean(),
+});
+export type CorrectionSegment = z.infer<typeof correctionSegmentSchema>;
+
+/** How often the caller's ledger (F12) has recorded this tag, up to and including this lesson. */
+export const errorRecurrenceSchema = z.object({
+  count: z.number().int().min(2),
+  /** Server-built ordinal, e.g. `4th time`. */
+  label: z.string(),
+});
+export type ErrorRecurrence = z.infer<typeof errorRecurrenceSchema>;
+
 export const analysisErrorViewSchema = z.object({
   quote: z.string(),
   correction: z.string(),
+  /** The correction split into spans; their texts joined with single spaces equal the whitespace-normalized correction. */
+  correctionSegments: z.array(correctionSegmentSchema),
   explanation: z.string(),
   severity: errorSeveritySchema,
   tag: z.string(),
   tagLabel: z.string(),
   recurring: z.boolean(),
+  /** Null below 2 occurrences, and always null until F12 provides the ledger. */
+  recurrence: errorRecurrenceSchema.nullable(),
   /** The caller's own utterance the quote was matched to; null once the transcript has been replaced. */
   utteranceId: z.uuid().nullable(),
 });

@@ -5,7 +5,7 @@ import 'package:mobile/design/eq_theme.dart';
 /// Pumps [screen] on a small phone (360×690 dp) under the app theme. Pass a
 /// [textScale] above 1 to prove the layout survives large accessibility text:
 /// any RenderFlex overflow fails the test.
-Future<void> pumpOnSmallPhone(WidgetTester tester, Widget screen, {double textScale = 1}) async {
+Future<void> pumpOnSmallPhone(WidgetTester tester, Widget screen, {double textScale = 1, bool dark = false}) async {
   tester.view
     ..physicalSize = const Size(360, 690)
     ..devicePixelRatio = 1;
@@ -13,7 +13,7 @@ Future<void> pumpOnSmallPhone(WidgetTester tester, Widget screen, {double textSc
 
   await tester.pumpWidget(
     MaterialApp(
-      theme: EqTheme.light(),
+      theme: dark ? EqTheme.dark() : EqTheme.light(),
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context).copyWith(textScaler: TextScaler.linear(textScale)),
         child: child!,

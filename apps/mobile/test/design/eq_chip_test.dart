@@ -32,5 +32,12 @@ void main() {
       // Five tones, five distinct fills (the counted chip shares warning's).
       expect(decorations, hasLength(EqChipTone.values.length));
     });
+
+    testWidgets('a_chip_without_a_count_shows_only_its_label', (tester) async {
+      await tester.pumpWidget(MaterialApp(theme: EqTheme.dark(), home: const Scaffold(body: Center(child: EqChip(label: 'travel')))));
+
+      expect(find.text('travel', findRichText: true), findsOneWidget);
+      expect(find.textContaining('×'), findsNothing);
+    });
   });
 }

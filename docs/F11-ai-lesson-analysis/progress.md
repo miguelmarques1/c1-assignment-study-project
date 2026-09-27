@@ -139,3 +139,6 @@
 - `ProfileTagsPort` is real, so `recurring_weakness_tags` carries the owner's recurring analysis-family tags and `recurring_tags` can survive the output rules (`profile-seams.spec.ts > the_analysis_input_carries_the_owners_recurring_tags`).
 - `StoredAnalysisError` gained `id` (additive), which F12 stores as each ledger occurrence's `analysis_error_id`.
 - The error taxonomy is v2: the `phoneme` family (49 tags, `analysis: false`, `format: ipa`) was added, and the three analysis families are byte-identical to v1 (asserted by fingerprint), so this feature's prompt `enum` and boot check are untouched.
+
+**Follow-up added by F19 (2026-09-26), appended — earlier notes above are unchanged:**
+- **F19 extended the analysis route additively:** every error gains `correctionSegments` (server-built word-level LCS against the quote, `analysis/correction-diff.ts`) and `recurrence` (`{ count, label }` from 2 upward, via the new `ErrorLedgerPort` in `profile/`, which returned an empty map until F12 — since the F12 merge on 2026-09-27 it is F12's ledger-backed implementation, so the badge renders). `LessonAnalysisReader` gained `scoreTimelineFor(userId)` for the history headline. `analysis-routes.spec.ts` now boots with a test-only `FakeErrorLedgerPort` override. The result area renders on web and mobile.

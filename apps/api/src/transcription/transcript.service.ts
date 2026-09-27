@@ -17,6 +17,7 @@ import {
   PronunciationResultReader,
   type StoredPronunciationExcerpt,
 } from '../pronunciation/pronunciation-result.reader';
+import { toAssessedWords } from '../pronunciation/pronunciation-words';
 import { mergeTranscript, type TranscriptTrack } from './transcript-merge';
 
 const wordsSchema = z.array(transcriptWordSchema);
@@ -121,6 +122,7 @@ export class TranscriptService {
     return new Map(
       (mine?.excerpts ?? []).map((excerpt) => {
         const assessed = pronunciationByExcerptId.get(excerpt.id);
+        const isAssessed = assessed?.status === 'assessed';
         return [
           excerpt.utteranceId,
           {
@@ -135,6 +137,7 @@ export class TranscriptService {
               status: assessed ? excerptPronunciationStatusView(assessed.status) : 'pending',
               scores: assessed?.scores ?? null,
             },
+            assessedWords: isAssessed && assessed.words ? toAssessedWords(assessed.words) : null,
           },
         ];
       }),

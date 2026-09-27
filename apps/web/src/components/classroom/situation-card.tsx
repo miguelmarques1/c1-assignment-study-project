@@ -33,14 +33,20 @@ function RoleTile({ role, mine }: { role: Role; mine: boolean }) {
   );
 }
 
-export interface SituationCardProps {
-  situation: SharedSituation;
-  /** The viewer's own role — highlighted; every other seat reads as a partner's. */
-  myRoleLabel: string | null;
+/** The reroll control, present only while the scenario can still change (F06's waiting room). */
+export interface SituationRerollProps {
   rerollsRemaining: number;
   canReroll: boolean;
   rerolling: boolean;
   onReroll: () => void;
+}
+
+export interface SituationCardProps {
+  situation: SharedSituation;
+  /** The viewer's own role — highlighted; every other seat reads as a partner's. */
+  myRoleLabel: string | null;
+  /** Omitted for a past lesson (F19): the scenario is immutable once the lesson starts, so there is no button. */
+  reroll?: SituationRerollProps;
 }
 
 /**
@@ -48,14 +54,7 @@ export interface SituationCardProps {
  * and the reroll action on top, the title and premise as prose, one tile per
  * seat with its relationship, and the discussion hooks in a two-column grid.
  */
-export function SituationCard({
-  situation,
-  myRoleLabel,
-  rerollsRemaining,
-  canReroll,
-  rerolling,
-  onReroll,
-}: SituationCardProps) {
+export function SituationCard({ situation, myRoleLabel, reroll }: SituationCardProps) {
   return (
     <section
       aria-label="Today's situation"
@@ -67,22 +66,24 @@ export function SituationCard({
             <BookIcon size={16} />
             {situation.vocabularyDomain}
           </span>
-          <button
-            type="button"
-            onClick={onReroll}
-            disabled={!canReroll || rerolling}
-            className="press-button inline-flex items-center gap-xs rounded-md border-2 border-outline-strong bg-surface-container-lowest px-md py-xs text-label-md text-on-surface outline-offset-2 outline-outline-strong focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <RefreshIcon size={16} />
-            New situation
-            <span className="text-on-surface-variant">{rerollsLeft(rerollsRemaining)}</span>
-          </button>
+          {reroll ? (
+            <button
+              type="button"
+              onClick={reroll.onReroll}
+              disabled={!reroll.canReroll || reroll.rerolling}
+              className="press-button inline-flex items-center gap-xs rounded-md border-2 border-outline-strong bg-surface-container-lowest px-md py-xs text-label-md text-on-surface outline-offset-2 outline-outline-strong focus-visible:outline-2 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RefreshIcon size={16} />
+              New situation
+              <span className="text-on-surface-variant">{rerollsLeft(reroll.rerollsRemaining)}</span>
+            </button>
+          ) : null}
         </div>
-        {rerollsRemaining === 0 ? (
+        {!reroll ? null : reroll.rerollsRemaining === 0 ? (
           <p className="text-right text-body-sm text-on-surface-variant">
             You have used all 3 rerolls for this lesson.
           </p>
-        ) : !canReroll ? (
+        ) : !reroll.canReroll ? (
           <p className="text-right text-body-sm text-on-surface-variant">
             Only the participant who opened the room can change the situation.
           </p>

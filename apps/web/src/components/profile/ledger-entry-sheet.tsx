@@ -1,26 +1,23 @@
 'use client';
 
 import type { LedgerEntryDetailView, LedgerExampleView, LedgerSourceView } from '@english-quest/shared';
+import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { lessonHref } from '@/components/lessons/links';
 import { Badge, CloseIcon, ErrorState, LoadingState } from '@/components/ui';
 import { fetchLedgerEntry } from '@/lib/profile';
 import { formatRelativeTime } from '@/lib/relative-time';
 import { STATE_BADGES } from './recurring-weaknesses';
 
-/**
- * Where a lesson example links to. F19 owns the lesson-detail page; until it
- * ships `/lessons/{id}` this stays null and a lesson source renders as plain
- * text (F12 spec, A27). Whichever of F12 and F19 lands second sets it to
- * `(lessonId) => \`/lessons/${lessonId}\``. Activity sources stay unlinked
- * until F16–F18 give activities a page.
- */
-export const LESSON_DETAIL_HREF: ((lessonId: string) => string) | null = null;
-
 function timesLabel(count: number): string {
   return `${count} ${count === 1 ? 'time' : 'times'}`;
 }
 
+/**
+ * A lesson source links to F19's lesson detail (F12 spec, A27). Activity
+ * sources stay plain text until F16–F18 give activities a page.
+ */
 function SourceLine({
   source,
   serverTime,
@@ -29,11 +26,11 @@ function SourceLine({
   serverTime: string;
 }) {
   const text = `${source.sourceKind === 'lesson' ? 'Lesson' : 'Activity'} · ${formatRelativeTime(source.occurredAt, serverTime)}`;
-  if (source.sourceKind === 'lesson' && source.lessonId && LESSON_DETAIL_HREF) {
+  if (source.sourceKind === 'lesson' && source.lessonId) {
     return (
-      <a href={LESSON_DETAIL_HREF(source.lessonId)} className="text-label-md text-primary underline">
+      <Link href={lessonHref(source.lessonId)} className="text-label-md text-primary underline">
         {text}
-      </a>
+      </Link>
     );
   }
   return <span className="text-label-md text-on-surface-variant">{text}</span>;

@@ -13,15 +13,12 @@ import type { Lesson, LessonPipelineBranch, LessonPipelineStage } from '@prisma/
 import { AppError } from '../common/app-error';
 import { PrismaService } from '../prisma/prisma.service';
 import { LessonAccessService } from './lesson-access.service';
-import { PIPELINE_STAGE_ORDER, type QueuedPipelineStage } from './pipeline.constants';
+import { PIPELINE_STAGE_ORDER, STORAGE_UNAVAILABLE_REASON, type QueuedPipelineStage } from './pipeline.constants';
 import { PipelineStageRegistry } from './pipeline-stage.registry';
 import { PipelineQueueService } from './pipeline-queue.service';
 import { PipelineStateService } from './pipeline-state.service';
 
 type BranchWithStages = LessonPipelineBranch & { stages: LessonPipelineStage[] };
-
-/** F07's `storage_unavailable` is a branch status, not a failure code; the view needs a sentence for it. */
-const STORAGE_UNAVAILABLE_REASON = 'Storage was unavailable when this recording was verified.';
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);

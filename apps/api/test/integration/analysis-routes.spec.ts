@@ -3,6 +3,8 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vites
 
 vi.mock('@google/genai', async () => (await import('./helpers/fake-gemini')).fakeGeminiModule);
 
+import { ErrorLedgerPort } from '../../src/profile/error-ledger.port';
+import { FakeErrorLedgerPort } from './helpers/fake-error-ledger';
 import { gemini } from './helpers/fake-gemini';
 import {
   createPipelineTestContext,
@@ -17,9 +19,10 @@ import {
 } from './helpers/pipeline-fixtures';
 
 let pipeline: PipelineTestContext;
+const ledger = new FakeErrorLedgerPort();
 
 beforeAll(async () => {
-  pipeline = await createPipelineTestContext();
+  pipeline = await createPipelineTestContext({ overrides: [{ token: ErrorLedgerPort, useValue: ledger }] });
 }, 240_000);
 
 afterAll(async () => {
@@ -28,6 +31,7 @@ afterAll(async () => {
 
 beforeEach(async () => {
   gemini.reset();
+  ledger.reset();
   await resetPipelineTables(pipeline.ctx);
 });
 
@@ -256,6 +260,69 @@ describe('GET /lessons/:lessonId/analysis', () => {
     await waitForStage(pipeline.ctx, branchId, 'lesson_analysis', ['completed']);
     const view = await readAnalysis(lesson.lessonId, ana);
     expect(view.body.data.status).toBe('ready');
+  }, 60_000);
+
+  it('errors_carry_correction_segments', async () => {
+    const quote = 'if I would have known, I would have booked earlier';
+    const ana = await seedSpeaker(pipeline.ctx, 'Ana', { withGeminiKey: true });
+    const lesson = await makeAnalysisReadyLesson(pipeline, [{ speaker: ana, utterances: [said(quote)] }]);
+    const branchId = lesson.branches.get(ana.id)!;
+    gemini.scriptAnalysis(ana.geminiKey!, {
+      kind: 'ok',
+      response: {
+        ...fullResponse({ grammarScore: 60, errorSeverity: 'major', quote }),
+        errors: [
+          {
+            quote,
+            tag: 'grammar:conditional-3',
+            correction: 'if I had known, I would have booked earlier',
+            explanation: 'Third conditional.',
+            severity: 'major',
+          },
+          { quote, tag: 'vocab:register', correction: quote, explanation: 'Fine as is.', severity: 'minor' },
+        ],
+      },
+    });
+    await startAnalysis(pipeline, branchId);
+    await waitForStage(pipeline.ctx, branchId, 'lesson_analysis', ['completed']);
+
+    const errors = (await readAnalysis(lesson.lessonId, ana)).body.data.analysis.errors;
+    expect(errors[0].correctionSegments).toEqual([
+      { text: 'if I', changed: false },
+      { text: 'had', changed: true },
+      { text: 'known, I would have booked earlier', changed: false },
+    ]);
+    expect(errors[1].correctionSegments).toEqual([{ text: quote, changed: false }]);
+  }, 60_000);
+
+  it('errors_carry_the_ledger_recurrence_count', async () => {
+    const ana = await seedSpeaker(pipeline.ctx, 'Ana', { withGeminiKey: true });
+    const lesson = await makeAnalysisReadyLesson(pipeline, [{ speaker: ana, utterances: [said('If I would have known I would have left.')] }]);
+    const branchId = lesson.branches.get(ana.id)!;
+    gemini.scriptAnalysis(ana.geminiKey!, {
+      kind: 'ok',
+      response: fullResponse({ grammarScore: 60, errorSeverity: 'major', quote: 'If I would have known I would have left.' }),
+    });
+    await startAnalysis(pipeline, branchId);
+    await waitForStage(pipeline.ctx, branchId, 'lesson_analysis', ['completed']);
+
+    // Nothing recorded yet: no badge on any card.
+    let errors = (await readAnalysis(lesson.lessonId, ana)).body.data.analysis.errors;
+    expect(errors.map((error: { recurrence: unknown }) => error.recurrence)).toEqual([null, null]);
+
+    ledger.counts.set('grammar:conditional-3', 4);
+    ledger.counts.set('vocab:register', 1);
+    errors = (await readAnalysis(lesson.lessonId, ana)).body.data.analysis.errors;
+    const byTag = new Map(errors.map((error: { tag: string; recurrence: unknown }) => [error.tag, error.recurrence]));
+    expect(byTag.get('grammar:conditional-3')).toEqual({ count: 4, label: '4th time' });
+    expect(byTag.get('vocab:register')).toBeNull();
+    // Asked about the caller's own ledger, for this lesson, once per distinct tag.
+    expect(ledger.calls.at(-1)).toEqual({
+      userId: ana.id,
+      lessonId: lesson.lessonId,
+      tags: expect.arrayContaining(['grammar:conditional-3', 'vocab:register']),
+    });
+    expect(ledger.calls.at(-1)!.tags).toHaveLength(2);
   }, 60_000);
 
   it('rejects_a_non_participant', async () => {

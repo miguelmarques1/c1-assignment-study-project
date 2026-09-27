@@ -69,6 +69,13 @@ export interface StoredAnalysis {
   createdAt: Date;
 }
 
+/** One analysed lesson's five scores, for F19's per-lesson deltas. */
+export interface AnalysisScorePoint {
+  lessonId: string;
+  startedAt: Date;
+  scores: Record<AnalysisCompetency, number>;
+}
+
 type AnalysisWithErrors = Prisma.LessonAnalysisGetPayload<{ include: { errors: true } }>;
 
 /**
@@ -99,6 +106,39 @@ export class LessonAnalysisReader {
       include: { errors: { orderBy: { idx: 'asc' } } },
     });
     return analysis ? this.toStored(analysis) : null;
+  }
+
+  /**
+   * Every analysed lesson of the owner, oldest first, score columns only —
+   * what F19's history computes every row's deltas from in one read,
+   * comparing each with the latest one that started strictly before it,
+   * exactly as `previousFor` does for the route.
+   */
+  async scoreTimelineFor(userId: string): Promise<AnalysisScorePoint[]> {
+    const rows = await this.prisma.lessonAnalysis.findMany({
+      where: { userId, lesson: { startedAt: { not: null } } },
+      orderBy: { lesson: { startedAt: 'asc' } },
+      select: {
+        lessonId: true,
+        grammar: true,
+        vocabulary: true,
+        fluency: true,
+        interaction: true,
+        comprehension: true,
+        lesson: { select: { startedAt: true } },
+      },
+    });
+    return rows.map((row) => ({
+      lessonId: row.lessonId,
+      startedAt: row.lesson.startedAt!,
+      scores: {
+        grammar: row.grammar,
+        vocabulary: row.vocabulary,
+        fluency: row.fluency,
+        interaction: row.interaction,
+        comprehension: row.comprehension,
+      },
+    }));
   }
 
   private toStored(analysis: AnalysisWithErrors): StoredAnalysis {

@@ -70,10 +70,12 @@ export function ScenarioRegion({ scenario }: ScenarioRegionProps) {
       <SituationCard
         situation={view.situation}
         myRoleLabel={view.myRoleLabel}
-        rerollsRemaining={view.rerollsRemaining}
-        canReroll={view.canReroll}
-        rerolling={rerolling}
-        onReroll={() => void reroll()}
+        reroll={{
+          rerollsRemaining: view.rerollsRemaining,
+          canReroll: view.canReroll,
+          rerolling,
+          onReroll: () => void reroll(),
+        }}
       />
       <RoleCardPanel card={view.myCard} roleLabel={view.myRoleLabel} />
     </div>

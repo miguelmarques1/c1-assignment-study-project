@@ -1,4 +1,5 @@
 import { SchedulerRegistry } from '@nestjs/schedule';
+import request from 'supertest';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('@google/genai', async () => (await import('./helpers/fake-gemini')).fakeGeminiModule);
@@ -313,5 +314,26 @@ describe('profile seams', () => {
     // Bruno's occurrences on the same tag never count toward Ana's badge, and vice versa.
     expect(await port.occurrencesThrough(bruno.id, brunoLesson, tags)).toEqual(new Map([[tag, 4]]));
     expect(await port.occurrencesThrough(ana.id, third, [])).toEqual(new Map());
+  }, 60_000);
+
+  it('the_lesson_result_badge_reads_the_real_ledger', async () => {
+    const ana = await seedSpeaker(pipeline.ctx, 'Ana', { withGeminiKey: true });
+    // Three earlier occurrences of the tag the default fake analysis reports.
+    await makeProfiledLesson(pipeline.ctx, ana.id, { startedAt: daysAgo(4), errors: errors('grammar:conditional-3', 3) });
+    const lesson = await makeAnalysisReadyLesson(pipeline, [
+      { speaker: ana, utterances: [{ startMs: 0, endMs: 4_000, text: 'If I would have known I would have come.', confidence: 0.9 }] },
+    ]);
+    const branchId = lesson.branches.get(ana.id)!;
+    await startAnalysis(pipeline, branchId);
+    await waitForStage(pipeline.ctx, branchId, 'profile_update', ['completed']);
+
+    // F19's result view, through F12's ledger: this lesson's occurrence is the fourth.
+    const response = await request(pipeline.ctx.app.getHttpServer())
+      .get(`/lessons/${lesson.lessonId}/analysis`)
+      .set('Cookie', ana.cookie);
+    expect(response.status).toBe(200);
+    expect(response.body.data.analysis.errors).toEqual([
+      expect.objectContaining({ tag: 'grammar:conditional-3', recurrence: { count: 4, label: '4th time' } }),
+    ]);
   }, 60_000);
 });

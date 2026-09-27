@@ -83,3 +83,6 @@ export const PENDING_STAGE_STATUSES = ['queued', 'running', 'retrying'] as const
 
 /** The sentence a stage fails with when the runner itself could not classify what went wrong. */
 export const INTERNAL_ERROR_REASON = 'Something went wrong while processing this stage.';
+
+/** F07's `storage_unavailable` is a branch status, not a failure code; the pipeline view and F19's history need a sentence for it. */
+export const STORAGE_UNAVAILABLE_REASON = 'Storage was unavailable when this recording was verified.';

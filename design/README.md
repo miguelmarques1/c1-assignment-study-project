@@ -34,7 +34,7 @@ Two things intentionally have no row anywhere in this document: elements that ne
 | Region | Owner | Status | Reference |
 |---|---|---|---|
 | Header: logo + wordmark | F21 | implemented | Shared with settings; unchanged |
-| Header: pill navigation | F22 | implemented | Shared with settings; carries Dashboard, Profile (F12) and Settings today, in the mobile shell's tab order (F19's Lessons goes between Profile and Settings). "Scenarios & Practice" is a further pill entry deferred to F06 |
+| Header: pill navigation | F22 | implemented | Shared with settings; carries Dashboard, Profile (F12), Lessons (F19, prefix-matched so a lesson's detail keeps it active) and Settings, in the mobile shell's tab order. "Scenarios & Practice" is a further pill entry deferred to F06 |
 | Header: streak chip ("7 Day Streak") | — | dropped | Section 7, Social and comparison: "Leaderboards, streaks, badges…" |
 | Header: XP chip ("1,420 XP") | — | dropped | Section 7, Social and comparison: the same clause — XP is this product's name for the points mechanic it excludes |
 | Header: avatar | F22 | implemented | Shared with settings; initials avatar rather than the mockup's generic person icon |
@@ -49,6 +49,7 @@ Two things intentionally have no row anywhere in this document: elements that ne
 | Stat card — "Tempo de Conversação" | F20 | deferred | Progress and Evolution Dashboard; the PRD's F22 entry names this explicitly rather than mocking a number now |
 | Stat card — "Nível de Domínio" | F20 | deferred | Progress and Evolution Dashboard, same reasoning |
 | Recommended-scenario card, including its "+75 XP" chip | F06 | implemented | `RecommendedScenarioCard` below the hero: the eyebrow, heading, description and action mirror the mockup. With a lesson open and its situation ready it shows that situation's title, premise, domain and role count; otherwise it invites opening the classroom — nothing is generated ahead of time (Section 6, F06: "This is preparation inside the room, not scheduling"). The "+75 XP" and duration chips are not built: Section 7, Social and comparison, the same clause as the header XP chip |
+| "Recent lessons" block (not in the mockup) | F19 | implemented | `RecentLessons` below the recommended-scenario card: the three newest history rows and "See all lessons". Added without a mockup region because the PRD requires it — F05's Experience ("returns them to the dashboard, where the lesson appears immediately with a `Processing` status") and F07's ("appears at the top of the history list"). Composed from the same `LessonRow` as `/lessons`, which has no mockup either (F19 spec, A24) |
 | Footer (© 2025, Privacy Policy, Terms of Service, Support Desk) | — | dropped | Section 7, Accounts and access: a private, two-seeded-user deployment has no public visitor needing these pages |
 
 ## design/english_quest_settings

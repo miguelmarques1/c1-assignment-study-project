@@ -102,7 +102,20 @@ describe('Meter', () => {
 
     cleanup();
     const { container: down } = render(<Meter label="Pronunciation" value={41} delta={-3} />);
-    expect(down.textContent).toContain('-3');
+    // U+2212, the typographic minus the PRD's own examples use (F19).
+    expect(down.textContent).toContain('▼ −3');
+  });
+
+  it('meter_renders_a_dash_when_there_is_no_previous_result', () => {
+    const { container } = render(<Meter label="Grammar" value={60} delta={null} />);
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('no previous result')).toHaveClass('sr-only');
+    expect(container.textContent).not.toMatch(/[▲▼]/);
+
+    cleanup();
+    // Omitted means "no delta to show", not "no previous result".
+    const { container: plain } = render(<Meter label="Grammar" value={60} />);
+    expect(plain.textContent).not.toContain('—');
   });
 });
 

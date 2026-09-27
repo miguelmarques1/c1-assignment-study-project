@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { excerptPronunciationSchema } from './pronunciation';
+import { assessedWordSchema, excerptPronunciationSchema } from './pronunciation';
 
 /**
  * Why one of the caller's own utterances was chosen for pronunciation
@@ -23,6 +23,8 @@ export const transcriptExcerptSchema = z.object({
   ruleVersion: z.string(),
   /** This excerpt's pronunciation assessment (F10). Identical shape and values to the pronunciation route's own entry. */
   pronunciation: excerptPronunciationSchema,
+  /** The assessed words with their colour bands (F19); null unless `pronunciation.status` is `assessed`. */
+  assessedWords: z.array(assessedWordSchema).nullable(),
 });
 export type TranscriptExcerpt = z.infer<typeof transcriptExcerptSchema>;
 

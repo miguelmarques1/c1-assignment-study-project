@@ -124,7 +124,7 @@ describe('ProfileScreen', () => {
     expect(screen.getByRole('meter', { name: 'Grammar' })).toHaveAttribute('aria-valuenow', '68');
     const grammarRow = screen.getByRole('meter', { name: 'Grammar' }).parentElement!;
     expect(grammarRow).toHaveTextContent('68 ▲ +3');
-    expect(screen.getByRole('meter', { name: 'Vocabulary' }).parentElement!).toHaveTextContent('74 ▼ -1');
+    expect(screen.getByRole('meter', { name: 'Vocabulary' }).parentElement!).toHaveTextContent('74 ▼ −1');
   });
 
   it('warming_up_competencies_show_the_marker', () => {

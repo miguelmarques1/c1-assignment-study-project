@@ -37,6 +37,13 @@ export const PRONUNCIATION_MIN_ASSESSED_SHARE = 0.6;
 /** Azure's own boundary for a word's `Mispronunciation` — a phoneme instance below this counts as a failure. */
 export const PHONEME_FAILURE_THRESHOLD = 60;
 
+/**
+ * The floor of a word's `good` colour band on the transcript (F19), the
+ * conventional "good" boundary for Azure's scores. `poor` sits below
+ * `PHONEME_FAILURE_THRESHOLD`, and `fair` in between.
+ */
+export const WORD_BAND_GOOD_MIN = 80;
+
 /** A phoneme needs at least this many failing instances in the lesson to be ranked — one bad reading is noise. */
 export const WORST_PHONEME_MIN_OCCURRENCES = 2;
 

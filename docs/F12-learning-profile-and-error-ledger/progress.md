@@ -218,3 +218,13 @@
 - Six textual conflicts, all additive (both features appended at the same spot): `schema.prisma` (User back-relations and the models at the end), `app.module.ts`, `app-error.ts`, `codes.ts`, the shared `index.ts` barrel, and `openapi.json`. Both sides were kept; `openapi.json` was regenerated (30 operations with F13's, `PROF001` and F13's `CONTENT001`/`CONTENT002`).
 - Two semantic follow-ons of F12's taxonomy v2 inside F13's code, fixed here: `test/integration/helpers/content-fixtures.ts` builds a `LoadedErrorTaxonomy` by hand, so it now supplies `familyOf` and a family `format` (`ipa` for a `phoneme:/…/` tag); and `assignment-content/*/meta.schema.json`, whose `target_tags` enum mirrors the taxonomy in force, was regenerated with F13's own `pnpm content:schema` (85 tags).- F13's `save_generated_rejects_invalid_input_with_val001` pinned the taxonomy version (`v1`) in an expected message; it now reads the version in force. After the merge: typecheck ✅ · lint ✅ · API unit 339/339 ✅ · API integration 395/395 ✅ (394 in the merged run, plus the fixed F13 test re-run 16/16) · web 146/146 ✅ · tokens 17/17 ✅.
 
+## F19 follow-ups applied (2026-09-27)
+
+F19 merged second, and its merge commit applied the six items listed in stage 7. The details are in F19's progress log, section "Merge with main".
+
+1. Lesson sources in the ledger link to the lesson: web `Link` to `/lessons/{id}` (`LESSON_DETAIL_HREF` removed; the test is `lesson_examples_link_to_the_lesson` again), mobile `onOpenLesson`.
+2. The error-card tag chip links to `/profile?tag=` (web) and calls `showLedgerEntrySheetForTag` (mobile).
+3. `plan_generation` reads `Plan generated` / `Generating plan` on both clients.
+4. There is one `EqMeter`, `EqChip`, `relative_time.dart` and `relative-time.ts`. `EqMeter` is this feature's widget, with `showNullDelta` renamed to F19's `noPreviousResult`, and it prints negatives with U+2212 like the web `Meter`. The formatter is `formatRelativeTime` on both clients, with an optional time zone (web) or `utcOffset` (mobile) for tests.
+5. The header pill is Dashboard, Profile, Lessons, Settings.
+6. F19's analysis view reads this feature's `ErrorLedgerPort`. F19's empty default was dropped in favour of this implementation.

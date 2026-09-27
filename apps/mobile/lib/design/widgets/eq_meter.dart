@@ -4,10 +4,12 @@ import 'package:flutter/material.dart';
 /// Mirrors `apps/web/src/components/ui/meter.tsx`'s two states.
 enum EqMeterState { scored, warmingUp }
 
-/// A 0–100 score as a labelled bar, with its signed change since the last
-/// measurement. While [state] is [EqMeterState.warmingUp] (fewer than three
-/// measurements) the number is replaced by `Warming up`, the track is
-/// hatched, and the semantics say so — the same contract as the web's.
+/// A 0–100 score as a labelled bar, with its change since the previous
+/// measurement: `▲ +4`, `▼ −2` (U+2212), or `—` when there was no previous
+/// measurement at all ([noPreviousResult], the web's `delta: null`). While
+/// [state] is [EqMeterState.warmingUp] (fewer than three measurements) the
+/// number is replaced by `Warming up`, the track is hatched, and the
+/// semantics say so — the same contract as the web's.
 class EqMeter extends StatelessWidget {
   const EqMeter({
     super.key,
@@ -15,21 +17,22 @@ class EqMeter extends StatelessWidget {
     required this.value,
     this.state = EqMeterState.scored,
     this.delta,
-    this.showNullDelta = false,
+    this.noPreviousResult = false,
   });
 
   /// The accessible name; also rendered as visible text.
   final String label;
 
-  /// 0–100. Only null while warming up.
+  /// 0–100. Only null while [state] is [EqMeterState.warmingUp].
   final int? value;
   final EqMeterState state;
 
-  /// Signed change since the last measurement. Zero renders nothing, like the web.
+  /// Signed change since the last measurement. Zero, or null without
+  /// [noPreviousResult], renders nothing, like the web.
   final int? delta;
 
-  /// Renders a null [delta] as `—` (F19's lesson-result convention) instead of nothing.
-  final bool showNullDelta;
+  /// Renders an em dash read out as "no previous result" (F19's first lesson).
+  final bool noPreviousResult;
 
   @override
   Widget build(BuildContext context) {
@@ -41,10 +44,11 @@ class EqMeter extends StatelessWidget {
     final track = dark ? EqDarkColors.surfaceContainerHighest : EqLightColors.surfaceContainerHighest;
     final fill = dark ? EqDarkColors.primary : EqLightColors.primary;
     final clamped = (value ?? 0).clamp(0, 100);
+    final (deltaText, deltaColor, deltaSpoken) = _delta(dark);
 
     final semanticsLabel = warmingUp
         ? '$label: warming up, not enough data yet'
-        : '$label: $clamped out of 100${_deltaSemantics()}';
+        : '$label: $clamped out of 100${deltaSpoken == null ? '' : ', $deltaSpoken'}';
 
     return Semantics(
       container: true,
@@ -65,7 +69,13 @@ class EqMeter extends StatelessWidget {
                   TextSpan(
                     text: '$clamped',
                     style: EqTextStyles.labelLg(dark: dark).copyWith(color: onSurface),
-                    children: [if (_deltaText() != null) _deltaSpan(dark)],
+                    children: [
+                      if (deltaText != null)
+                        TextSpan(
+                          text: ' $deltaText',
+                          style: EqTextStyles.labelLg(dark: dark).copyWith(color: deltaColor),
+                        ),
+                    ],
                   ),
                 ),
             ],
@@ -95,30 +105,19 @@ class EqMeter extends StatelessWidget {
     );
   }
 
-  String? _deltaText() {
+  /// The visible delta, its colour and how it is read out; all null when nothing renders.
+  (String?, Color?, String?) _delta(bool dark) {
     final change = delta;
-    if (change == null) return showNullDelta ? ' —' : null;
-    if (change == 0) return null;
-    return change > 0 ? ' ▲ +$change' : ' ▼ $change';
-  }
-
-  String _deltaSemantics() {
-    final change = delta;
-    if (change == null || change == 0) return '';
-    return change > 0 ? ', up $change' : ', down ${-change}';
-  }
-
-  TextSpan _deltaSpan(bool dark) {
-    final change = delta;
-    final Color color;
     if (change == null) {
-      color = dark ? EqDarkColors.onSurfaceVariant : EqLightColors.onSurfaceVariant;
-    } else {
-      color = change > 0
-          ? (dark ? EqDarkColors.tertiary : EqLightColors.tertiary)
-          : (dark ? EqDarkColors.error : EqLightColors.error);
+      return noPreviousResult
+          ? ('—', dark ? EqDarkColors.onSurfaceVariant : EqLightColors.onSurfaceVariant, 'no previous result')
+          : (null, null, null);
     }
-    return TextSpan(text: _deltaText(), style: EqTextStyles.labelLg(dark: dark).copyWith(color: color));
+    if (change == 0) return (null, null, null);
+    if (change > 0) {
+      return ('▲ +$change', dark ? EqDarkColors.tertiary : EqLightColors.tertiary, 'up $change');
+    }
+    return ('▼ −${change.abs()}', dark ? EqDarkColors.error : EqLightColors.error, 'down ${change.abs()}');
   }
 }
 

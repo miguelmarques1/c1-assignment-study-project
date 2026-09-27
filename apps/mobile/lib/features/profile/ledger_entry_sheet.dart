@@ -1,5 +1,6 @@
 import 'package:english_quest_tokens/english_quest_tokens.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_modular/flutter_modular.dart';
 
 import '../../core/format/relative_time.dart';
 import '../../design/widgets/eq_badge.dart';
@@ -17,39 +18,66 @@ String timesLabel(int count) => '$count ${count == 1 ? 'time' : 'times'}';
 
 /// Opens a record's detail as a bottom sheet — the mobile form of the web's
 /// dialog. [label] is known before the detail loads, so the sheet has its
-/// title at once.
+/// title at once. A lesson source closes the sheet and opens that lesson —
+/// by default switching to the Lessons tab; [onOpenLesson] overrides where.
 Future<void> showLedgerEntrySheet(
   BuildContext context, {
   required String entryId,
   required String label,
   required Future<LedgerEntryDetailView> Function(String entryId) load,
+  void Function(String lessonId)? onOpenLesson,
 }) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    builder: (context) => LedgerEntrySheet(entryId: entryId, label: label, load: load),
+    builder: (sheetContext) => LedgerEntrySheet(
+      entryId: entryId,
+      label: label,
+      load: load,
+      onOpenLesson: (lessonId) {
+        Navigator.of(sheetContext).pop();
+        if (onOpenLesson != null) {
+          onOpenLesson(lessonId);
+        } else {
+          context.navigate('/app/lessons/$lessonId');
+        }
+      },
+    ),
   );
 }
 
 /// Resolves a tag to the caller's record and opens it — how F19's lesson
 /// error-card chip lands on the ledger. Does nothing when the caller has no
-/// record for the tag.
-Future<void> showLedgerEntrySheetForTag(BuildContext context, ProfileController controller, String tag) async {
+/// record for the tag; a failed lookup throws `DioException` for the caller.
+Future<void> showLedgerEntrySheetForTag(
+  BuildContext context,
+  ProfileController controller,
+  String tag, {
+  void Function(String lessonId)? onOpenLesson,
+}) async {
   final entry = await controller.findEntryByTag(tag);
   if (entry == null || !context.mounted) return;
-  await showLedgerEntrySheet(context, entryId: entry.id, label: entry.label, load: controller.loadEntry);
+  await showLedgerEntrySheet(
+    context,
+    entryId: entry.id,
+    label: entry.label,
+    load: controller.loadEntry,
+    onOpenLesson: onOpenLesson,
+  );
 }
 
 /// Every example collected for a tag, each with the lesson or activity it
-/// came from, and the sources list. Lesson sources are plain text until F19
-/// ships the lesson-detail page they will open (F12 spec, A27).
+/// came from, and the sources list. A lesson source opens F19's lesson
+/// detail (F12 spec, A27); an activity source stays plain text until
+/// F16–F18 give activities a page.
 class LedgerEntrySheet extends StatefulWidget {
-  const LedgerEntrySheet({super.key, required this.entryId, required this.label, required this.load});
+  const LedgerEntrySheet({super.key, required this.entryId, required this.label, required this.load, this.onOpenLesson});
 
   final String entryId;
   final String label;
   final Future<LedgerEntryDetailView> Function(String entryId) load;
+  final void Function(String lessonId)? onOpenLesson;
 
   @override
   State<LedgerEntrySheet> createState() => _LedgerEntrySheetState();
@@ -89,7 +117,7 @@ class _LedgerEntrySheetState extends State<LedgerEntrySheet> {
     } else if (detail == null) {
       body = const EqLoading(blockCount: 4, blockHeight: 48);
     } else {
-      body = _DetailBody(detail: detail);
+      body = _DetailBody(detail: detail, onOpenLesson: widget.onOpenLesson);
     }
 
     return ConstrainedBox(
@@ -111,9 +139,10 @@ class _LedgerEntrySheetState extends State<LedgerEntrySheet> {
 }
 
 class _DetailBody extends StatelessWidget {
-  const _DetailBody({required this.detail});
+  const _DetailBody({required this.detail, required this.onOpenLesson});
 
   final LedgerEntryDetailView detail;
+  final void Function(String lessonId)? onOpenLesson;
 
   @override
   Widget build(BuildContext context) {
@@ -150,7 +179,7 @@ class _DetailBody extends StatelessWidget {
           for (final example in detail.examples)
             Padding(
               padding: EdgeInsets.only(bottom: EqSpacing.gutterMobile),
-              child: _ExampleTile(example: example, when: when(example.occurredAt)),
+              child: _ExampleTile(example: example, when: when(example.occurredAt), onOpenLesson: onOpenLesson),
             ),
         SizedBox(height: EqSpacing.md),
         Text('Sources', style: EqTextStyles.titleMd(dark: dark)),
@@ -158,9 +187,12 @@ class _DetailBody extends StatelessWidget {
         for (final source in detail.sources)
           Padding(
             padding: EdgeInsets.only(bottom: EqSpacing.xs),
-            child: Text(
-              '${source.sourceKind == LedgerSourceKind.lesson ? 'Lesson' : 'Activity'} · ${when(source.occurredAt)} · '
-              '${timesLabel(source.occurrences)}',
+            child: _SourceLine(
+              text:
+                  '${source.sourceKind == LedgerSourceKind.lesson ? 'Lesson' : 'Activity'} · ${when(source.occurredAt)} · '
+                  '${timesLabel(source.occurrences)}',
+              lessonId: source.sourceKind == LedgerSourceKind.lesson ? source.lessonId : null,
+              onOpenLesson: onOpenLesson,
               style: muted,
             ),
           ),
@@ -169,11 +201,33 @@ class _DetailBody extends StatelessWidget {
   }
 }
 
+/// A source's line: a link to the lesson when it came from one, plain text otherwise.
+class _SourceLine extends StatelessWidget {
+  const _SourceLine({required this.text, required this.lessonId, required this.onOpenLesson, required this.style});
+
+  final String text;
+  final String? lessonId;
+  final void Function(String lessonId)? onOpenLesson;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    final id = lessonId;
+    final open = onOpenLesson;
+    if (id == null || open == null) return Text(text, style: style);
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton(onPressed: () => open(id), child: Text(text)),
+    );
+  }
+}
+
 class _ExampleTile extends StatelessWidget {
-  const _ExampleTile({required this.example, required this.when});
+  const _ExampleTile({required this.example, required this.when, required this.onOpenLesson});
 
   final LedgerExample example;
   final String when;
+  final void Function(String lessonId)? onOpenLesson;
 
   @override
   Widget build(BuildContext context) {
@@ -207,7 +261,12 @@ class _ExampleTile extends StatelessWidget {
                 style: EqTextStyles.bodyMd(dark: dark),
               ),
             SizedBox(height: EqSpacing.xs),
-            Text('${example.sourceKind == LedgerSourceKind.lesson ? 'Lesson' : 'Activity'} · $when', style: muted),
+            _SourceLine(
+              text: '${example.sourceKind == LedgerSourceKind.lesson ? 'Lesson' : 'Activity'} · $when',
+              lessonId: example.sourceKind == LedgerSourceKind.lesson ? example.lessonId : null,
+              onOpenLesson: onOpenLesson,
+              style: muted,
+            ),
           ],
         ),
       ),

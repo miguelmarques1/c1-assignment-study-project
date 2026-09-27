@@ -1,8 +1,11 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mobile/design/eq_theme.dart';
 import 'package:mobile/design/widgets/eq_meter.dart';
+import 'package:mobile/features/profile/ledger_entry_sheet.dart';
 import 'package:mobile/features/profile/profile_controller.dart';
+import 'package:mobile/features/profile/profile_models.dart';
 import 'package:mobile/features/profile/profile_page.dart';
 
 import '../helpers/pump_screen.dart';
@@ -132,6 +135,31 @@ void main() {
       expect(find.text('Lesson · 3 days ago · 2 times'), findsOneWidget);
       expect(adapter.calls['GET /profile/ledger/$entryId'], 1);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('lesson_examples_link_to_the_lesson', (tester) async {
+      final opened = <String>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: EqTheme.light(),
+          home: Scaffold(
+            body: LedgerEntrySheet(
+              entryId: entryId,
+              label: 'Third conditional',
+              load: (_) async => LedgerEntryDetailView.fromJson(detailJson()),
+              onOpenLesson: opened.add,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // A27: every lesson source is a link to that lesson (F19's detail).
+      expect(find.widgetWithText(TextButton, 'Lesson · 3 days ago'), findsNWidgets(2));
+      await tester.ensureVisible(find.text('Lesson · 3 days ago · 2 times'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lesson · 3 days ago · 2 times'));
+      expect(opened, [lessonId]);
     });
   });
 }
