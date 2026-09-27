@@ -163,6 +163,12 @@ void main() {
       expect(navigated, ['/app/settings']);
     });
 
+    testWidgets('a_stage_this_build_does_not_know_still_shows', (tester) async {
+      await _pump(tester, overrides: {'GET /lessons/$lessonId/pipeline': ok(pipelineJson(unknownStage: 'plan_generation'))});
+      await _openTab(tester, 'Status');
+      expect(find.text('Plan generation'), findsOneWidget);
+    });
+
     testWidgets('a_lesson_that_is_not_mine_reads_as_unavailable', (tester) async {
       final navigated = <String>[];
       await _pump(

@@ -146,7 +146,14 @@ class OwnStepper extends StatelessWidget {
       ),
     ];
 
-    for (final stage in PipelineStage.order) {
+    // The shared order, then any stage this build does not know yet (F12's
+    // `plan_generation`) — shown humanized rather than silently dropped.
+    final order = [
+      ...PipelineStage.order,
+      for (final view in pipeline.stages)
+        if (!PipelineStage.order.contains(view.stage)) view.stage,
+    ];
+    for (final stage in order) {
       final view = pipeline.stage(stage);
       if (view == null) {
         steps.add(StepperStep(title: stage.title, state: 'Not started', tone: StepTone.idle));

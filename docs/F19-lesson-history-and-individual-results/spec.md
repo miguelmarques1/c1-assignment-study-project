@@ -619,6 +619,7 @@ The caller's own `utterances[].excerpt` gains `assessedWords`. It is null unless
   - Registering the `profile_update` handler turns the `Profile updated` step from `Queued` to its real states.
   - Appends `plan_generation` (F12's A11). If F19 landed first, F12 adds its `pipelineStageLabels` entry (enforced by the `Record` type) and the Dart label.
   - Shares `EqMeter`, `EqChip`, the relative-time formatter and the header pill order with F19 (A19, A22, A25). Whichever lands first creates them.
+  - _As built (2026-09-26): F19 landed first and created them — web `src/lib/relative-time.ts` (time zone as a parameter), mobile `lib/core/format/relative_time.dart` (optional `utcOffset`), `lib/design/widgets/eq_meter.dart` and `eq_chip.dart`. `EqMeter` takes `noPreviousResult: true` where the web passes `delta: null`. The Dart stage labels F12 extends for `plan_generation` are `PipelineStage._labels` in `apps/mobile/lib/features/lessons/models/pipeline_models.dart`; until then the mobile stepper shows an unknown stage humanized. The header pill is Dashboard, Lessons, Settings — `Profile` goes between Dashboard and Lessons._
 - **F15:** Registers the `plan_generation` handler and the terminal branch status. The stepper and the lesson status then include the stage's real states: a blocked or failed plan stage shows the row as `Blocked` or `Failed` with its reason (A3).
 - **F20:** The list's `vocabularyDomain` is exactly `lesson_scenarios.vocabulary_domain` for a `ready` situation and null otherwise, so F20's coverage counts must count the same rows.
 
