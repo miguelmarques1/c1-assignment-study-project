@@ -1,6 +1,6 @@
 # Implementation Progress: Lesson History and Individual Results
 
-**Status:** in progress
+**Status:** success
 **Branch:** claude/lesson-history-individual-results-3cc933
 **Started:** 2026-09-25
 **Last updated:** 2026-09-26
@@ -116,4 +116,36 @@
 - **Follow-ups (step 21):** dated notes appended to the progress logs of F07, F08, F09, F10, F11 and F22 (earlier notes untouched). The spec's notes for F12 gained an "as built" line (where the shared formatter, `EqMeter`/`EqChip` and the Dart stage labels live, and `EqMeter`'s `noPreviousResult`); the F15 note (stepper renders the shared order) and the F20 note (list domain = `lesson_scenarios.vocabulary_domain` for a ready situation) match what was built.
 
 **Validation:** live API checks as both users ✅ · Playwright live page checks 7/7 ✅ (light, dark, 375 px, real retry) · visual suite: meter baselines regenerated ✅, `field-*` stale and `icons-*`/`login-screen-*` missing — pre-existing, left as found · mobile 65/65 ✅ · scratch data deleted ✅
-**Commit:** _(recorded in the final verification commit)_
+**Commit:** d0b19a1 "F19 stage 5 - verification and hand-off"
+
+## Final verification
+
+_2026-09-26. Correction to Stage 5's validation line: the mobile suite is **64/64**, not 65/65 (63 at the end of Stage 4, plus `a_stage_this_build_does_not_know_still_shows`)._
+
+**Full suite (whole repo, not filtered to this feature):**
+- `pnpm -r typecheck` ✅ (shared, design-tokens, web, api) · `pnpm lint` ✅ (zero warnings)
+- API, every unit and integration file in one serial run: **623/625** — the two failures were timing races in F08/F10 suites (`pipeline-routes` › `retry_reruns_downstream_stages`, the race F09's progress log already records; `pronunciation-routes` › `never_returns_another_participants_pronunciation`, the stage failing under load as in Stage 1's note). Both files re-run in isolation: **22/22** ✅, with no code change. Not attributable to F19 (its only touch to those paths is the moved `STORAGE_UNAVAILABLE_REASON` constant and read-only view fields), so they are recorded as pre-existing flakes, not regressions.
+- Web **167/167** ✅ (including the `no-raw-values`, `token-resolution` and `design-reference` guards) · shared: no test files · mobile `flutter analyze` 0 issues ✅, `flutter test` **64/64** ✅, `flutter build apk --debug` ✅ (Stage 4)
+- `packages/design-tokens` › `generated_files_match_a_fresh_generation` ✗ — **pre-existing**: the drift guard compares the generator's LF output with the CRLF files `core.autocrlf` checks out on Windows. F19 does not touch the package (`git diff main -- packages/design-tokens` is empty).
+
+**Component Overview walk-through:** every file the spec lists exists with its described role; the three routes and the `LessonList`, `LessonDetailView`, `LessonScenarioView` components are in `docs/api/openapi.json`; `shell_module.dart` mounts `lessonsModule`; `design/README.md` names `Lessons` and the `Recent lessons` block. **Missing from spec: none.** Files added beyond the spec's list (all small, all to keep one job per file): web `components/lessons/{area-error,localized-time,links,lesson-header}.tsx|ts`, `result/result-area.tsx`, `status/status-area.tsx`; mobile `tabs/tab_body.dart`, `widgets/{palette,lesson_header}.dart`, `models/json_read.dart`; test helpers `history-fixtures.ts`, `fake-error-ledger.ts`, `test/fixtures/lessons.ts`, `test/helpers/{pump_screen,scripted_dio}.dart`.
+
+**Acceptance criteria (PRD, F19) — every mapped test re-run in this final pass and passing:** all 14 F19 criteria and the 7 cross-feature rows the spec assigns to F19 (see the spec's Testing Strategy tables). The recurrence badge criterion is proven through the test-only `ErrorLedgerPort` fake, as A13 specifies, until F12 implements the port.
+
+**Smoke checks:** the three new routes and every web page were exercised against a running stack in Stage 5 (isolated `eq-f19` project), including a real retry, dark theme and 375 px.
+
+**Regressions:** none.
+
+**Soft-fails:**
+- The built-in browser pane was hidden for the whole session, so React never revealed streamed pages there; the page checks ran as a headless Playwright spec in the `eq-f19` `visual` container instead.
+- Mobile was not run on a device or emulator (per `apps/mobile/AGENTS.md`); the on-device review is the user's.
+- The optional real two-window lesson in the user's Chrome, followed to `Ready`, was not run (needs two browsers with WebRTC).
+- No Stitch mockup exists for the history or result screens (A24); both clients compose from the design-system primitives.
+
+**Pre-existing failures / gaps (left as found):** the design-tokens drift guard (CRLF); two timing-sensitive F08/F10 integration tests under full-suite load; stale `field-light/dark.png` baselines since F22; `icons-*.png` and `login-screen-*.png` baselines never committed.
+
+**Follow-up work:**
+- **F12** implements `ErrorLedgerPort.occurrencesThrough` (the badge then appears with no F19 change), wires the error-card tag chip to the ledger detail (A14), inserts `Profile` in the header pill between Dashboard and Lessons, and adds `plan_generation` to `pipelineStageLabels` and the Dart `PipelineStage._labels`.
+- Regenerate the stale `field-*` baselines and commit the missing `icons-*` / `login-screen-*` ones in a visual-baseline chore (run serially: `--workers=1`).
+- Fix the design-tokens drift guard's line-ending comparison, or add a `.gitattributes` `eol=lf` for the generated files.
+- The `eq-f19` compose project (containers stopped, volumes kept) and the worktree's gitignored `.env` can be removed with `docker compose -p eq-f19 down -v` once no further live check is wanted.
