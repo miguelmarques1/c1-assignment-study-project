@@ -45,6 +45,8 @@ model User {
   ledgerOccurrences    ErrorLedgerOccurrence[]
   ledgerEncounters     ErrorLedgerEncounter[]
   contentServings      ContentItemServing[]
+  generationRuns       ContentGenerationRun[]
+  generationSlots      ContentGenerationSlot[]
 
   @@map("users")
 }
@@ -963,7 +965,8 @@ model ContentItem {
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  servings ContentItemServing[]
+  servings        ContentItemServing[]
+  generationSlots ContentGenerationSlot[]
 
   @@index([type, cefrLevel], map: "ix_content_item_type_level")
   @@index([targetTags], map: "ix_content_item_target_tags", type: Gin)
@@ -985,4 +988,91 @@ model ContentItemServing {
   @@index([userId, contentItemId, servedAt(sort: Desc)], map: "ix_content_item_serving_user_item_time")
   @@index([contentItemId], map: "ix_content_item_serving_item")
   @@map("content_item_serving")
+}
+
+// ---------------------------------------------------------------------------
+// F14 AI content generation. CHECK constraints and the partial index on
+// completed generated slots live only in 0014_content_generation, as with
+// every earlier migration.
+// ---------------------------------------------------------------------------
+
+/// One generation batch per study plan, idempotent per (user, run key).
+model ContentGenerationRun {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId               String    @map("user_id") @db.Uuid
+  runKey               String    @map("run_key") @db.VarChar(128)
+  /// One of running, completed.
+  status               String    @default("running") @db.VarChar(16)
+  /// One of credential_missing, credential_rejected, quota_exhausted.
+  abandonReason        String?   @map("abandon_reason") @db.VarChar(32)
+  maxItems             Int       @map("max_items") @db.SmallInt
+  rulesVersion         String    @map("rules_version") @db.VarChar(32)
+  rulesFingerprint     String    @map("rules_fingerprint") @db.Char(64)
+  frequencyListVersion String    @map("frequency_list_version") @db.VarChar(80)
+  taxonomyVersion      String    @map("taxonomy_version") @db.VarChar(16)
+  /// `[{ code, text }]`, for the plan to show.
+  notes                Json      @default("[]")
+  startedAt            DateTime  @default(now()) @map("started_at") @db.Timestamptz(6)
+  finishedAt           DateTime? @map("finished_at") @db.Timestamptz(6)
+
+  user  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slots ContentGenerationSlot[]
+
+  @@unique([userId, runKey], map: "ux_generation_runs_user_key")
+  @@index([userId, startedAt(sort: Desc)], map: "ix_generation_runs_user_started")
+  @@map("content_generation_runs")
+}
+
+/// One planned item of a run: its type and tags, then what became of it.
+model ContentGenerationSlot {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  runId         String    @map("run_id") @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  position      Int       @db.SmallInt
+  /// One of reading, vocabulary, grammar, error_review.
+  type          String    @db.VarChar(16)
+  targetTags    String[]  @map("target_tags")
+  /// `[{ tag, source, rank }]`: why each tag was chosen.
+  tagSources    Json      @map("tag_sources")
+  genre         String?   @db.VarChar(40)
+  topicDomain   String    @map("topic_domain") @db.VarChar(40)
+  exemplarIndex Int       @map("exemplar_index") @db.SmallInt
+  /// One of pending, running, generated, fallback, dropped.
+  status        String    @default("pending") @db.VarChar(16)
+  reason        String?   @db.VarChar(32)
+  /// The generated item, or the curated fallback.
+  contentItemId String?   @map("content_item_id") @db.Uuid
+  attemptCount  Int       @default(0) @map("attempt_count") @db.SmallInt
+  claimedAt     DateTime? @map("claimed_at") @db.Timestamptz(6)
+  completedAt   DateTime? @map("completed_at") @db.Timestamptz(6)
+
+  run         ContentGenerationRun       @relation(fields: [runId], references: [id], onDelete: Cascade)
+  user        User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contentItem ContentItem?               @relation(fields: [contentItemId], references: [id], onDelete: NoAction)
+  attempts    ContentGenerationAttempt[]
+
+  @@unique([runId, position], map: "ux_generation_slots_run_position")
+  @@index([runId, status], map: "ix_generation_slots_run_status")
+  @@map("content_generation_slots")
+}
+
+/// One model call for a slot: the prompt stamp, the outcome and, when the gate ran, its metrics. Never item text.
+model ContentGenerationAttempt {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  slotId        String   @map("slot_id") @db.Uuid
+  attempt       Int      @db.SmallInt
+  promptId      String   @map("prompt_id") @db.VarChar(64)
+  promptVersion String   @map("prompt_version") @db.VarChar(16)
+  outcome       String   @db.VarChar(24)
+  failedChecks  String[] @default([]) @map("failed_checks")
+  gateMetrics   Json?    @map("gate_metrics")
+  errorDetail   String?  @map("error_detail") @db.VarChar(500)
+  latencyMs     Int?     @map("latency_ms")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  slot ContentGenerationSlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+
+  @@unique([slotId, attempt], map: "ux_generation_attempts_slot_attempt")
+  @@index([promptId, promptVersion, createdAt(sort: Desc)], map: "ix_generation_attempts_prompt_time")
+  @@map("content_generation_attempts")
 }

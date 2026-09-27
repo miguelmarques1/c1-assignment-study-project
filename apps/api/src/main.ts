@@ -11,6 +11,8 @@ import { waitForDependencies } from './boot/wait-for-dependencies';
 import { verifyCredentialDecryptability } from './boot/verify-credential-decryptability';
 import { loadPrompts } from './boot/load-prompts';
 import { verifyAnalysisPrompt } from './boot/verify-analysis-prompt';
+import { verifyGenerationPrompts } from './boot/verify-generation-prompts';
+import { GenerationRulesService } from './generation/generation-rules.service';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { loadEnv } from './config/env';
 import { CredentialCryptoService } from './credentials/credential-crypto.service';
@@ -88,6 +90,14 @@ async function bootstrap(): Promise<void> {
   verifyAnalysisPrompt({
     registry: app.get(PromptRegistryService),
     taxonomy: app.get(ErrorTaxonomyService),
+  });
+
+  // F14's generation prompts must declare exactly the variables the
+  // generator renders, allow only the question formats the rules allow, and
+  // carry the fields the difficulty gate reads back.
+  verifyGenerationPrompts({
+    registry: app.get(PromptRegistryService),
+    allowedFormats: app.get(GenerationRulesService).current().rules.questions.formats,
   });
 
   // Readiness line: one probe per dependency with its latency, so a slow or

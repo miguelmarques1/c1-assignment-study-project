@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  InvalidExampleSelectionError,
   MissingRequiredVariableError,
   buildRetryMessage,
   renderUserMessage,
@@ -90,6 +91,54 @@ describe('renderUserMessage', () => {
     expect(examplesIndex).toBeGreaterThan(mainIndex);
     expect(example1Index).toBeGreaterThan(examplesIndex);
     expect(example2Index).toBeGreaterThan(example1Index);
+  });
+});
+
+describe('renderUserMessage options (F14)', () => {
+  const withThreeExamples = () =>
+    prompt({
+      constraints: ['Stay polite.'],
+      examples: [
+        { user: 'Example Bob.', output: { greeting: 'Hi Bob!' } },
+        { user: 'Example Cara.', output: { greeting: 'Hi Cara!' } },
+        { user: 'Example Dev.', output: { greeting: 'Hi Dev!' } },
+      ],
+    });
+
+  it('renders_only_the_selected_examples_in_order', () => {
+    const message = renderUserMessage(withThreeExamples(), { name: 'Ana' }, { exampleIndexes: [2, 0] });
+
+    expect(message).not.toContain('Example Cara.');
+    expect(message.indexOf('Example Dev.')).toBeGreaterThan(0);
+    expect(message.indexOf('Example Bob.')).toBeGreaterThan(message.indexOf('Example Dev.'));
+    expect(renderUserMessage(withThreeExamples(), { name: 'Ana' }, { exampleIndexes: [] })).not.toContain('Examples:');
+  });
+
+  it('appends_the_appendix_after_constraints_and_examples', () => {
+    const appendix = 'Correction needed: your previous draft failed these checks.';
+    const message = renderUserMessage(withThreeExamples(), { name: 'Ana' }, { appendix, exampleIndexes: [1] });
+
+    expect(message.endsWith(`\n\n${appendix}`)).toBe(true);
+    expect(message.indexOf('Stay polite.')).toBeLessThan(message.indexOf(appendix));
+    expect(message.indexOf('Example Cara.')).toBeLessThan(message.indexOf(appendix));
+  });
+
+  it('rejects_an_out_of_range_example_index', () => {
+    expect(() => renderUserMessage(withThreeExamples(), { name: 'Ana' }, { exampleIndexes: [3] })).toThrow(
+      InvalidExampleSelectionError,
+    );
+    expect(() => renderUserMessage(withThreeExamples(), { name: 'Ana' }, { exampleIndexes: [-1] })).toThrow(
+      /example index -1 does not exist/,
+    );
+  });
+
+  it('output_is_unchanged_without_options', () => {
+    const plain = renderUserMessage(withThreeExamples(), { name: 'Ana' });
+
+    expect(renderUserMessage(withThreeExamples(), { name: 'Ana' }, {})).toBe(plain);
+    expect(renderUserMessage(withThreeExamples(), { name: 'Ana' }, { appendix: '   ' })).toBe(plain);
+    expect(plain).toContain('Example Bob.');
+    expect(plain).toContain('Example Dev.');
   });
 });
 

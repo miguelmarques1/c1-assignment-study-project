@@ -1,4 +1,4 @@
-import type { LoadedPrompt, PromptExample } from './prompt-types';
+import type { LoadedPrompt, PromptExample, PromptExecutionOptions } from './prompt-types';
 
 const PLACEHOLDER_PATTERN = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
 
@@ -15,6 +15,31 @@ export class MissingRequiredVariableError extends Error {
 
 function substitute(template: string, values: Record<string, string>): string {
   return template.replace(PLACEHOLDER_PATTERN, (_match, name: string) => values[name] ?? '');
+}
+
+/** A caller asked for an example the prompt does not have: a code bug, like a missing variable. */
+export class InvalidExampleSelectionError extends Error {
+  constructor(
+    public readonly index: number,
+    public readonly promptId: string,
+    public readonly exampleCount: number,
+  ) {
+    super(`Prompt "${promptId}" has ${exampleCount} examples; example index ${index} does not exist.`);
+    this.name = 'InvalidExampleSelectionError';
+  }
+}
+
+function selectExamples(prompt: LoadedPrompt, indexes: readonly number[] | undefined): PromptExample[] {
+  if (indexes === undefined) {
+    return prompt.examples;
+  }
+  return indexes.map((index) => {
+    const example = Number.isInteger(index) ? prompt.examples[index] : undefined;
+    if (!example) {
+      throw new InvalidExampleSelectionError(index, prompt.id, prompt.examples.length);
+    }
+    return example;
+  });
 }
 
 function renderConstraints(constraints: string[]): string {
@@ -44,7 +69,17 @@ function renderExamples(examples: PromptExample[]): string {
   return `\n\nExamples:\n\n${blocks}`;
 }
 
-export function renderUserMessage(prompt: LoadedPrompt, variables: Record<string, string>): string {
+/**
+ * Renders the template, then the constraints, then the examples. `options`
+ * (added by F14) narrows the examples to a selection and appends a trailing
+ * block; without it the output is exactly what it always was.
+ */
+export function renderUserMessage(
+  prompt: LoadedPrompt,
+  variables: Record<string, string>,
+  options: PromptExecutionOptions = {},
+): string {
+  const examples = selectExamples(prompt, options.exampleIndexes);
   const resolved: Record<string, string> = {};
 
   for (const variable of prompt.variables) {
@@ -59,7 +94,8 @@ export function renderUserMessage(prompt: LoadedPrompt, variables: Record<string
   }
 
   const body = substitute(prompt.userTemplate, resolved);
-  return `${body}${renderConstraints(prompt.constraints)}${renderExamples(prompt.examples)}`;
+  const appendix = options.appendix?.trim() ? `\n\n${options.appendix.trim()}` : '';
+  return `${body}${renderConstraints(prompt.constraints)}${renderExamples(examples)}${appendix}`;
 }
 
 /**

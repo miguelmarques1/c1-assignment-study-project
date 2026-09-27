@@ -5,6 +5,7 @@ import { ERROR_TAXONOMY_PATH } from '../../taxonomy/error-taxonomy.constants';
 import { loadErrorTaxonomyFile } from '../../taxonomy/error-taxonomy';
 import { assertContentSchemaExists } from '../content-schema-guard';
 import { collectContentStats, renderContentStats } from '../content-stats';
+import { collectGenerationStats, renderGenerationStats } from '../../generation/generation-stats';
 
 /**
  * `pnpm content:stats`: read-only inventory, the PRD's corpus target, usage
@@ -18,7 +19,9 @@ async function main(): Promise<void> {
   try {
     await assertContentSchemaExists(prisma, 'content:stats');
     const stats = await collectContentStats(prisma, taxonomy);
-    process.stdout.write(`${renderContentStats(stats).join('\n')}\n`);
+    // F14's section: how generated items fare at the difficulty gate, per prompt version.
+    const generation = await collectGenerationStats(prisma);
+    process.stdout.write(`${[...renderContentStats(stats), ...renderGenerationStats(generation)].join('\n')}\n`);
   } finally {
     await prisma.$disconnect();
   }

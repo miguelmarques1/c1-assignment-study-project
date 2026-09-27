@@ -1,0 +1,66 @@
+{
+  "title": "What the Museum Left Off Its Labels",
+  "topic": "museum curation",
+  "body": "When the city museum reopened its maritime gallery last spring, most visitors noticed the new lighting before they noticed the labels; had the lighting been left alone, they would have seen at once that the labels were the real change. For decades the ships had been described as triumphs of engineering, and the sailors who crewed them were mentioned only in passing. The curators have rewritten almost every caption, however, and the result is a gallery that tells an uncomfortable story with remarkable restraint.\n\nHad the museum added a modest panel on working conditions, few people would have objected. Instead, the curators decided to rethink the whole narrative, which inevitably drew criticism from donors who had funded the original displays. Several of them have argued that the new captions are overly political, although the wording is strikingly measured. A model of a nineteenth-century clipper, for instance, is now accompanied by an extract from a deckhand's diary describing the hunger that set in after the ship was becalmed for three weeks.\n\nThe decision was not taken lightly. The curators have spent two years consulting historians, descendants of sailors and, crucially, the volunteers who guide school groups through the rooms every morning. If they had skipped that consultation, the gallery would have lost the trust of the very people who explain it to the public. Nevertheless, the museum has paid a price: a long-standing sponsor withdrew its support in the summer, and the funding gap has not yet been closed. Whether the gamble pays off will depend on whether visitors bother to read the labels at all, which is precisely the question the next annual report is expected to answer.",
+  "questions": [
+    {
+      "format": "multiple_choice",
+      "prompt": "What did most visitors notice first when the gallery reopened?",
+      "options": ["The new lighting", "The rewritten labels", "The model clipper", "The deckhand's diary"],
+      "answer": "The new lighting",
+      "explanation": "The text says visitors noticed the lighting before they noticed the labels.",
+      "evidence": "most visitors noticed the new lighting before they noticed the labels"
+    },
+    {
+      "format": "multiple_choice",
+      "prompt": "Why did some donors criticise the new captions?",
+      "options": ["They considered them overly political", "They found them too long", "They preferred the old lighting", "They wanted more ship models"],
+      "answer": "They considered them overly political",
+      "explanation": "Donors who had funded the original displays argued the captions were political.",
+      "evidence": "Several of them have argued that the new captions are overly political"
+    },
+    {
+      "format": "fill_blank",
+      "prompt": "The diary describes the hunger that set in after the ship was ___ for three weeks.",
+      "accepted_answers": ["becalmed"],
+      "explanation": "A becalmed ship cannot move for lack of wind, so supplies ran low.",
+      "evidence": "the hunger that set in after the ship was becalmed for three weeks"
+    },
+    {
+      "format": "multiple_choice",
+      "prompt": "Whom did the curators consult over two years?",
+      "options": ["Historians, descendants of sailors and volunteer guides", "Only the museum's donors", "Marine engineers", "The city council"],
+      "answer": "Historians, descendants of sailors and volunteer guides",
+      "explanation": "The consultation deliberately included the volunteers who guide school groups.",
+      "evidence": "consulting historians, descendants of sailors and, crucially, the volunteers who guide school groups"
+    },
+    {
+      "format": "fill_blank",
+      "prompt": "A long-standing sponsor ___ its support in the summer.",
+      "accepted_answers": ["withdrew"],
+      "explanation": "Losing the sponsor is the price the museum paid for the new narrative.",
+      "evidence": "a long-standing sponsor withdrew its support in the summer"
+    }
+  ],
+  "target_occurrences": [
+    { "tag": "grammar:passive-voice", "quote": "the ships had been described as triumphs of engineering" },
+    { "tag": "grammar:passive-voice", "quote": "is now accompanied by an extract" },
+    { "tag": "grammar:passive-voice", "quote": "The decision was not taken lightly" },
+    { "tag": "grammar:passive-voice", "quote": "the funding gap has not yet been closed" },
+    { "tag": "vocab:collocation", "quote": "with remarkable restraint" },
+    { "tag": "vocab:collocation", "quote": "drew criticism from donors" },
+    { "tag": "vocab:collocation", "quote": "withdrew its support" },
+    { "tag": "grammar:article-definite", "quote": "the labels were the real change" },
+    { "tag": "grammar:article-definite", "quote": "rethink the whole narrative" },
+    { "tag": "grammar:article-definite", "quote": "the funding gap has not yet been closed" },
+    { "tag": "grammar:conditional-3", "quote": "had the lighting been left alone, they would have seen at once" },
+    { "tag": "grammar:conditional-3", "quote": "Had the museum added a modest panel on working conditions, few people would have objected" },
+    { "tag": "grammar:conditional-3", "quote": "If they had skipped that consultation, the gallery would have lost the trust" },
+    { "tag": "discourse:connector", "quote": "every caption, however, and the result" },
+    { "tag": "discourse:connector", "quote": "although the wording is strikingly measured" },
+    { "tag": "discourse:connector", "quote": "Nevertheless, the museum has paid a price" },
+    { "tag": "grammar:present-perfect", "quote": "The curators have rewritten almost every caption" },
+    { "tag": "grammar:present-perfect", "quote": "Several of them have argued" },
+    { "tag": "grammar:present-perfect", "quote": "the museum has paid a price" }
+  ]
+}

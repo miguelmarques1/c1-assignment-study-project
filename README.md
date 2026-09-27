@@ -67,7 +67,10 @@ Redis answer. It logs a readiness line listing every dependency with its latency
 | Seed the configured accounts | `docker compose exec api pnpm db:seed` |
 | Import curated content ([assignment-content/README.md](assignment-content/README.md)) | `docker compose exec api sh -c 'cd apps/api && pnpm content:import'` |
 | Check an import without writing anything | `docker compose exec api sh -c 'cd apps/api && pnpm content:import --dry-run'` |
-| Content bank inventory, corpus target and usage | `docker compose exec api sh -c 'cd apps/api && pnpm content:stats'` |
+| Content bank inventory, corpus target, usage and generation pass rates | `docker compose exec api sh -c 'cd apps/api && pnpm content:stats'` |
+| Plan a generation batch for a user without calling Gemini (runs the compiled `dist/`, kept current by the dev server's watch build) | `docker compose exec api sh -c 'cd apps/api && pnpm content:generate ana@example.com --dry-run'` |
+| Generate a batch on that user's own Gemini key (`--max N`, `--run-key K`) | `docker compose exec api sh -c 'cd apps/api && pnpm content:generate ana@example.com --max 4'` |
+| Rebuild the difficulty gate's frequency list from wordfreq ([apps/api/rules/frequency/README.md](apps/api/rules/frequency/README.md)) | `pnpm --filter @english-quest/api frequency:build` |
 | Run the API test suite | `docker compose exec api pnpm test` |
 | Lint everything | `docker compose exec api pnpm -r lint` |
 | Typecheck everything | `docker compose exec api pnpm -r typecheck` |
