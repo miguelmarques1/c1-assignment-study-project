@@ -22,11 +22,12 @@ Thumbs.db
 *.swp
 
 # Listening audio and other imported media are uploaded to object storage by the
-# importer; only the meta.json files belong in version control.
-assignment-content/**/*.mp3
-assignment-content/**/*.m4a
-assignment-content/**/*.wav
-assignment-content/**/*.ogg
+# importer; only the meta.json files belong in version control. The importer
+# accepts these extensions in any case (AUDIO.MP3), so the patterns do too.
+assignment-content/**/*.[mM][pP]3
+assignment-content/**/*.[mM]4[aA]
+assignment-content/**/*.[wW][aA][vV]
+assignment-content/**/*.[oO][gG][gG]
 
 *.tsbuildinfo
 next-env.d.ts

@@ -211,3 +211,10 @@
 - Rejected tags are queryable in `profile_sources.rejected_tags`, but a later taxonomy that adds a tag does not re-ingest it from sources already applied. A curator tool (or a new revision of the source) would be needed; the live run did it by deleting the source so the job re-applied it.
 - The `tsx`-based `openapi:generate` script still exits 1 silently (the `emitDecoratorMetadata` gap first recorded by F10); the snapshot was generated through `pnpm build` + `node dist/openapi/generate.js`.
 - Merge note: this branch was fast-forwarded to `f90378a`; `main` has since gained `e8932bd` (F13 spec and plan, docs only).
+
+## Merge with main (2026-09-27)
+
+- `origin/main` gained F13 (content bank) after this run's base. Merged into this branch before the PR. F13 had already numbered its migration `0013_content_bank`, leaving `0012` to F12, so migrations apply in order with no renumbering.
+- Six textual conflicts, all additive (both features appended at the same spot): `schema.prisma` (User back-relations and the models at the end), `app.module.ts`, `app-error.ts`, `codes.ts`, the shared `index.ts` barrel, and `openapi.json`. Both sides were kept; `openapi.json` was regenerated (30 operations with F13's, `PROF001` and F13's `CONTENT001`/`CONTENT002`).
+- Two semantic follow-ons of F12's taxonomy v2 inside F13's code, fixed here: `test/integration/helpers/content-fixtures.ts` builds a `LoadedErrorTaxonomy` by hand, so it now supplies `familyOf` and a family `format` (`ipa` for a `phoneme:/…/` tag); and `assignment-content/*/meta.schema.json`, whose `target_tags` enum mirrors the taxonomy in force, was regenerated with F13's own `pnpm content:schema` (85 tags).- F13's `save_generated_rejects_invalid_input_with_val001` pinned the taxonomy version (`v1`) in an expected message; it now reads the version in force. After the merge: typecheck ✅ · lint ✅ · API unit 339/339 ✅ · API integration 395/395 ✅ (394 in the merged run, plus the fixed F13 test re-run 16/16) · web 146/146 ✅ · tokens 17/17 ✅.
+
