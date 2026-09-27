@@ -1,4 +1,5 @@
 import type { GeneratedContentType, GeneratedItemInput } from '@english-quest/shared';
+import { z } from 'zod';
 
 /**
  * The shapes F14 exchanges internally and with its callers. Nothing here
@@ -112,6 +113,55 @@ export interface GateReport {
   evidence: string[];
   /** The bank input with the final metrics, ready for `saveGenerated`; null unless the gate passed. */
   item: GeneratedItemInput | null;
+}
+
+/** `generateForPlan`'s input (spec §5). An invalid request is a caller bug and raises `VAL001`. */
+export const generationRequestSchema = z.strictObject({
+  userId: z.uuid(),
+  runKey: z.string().min(1).max(128).regex(/^[A-Za-z0-9:._-]+$/, 'must be letters, digits, colons, dots, dashes or underscores'),
+  maxItems: z.number().int().min(1).max(12).default(12),
+});
+export type GenerationRequestInput = z.input<typeof generationRequestSchema>;
+
+export interface GenerationRequest extends GenerationRequestInput {
+  now?: Date;
+  /** Called after each slot reaches a terminal state; F15 passes its stage's `reportProgress`. A throw is logged and ignored. */
+  onProgress?: (done: number, total: number) => void | Promise<void>;
+}
+
+export type SlotOutcome = 'generated' | 'fallback' | 'dropped';
+
+export interface GenerationSlotResult {
+  position: number;
+  type: GeneratedContentType;
+  targetTags: string[];
+  outcome: SlotOutcome;
+  /** The generated item, or the curated fallback; null when dropped. */
+  contentItemId: string | null;
+  reason: null | 'gate_failed_twice' | 'generation_failed' | 'quota_exhausted' | 'credential_rejected' | 'credential_missing';
+  attempts: number;
+  genre: string | null;
+  tagSources: Array<{ tag: string; source: 'due' | 'recurring' | 'unmastered'; rank: number }>;
+}
+
+export interface GenerationRunResult {
+  runId: string;
+  runKey: string;
+  abandonReason: null | 'credential_missing' | 'credential_rejected' | 'quota_exhausted';
+  slots: GenerationSlotResult[];
+  counts: { planned: number; generated: number; fallback: number; dropped: number };
+  notes: Array<{ code: 'gemini_key_missing' | 'gemini_quota_exhausted'; text: string }>;
+}
+
+/** What a dry run shows: the plan, genres and exemplars included, with nothing persisted and no model call. */
+export interface PlannedSlotPreview {
+  position: number;
+  type: GeneratedContentType;
+  targetTags: string[];
+  tagSources: Array<{ tag: string; source: 'due' | 'recurring' | 'unmastered'; rank: number }>;
+  genre: string | null;
+  topicDomain: string;
+  exemplarIndex: number;
 }
 
 /** The slot facts the mapper and the gate need. */

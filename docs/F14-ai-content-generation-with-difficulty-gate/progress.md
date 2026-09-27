@@ -60,19 +60,28 @@
 - `generation.constants.ts` gained `GENERATION_PROMPT_IDS`, and `prompt-variables.ts` holds `GENERATION_PROMPT_VARIABLES`, the single list the verifier compares against, plus the pure `buildPromptVariables`. Stage 4's slot generator only feeds it the ledger examples.
 
 **Validation:** typecheck ✅ · lint ✅ (all of `apps/api/src` and `apps/api/test`) · unit: generation-prompts 8 new, template-renderer +4, prompt-execution.service +2, and generation-rules, difficulty-gate, target-structures, gate-feedback, mapper and prompt-file-loader re-run: 9 files, 90 tests ✅ · integration `prompt-boot.spec.ts` 6/6 ✅
+**Commit:** 9c2446a "F14 stage 3 - prompts and the prompt library extension"
+
+## Stage 4: Generation Runs — ✅ done
+
+- [x] **12. Data Model and Migration**
+- [x] **13. Batch Planning**
+- [x] **14. Slot Generation**
+- [x] **15. Generation Service and Module**
+
+**Observations:**
+- Migration `0014_content_generation` is the spec's SQL verbatim, and the three Prisma models mirror it. `User` gains `generationRuns`/`generationSlots`, and `ContentItem` gains `generationSlots`. The partial index `ix_generation_slots_user_type_completed` and every CHECK live only in the SQL. Testcontainers applied it from scratch in every integration suite. It has not been applied to a running stack yet (Stage 5).
+- **The database caught a real bug.** Attempts that ended before the gate (key rejected, quota) were written with `Prisma.JsonNull`, a JSON `null`, and `ck_generation_attempts_gate` rejected them because a JSON null `IS NOT NULL`. The fix is `Prisma.DbNull`, which is SQL NULL. The AGENTS.md hint ("Prisma JSON null is `Prisma.JsonNull`") is right for JSON values and wrong for a nullable column that a CHECK treats as absent.
+- **Planner behaviour worth knowing (spec A9 as built):** with a small ledger, round-robin plus "at most 2 items per tag" legitimately turns a type slot into a reading, or ends the plan early. The integration ledger (five tags) plans 7 slots, not 12: R, G, V, E, R, G, then a vocabulary slot that becomes a reading. Two planner unit expectations had assumed the full mix and were wrong. The planner was not. `uses_a_tag_in_at_most_two_items_and_prefers_unused_tags` now checks "fewest uses first" within one family, where compatibility cannot interfere.
+- **Additions beyond the spec's file list:** `generation.contract.ts` also holds `generationRequestSchema` (Zod; `z.uuid()`, `runKey` pattern, `maxItems` 1–12 defaulting to 12), and the repository exports `RunWithSlots`, `GenerationNote`, `RecordedAttempt` and `AttemptWrite`. `SLOT_CONCURRENCY`, `SLOT_LEASE_MS` and `GENERATION_NOTES` are in `generation.constants.ts`, and `MAX_ATTEMPTS_PER_SLOT` sits next to the slot generator that enforces it. `GENERATED_CEFR_LEVEL` lives in the mapper (Stage 2).
+- **Resuming a slot:** a failed attempt row keeps its structured `failures` inside `gate_metrics` (numbers and check names, never text), so a slot reclaimed after its lease rebuilds the same correction notes for attempt 2. `resumes_an_expired_slot_without_a_third_attempt` proves exactly one more call, with the rebuilt appendix.
+- **Upfront key check:** `CredentialsService.list` status `missing` or `invalid` marks the new run `credential_missing` before any slot runs, so every slot falls back with zero calls. `invalid` covers both an upstream rejection and an undecryptable key (F02 writes `invalid` for both). `unverified` still tries. A run with no eligible tags gets no abandon reason and no note.
+- **Concurrency:** two workers claim slots through `claimNextSlot` (`UPDATE … WHERE id = (SELECT … FOR UPDATE SKIP LOCKED)`). After a run-ending error, the other worker's in-flight call finishes and keeps its item, and no new call starts. The mid-run tests therefore assert "fewer calls than slots" and "exactly one generated", not an exact call count, because the order in which the two workers call the fake is scheduling-dependent.
+- **Test support:** `fake-gemini.ts` gained a `generation` call kind (recognised by `target_occurrences` in the response schema), per-key `scriptGeneration` queues, a `generationResponder` hook (needed because two slots call concurrently), and `fakeGeneration`, which answers from the fixture passages using the type and tags read off the rendered prompt. `helpers/generation-fixtures.ts` seeds ledgers through F12's `ingestActivityOutcome` and curated items through F13's validation and repository. `COVERED_TAGS` are the five tags both fixture passages cover. The fake is CRLF in this checkout, so it was patched with a line-ending-aware script, since the plain `\n` anchors did not match.
+- `generation-boot.spec.ts` sits under `test/integration` as the spec lists it, but needs no container. It swaps the constants module's paths with `vi.doMock` and runs Nest's own `moduleRef.init()`. A rules file that fails the Zod schema reports only schema issues, never semantic ones, the same as the excerpt rules. The test asserts that and nothing more.
+
+**Validation:** typecheck ✅ · lint ✅ · unit: 60 files, 478 tests ✅ (367 baseline + 111 from F14 so far, including batch-planner 13, genre-picker 4, generation-error 6) · integration `content-generation.spec.ts` 20/20 ✅ · `generation-boot.spec.ts` 4/4 ✅
 **Commit:** _(recorded in the next stage)_
-
-## Stage 4: Generation Runs — ⬜ pending
-
-- [ ] **12. Data Model and Migration**
-- [ ] **13. Batch Planning**
-- [ ] **14. Slot Generation**
-- [ ] **15. Generation Service and Module**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 5: Curator Surfaces and Verification — ⬜ pending
 

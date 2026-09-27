@@ -1,3 +1,7 @@
+import type { GeneratedContentType } from '@english-quest/shared';
+
+import { responseForSlot } from '../../fixtures/generation/fixtures';
+
 /**
  * A stand-in for `@google/genai`, installed by the scenario suites with
  * `vi.mock('@google/genai', ...)`. It replaces only the network call: F04's
@@ -10,7 +14,7 @@
  * which user's key produced which artifact.
  */
 
-export type GeminiCallKind = 'situation' | 'card' | 'analysis';
+export type GeminiCallKind = 'situation' | 'card' | 'analysis' | 'generation';
 
 export interface GeminiCall {
   apiKey: string;
@@ -51,6 +55,14 @@ export type FakeAnalysisStep =
   | { kind: 'network' }
   | { kind: 'empty' };
 
+/** One scripted answer for the next generation call from a given key (F14). `ok` without a response answers from the fixtures. */
+export type FakeGenerationStep =
+  | { kind: 'ok'; response?: unknown }
+  | { kind: 'invalid' }
+  | { kind: 'status'; status: number; message?: string }
+  | { kind: 'network' }
+  | { kind: 'empty' };
+
 export const gemini = {
   calls: [] as GeminiCall[],
   situationsServed: 0,
@@ -67,6 +79,14 @@ export const gemini = {
   /** Per-key queue of scripted analysis answers, consumed in order; falls back to a generated default. */
   analysisScripts: new Map<string, FakeAnalysisStep[]>(),
   analysisGate: null as ReturnType<typeof deferred> | null,
+  /** Per-key queue of scripted generation answers, consumed in order; falls back to the fixture response. */
+  generationScripts: new Map<string, FakeGenerationStep[]>(),
+  /**
+   * Decides a generation answer from the call itself, before the scripts: two
+   * slots run concurrently, so a test that targets one slot's type needs
+   * this rather than a queue whose order depends on scheduling.
+   */
+  generationResponder: null as ((call: { apiKey: string; message: string; index: number }) => FakeGenerationStep | undefined) | null,
 
   reset(): void {
     this.calls = [];
@@ -82,6 +102,13 @@ export const gemini = {
     this.analysisScripts = new Map();
     this.analysisGate?.release();
     this.analysisGate = null;
+    this.generationScripts = new Map();
+    this.generationResponder = null;
+  },
+
+  /** Queues one or more answers for the next generation call(s) from this key. */
+  scriptGeneration(apiKey: string, ...steps: FakeGenerationStep[]): void {
+    this.generationScripts.set(apiKey, [...(this.generationScripts.get(apiKey) ?? []), ...steps]);
   },
 
   /** Holds every situation response until the returned function is called. */
@@ -122,6 +149,9 @@ function kindOf(config: { responseJsonSchema?: { properties?: Record<string, unk
   }
   if ('competencies' in properties) {
     return 'analysis';
+  }
+  if ('target_occurrences' in properties) {
+    return 'generation';
   }
   return 'card';
 }
@@ -182,6 +212,31 @@ export function fakeAnalysis(message: string) {
       : null,
     topics_to_practice: ['Third conditional in spoken hypotheticals', 'Present perfect vs. past simple', 'Polite disagreement phrases'],
   };
+}
+
+/** The item type a rendered generation prompt asks for, read off its template's wording. */
+export function generationTypeOf(message: string): GeneratedContentType {
+  if (message.startsWith('Genre:')) {
+    return 'reading';
+  }
+  if (message.includes('The pattern to review:')) {
+    return 'error_review';
+  }
+  return message.includes('Target vocabulary.') ? 'vocabulary' : 'grammar';
+}
+
+/** The tags a rendered generation prompt targets: its `- family:tag (Label): …` lines. */
+export function generationTagsOf(message: string): string[] {
+  return [...message.matchAll(/^- ([a-z]+:[^\s(]+) \(/gm)].map((match) => match[1]!);
+}
+
+/**
+ * A generation answer that passes the gate: the fixture passage for the
+ * requested type, with its occurrences for the requested tags. Tests that
+ * seed ledgers with the fixtures' tags get passing items without scripting.
+ */
+export function fakeGeneration(message: string) {
+  return responseForSlot(generationTypeOf(message), generationTagsOf(message));
 }
 
 export function fakeSituation(seats: number, serial: number) {
@@ -245,6 +300,24 @@ class FakeGoogleGenAI {
         const seats = gemini.shortOnRoles ? asked - 1 : asked;
         gemini.situationsServed += 1;
         return { text: JSON.stringify(fakeSituation(seats, gemini.situationsServed)), usageMetadata: USAGE };
+      }
+
+      if (kind === 'generation') {
+        const index = gemini.callsOf('generation').length;
+        const step = gemini.generationResponder?.({ apiKey: this.apiKey, message, index }) ??
+          gemini.generationScripts.get(this.apiKey)?.shift() ?? { kind: 'ok' as const };
+        switch (step.kind) {
+          case 'status':
+            throw new FakeGeminiApiError(step.status, step.message ?? `HTTP ${step.status}`);
+          case 'network':
+            throw new Error('fetch failed');
+          case 'invalid':
+            return INVALID;
+          case 'empty':
+            return { text: '', usageMetadata: USAGE };
+          case 'ok':
+            return { text: JSON.stringify(step.response ?? fakeGeneration(message)), usageMetadata: USAGE };
+        }
       }
 
       if (kind === 'analysis') {
