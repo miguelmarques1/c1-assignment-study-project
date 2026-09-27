@@ -25,11 +25,20 @@ function joinWithAnd(items: readonly string[]): string {
   return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`;
 }
 
-/** `7 sessions · 21 activities · focused on third conditional, phrasal verb and /θ/` (PRD's example line). */
-export function summaryLine(sessions: readonly PackedSession[], activities: readonly PackedActivity[], focusLabels: readonly string[], generalMode: boolean): string {
-  const base = `${sessions.length} sessions · ${activities.length} activities`;
+/**
+ * `7 sessions · 21 activities · focused on third conditional, phrasal verb
+ * and /θ/` (PRD's example line). Exposed by count rather than by the
+ * packed shapes so `PlanHistoryReader` can build the same line from a
+ * stored plan row without reconstructing its sessions.
+ */
+export function formatSummaryLine(sessionCount: number, activityCount: number, focusLabels: readonly string[], generalMode: boolean): string {
+  const base = `${sessionCount} sessions · ${activityCount} activities`;
   if (generalMode || focusLabels.length === 0) {
     return base;
   }
   return `${base} · focused on ${joinWithAnd(focusLabels)}`;
+}
+
+export function summaryLine(sessions: readonly PackedSession[], activities: readonly PackedActivity[], focusLabels: readonly string[], generalMode: boolean): string {
+  return formatSummaryLine(sessions.length, activities.length, focusLabels, generalMode);
 }

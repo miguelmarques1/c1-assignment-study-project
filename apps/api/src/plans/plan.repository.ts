@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { StudyPlanActivity, StudyPlanRequest, Prisma } from '@prisma/client';
+import type { StudyPlanActivity, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { PLAN_LOCK_NAMESPACE } from './plan.constants';
@@ -178,10 +178,6 @@ export class PlanRepository {
       }
       current = next;
     }
-  }
-
-  async pendingRequestFor(client: TxClient | PrismaService, userId: string, lessonId: string, origin: string): Promise<StudyPlanRequest | null> {
-    return client.studyPlanRequest.findUnique({ where: { userId_lessonId_origin: { userId, lessonId, origin } } });
   }
 }
 

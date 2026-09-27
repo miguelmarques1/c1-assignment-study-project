@@ -4,6 +4,7 @@ import {
   classroomEndResultSchema,
   classroomSessionSchema,
   classroomTokenSchema,
+  currentPlanViewSchema,
   currentUserSchema,
   healthReportSchema,
   learningProfileViewSchema,
@@ -20,10 +21,12 @@ import {
   loginSchema,
   maskedCredentialListSchema,
   maskedCredentialSchema,
+  planHistoryViewSchema,
   publicUserSchema,
   saveCredentialSchema,
   scenarioViewSchema,
   sessionTokenSchema,
+  studyPlanViewSchema,
   validationDetailSchema,
 } from '@english-quest/shared';
 import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
@@ -82,6 +85,9 @@ export const OPENAPI_COMPONENTS: Record<string, SchemaObject> = {
   LearningProfileView: toOpenApi(learningProfileViewSchema, 'output'),
   LedgerEntryListView: toOpenApi(ledgerEntryListViewSchema, 'output'),
   LedgerEntryDetailView: toOpenApi(ledgerEntryDetailViewSchema, 'output'),
+  CurrentPlanView: toOpenApi(currentPlanViewSchema, 'output'),
+  StudyPlanView: toOpenApi(studyPlanViewSchema, 'output'),
+  PlanHistoryView: toOpenApi(planHistoryViewSchema, 'output'),
 };
 
 /** Shorthand for the error responses, which every route can return. */

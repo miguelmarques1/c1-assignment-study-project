@@ -319,7 +319,7 @@ export class RecordingFinalizerService {
       }
 
       if (item.classification.requiresFallbackPlan && !branch.fallbackRequestedAt) {
-        this.fallbackPort.requestFallbackPlan({
+        await this.fallbackPort.requestFallbackPlan({
           lessonId: lesson.id,
           userId: item.userId,
           failureCode: item.classification.failureCode!,
