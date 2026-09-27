@@ -46,8 +46,9 @@ export const pipelineStageStatusSchema = z.enum([
 export type PipelineStageStatus = z.infer<typeof pipelineStageStatusSchema>;
 
 /**
- * The branch pointer's status: F07's recording vocabulary plus the stage
- * statuses a branch can sit in while a later stage runs.
+ * The branch pointer's status: F07's recording vocabulary, the stage
+ * statuses a branch can sit in while a later stage runs, and `completed`
+ * once its last stage (`plan_generation`, F15) finishes.
  */
 export const pipelineBranchStatusSchema = z.enum([
   'verifying',
@@ -57,6 +58,7 @@ export const pipelineBranchStatusSchema = z.enum([
   'blocked_missing_key',
   'failed',
   'storage_unavailable',
+  'completed',
 ]);
 export type PipelineBranchStatus = z.infer<typeof pipelineBranchStatusSchema>;
 

@@ -19,11 +19,11 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
   updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  credentials       UserCredential[]
-  credentialUsage   CredentialUsage[]
-  promptExecutions  PromptExecution[]
-  lessonsOpened     Lesson[]            @relation("LessonOpener")
-  lessonsEnded      Lesson[]            @relation("LessonEnder")
+  credentials          UserCredential[]
+  credentialUsage      CredentialUsage[]
+  promptExecutions     PromptExecution[]
+  lessonsOpened        Lesson[]                    @relation("LessonOpener")
+  lessonsEnded         Lesson[]                    @relation("LessonEnder")
   lessonParticipations LessonParticipant[]
   scenariosGenerated   LessonScenario[]
   roleCards            LessonRoleCard[]
@@ -47,6 +47,9 @@ model User {
   contentServings      ContentItemServing[]
   generationRuns       ContentGenerationRun[]
   generationSlots      ContentGenerationSlot[]
+  studyPlans           StudyPlan[]
+  studyPlanActivities  StudyPlanActivity[]
+  studyPlanRequests    StudyPlanRequest[]
 
   @@map("users")
 }
@@ -96,18 +99,18 @@ model CredentialUsage {
 /// rawResponse is populated only on validation_failed_hard_error, per the
 /// PRD's "raw response retained for inspection".
 model PromptExecution {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  userId         String   @map("user_id") @db.Uuid
-  promptId       String   @map("prompt_id") @db.VarChar(64)
-  promptVersion  String   @map("prompt_version") @db.VarChar(16)
-  model          String   @db.VarChar(64)
-  temperature    Float    @db.Real
-  inputTokens    Int?     @map("input_tokens")
-  outputTokens   Int?     @map("output_tokens")
-  latencyMs      Int      @map("latency_ms")
-  outcome        String   @db.VarChar(32)
-  rawResponse    String?  @map("raw_response")
-  occurredAt     DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  promptId      String   @map("prompt_id") @db.VarChar(64)
+  promptVersion String   @map("prompt_version") @db.VarChar(16)
+  model         String   @db.VarChar(64)
+  temperature   Float    @db.Real
+  inputTokens   Int?     @map("input_tokens")
+  outputTokens  Int?     @map("output_tokens")
+  latencyMs     Int      @map("latency_ms")
+  outcome       String   @db.VarChar(32)
+  rawResponse   String?  @map("raw_response")
+  occurredAt    DateTime @default(now()) @map("occurred_at") @db.Timestamptz(6)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -129,58 +132,60 @@ model PromptExecution {
 /// `ix_lessons_recording_pending` on `recording_status`, scoped to the
 /// non-terminal values the finalization job scans. Also not declared here.
 model Lesson {
-  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  room                   String    @db.VarChar(64)
-  status                 String    @default("waiting") @db.VarChar(24)
-  openedBy               String    @map("opened_by") @db.Uuid
-  openedAt               DateTime  @default(now()) @map("opened_at") @db.Timestamptz(6)
-  startedAt              DateTime? @map("started_at") @db.Timestamptz(6)
-  endedAt                DateTime? @map("ended_at") @db.Timestamptz(6)
-  durationSeconds        Int?      @map("duration_seconds")
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  room                     String    @db.VarChar(64)
+  status                   String    @default("waiting") @db.VarChar(24)
+  openedBy                 String    @map("opened_by") @db.Uuid
+  openedAt                 DateTime  @default(now()) @map("opened_at") @db.Timestamptz(6)
+  startedAt                DateTime? @map("started_at") @db.Timestamptz(6)
+  endedAt                  DateTime? @map("ended_at") @db.Timestamptz(6)
+  durationSeconds          Int?      @map("duration_seconds")
   /// One of ended_by_participant, all_disconnected, max_duration, abandoned_before_start.
-  endReason              String?   @map("end_reason") @db.VarChar(32)
-  endedBy                String?   @map("ended_by") @db.Uuid
+  endReason                String?   @map("end_reason") @db.VarChar(32)
+  endedBy                  String?   @map("ended_by") @db.Uuid
   /// Stamped when the last connected participant leaves; cleared on any join.
   /// The sweeper's only input for the 60-second all-disconnected rule.
-  allDisconnectedSince   DateTime? @map("all_disconnected_since") @db.Timestamptz(6)
+  allDisconnectedSince     DateTime? @map("all_disconnected_since") @db.Timestamptz(6)
   /// The cap in force when this lesson opened, so a later configuration
   /// change never rewrites history.
-  maxParticipants        Int       @map("max_participants") @db.SmallInt
+  maxParticipants          Int       @map("max_participants") @db.SmallInt
   /// F07: the whole-lesson recording lifecycle. One of idle, starting,
   /// recording, not_recording, finalizing, recorded, recording_partial,
   /// recording_failed, too_short, storage_unavailable.
-  recordingStatus           String    @default("idle") @map("recording_status") @db.VarChar(24)
+  recordingStatus          String    @default("idle") @map("recording_status") @db.VarChar(24)
   /// First egress of the lesson active — the live indicator's `since`.
-  recordingStartedAt        DateTime? @map("recording_started_at") @db.Timestamptz(6)
+  recordingStartedAt       DateTime? @map("recording_started_at") @db.Timestamptz(6)
   /// When finalization began; the 120-second egress settle window counts from here.
-  recordingFinalizingSince  DateTime? @map("recording_finalizing_since") @db.Timestamptz(6)
+  recordingFinalizingSince DateTime? @map("recording_finalizing_since") @db.Timestamptz(6)
   /// First storage transport error of the current finalization pass; the
   /// 2-minute window counts from here, cleared on success or a retry.
-  storageUnavailableSince   DateTime? @map("storage_unavailable_since") @db.Timestamptz(6)
+  storageUnavailableSince  DateTime? @map("storage_unavailable_since") @db.Timestamptz(6)
   /// When the lesson reached a final recording status.
-  recordingFinalizedAt      DateTime? @map("recording_finalized_at") @db.Timestamptz(6)
+  recordingFinalizedAt     DateTime? @map("recording_finalized_at") @db.Timestamptz(6)
   /// Finalization lease — a pass claims this row only when null or past.
-  recordingLeaseUntil       DateTime? @map("recording_lease_until") @db.Timestamptz(6)
-  createdAt              DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt              DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  recordingLeaseUntil      DateTime? @map("recording_lease_until") @db.Timestamptz(6)
+  createdAt                DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
-  opener       User                @relation("LessonOpener", fields: [openedBy], references: [id], onDelete: Restrict)
-  ender        User?               @relation("LessonEnder", fields: [endedBy], references: [id], onDelete: SetNull)
-  participants LessonParticipant[]
-  scenario     LessonScenario?
-  roleCards    LessonRoleCard[]
-  recordingSegments LessonRecordingSegment[]
-  pipelineBranches  LessonPipelineBranch[]
-  transcripts       LessonTranscript[]
-  utterances        LessonUtterance[]
-  excerptSelections LessonExcerptSelection[]
-  excerpts          LessonExcerpt[]
+  opener               User                        @relation("LessonOpener", fields: [openedBy], references: [id], onDelete: Restrict)
+  ender                User?                       @relation("LessonEnder", fields: [endedBy], references: [id], onDelete: SetNull)
+  participants         LessonParticipant[]
+  scenario             LessonScenario?
+  roleCards            LessonRoleCard[]
+  recordingSegments    LessonRecordingSegment[]
+  pipelineBranches     LessonPipelineBranch[]
+  transcripts          LessonTranscript[]
+  utterances           LessonUtterance[]
+  excerptSelections    LessonExcerptSelection[]
+  excerpts             LessonExcerpt[]
   excerptAssessments   LessonExcerptAssessment[]
   pronunciationResults LessonPronunciationResult[]
   analyses             LessonAnalysis[]
   analysisErrors       LessonAnalysisError[]
   profileSources       ProfileSource[]
   ledgerOccurrences    ErrorLedgerOccurrence[]
+  studyPlans           StudyPlan[]
+  studyPlanRequests    StudyPlanRequest[]
 
   @@index([status, openedAt(sort: Desc)], map: "ix_lessons_status_opened")
   @@map("lessons")
@@ -266,27 +271,28 @@ model LessonRecordingSegment {
 /// pipeline grows past recording. `stage`/`status`/`failureCode` are widened
 /// by each feature's own migration rather than replaced.
 model LessonPipelineBranch {
-  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  lessonId             String    @map("lesson_id") @db.Uuid
-  userId               String    @map("user_id") @db.Uuid
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId            String    @map("lesson_id") @db.Uuid
+  userId              String    @map("user_id") @db.Uuid
   /// Where the branch is now. One of recording, transcription,
   /// excerpt_selection (F08), pronunciation_assessment (F09); later stages
   /// widen the check.
-  stage                String    @default("recording") @db.VarChar(24)
+  stage               String    @default("recording") @db.VarChar(24)
   /// The current stage's status. One of verifying, queued, running,
-  /// retrying, blocked_missing_key, failed, storage_unavailable.
-  status               String    @default("verifying") @db.VarChar(24)
+  /// retrying, blocked_missing_key, failed, storage_unavailable, completed
+  /// (F15: reached once `plan_generation`, the pipeline's last stage, completes).
+  status              String    @default("verifying") @db.VarChar(24)
   /// Set exactly when status = failed: F07's recording codes, or the failed
   /// stage row's reason code once the branch moved past recording.
-  failureCode          String?   @map("failure_code") @db.VarChar(40)
-  failureReason        String?   @map("failure_reason") @db.VarChar(200)
-  attempts             Int       @default(1) @db.SmallInt
+  failureCode         String?   @map("failure_code") @db.VarChar(40)
+  failureReason       String?   @map("failure_reason") @db.VarChar(200)
+  attempts            Int       @default(1) @db.SmallInt
   /// When PipelineLaunchPort.launch was called; guards against a second call.
-  launchedAt           DateTime? @map("launched_at") @db.Timestamptz(6)
+  launchedAt          DateTime? @map("launched_at") @db.Timestamptz(6)
   /// When StudyPlanFallbackPort.requestFallbackPlan was called (F15); guards against a second call.
-  fallbackRequestedAt  DateTime? @map("fallback_requested_at") @db.Timestamptz(6)
-  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
-  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  fallbackRequestedAt DateTime? @map("fallback_requested_at") @db.Timestamptz(6)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   lesson Lesson                @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   user   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -394,11 +400,11 @@ model LessonUtterance {
   words        Json
   createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  transcript LessonTranscript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
-  lesson     Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  excerpt    LessonExcerpt?
-  analysisErrors LessonAnalysisError[]
+  transcript        LessonTranscript        @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+  lesson            Lesson                  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  excerpt           LessonExcerpt?
+  analysisErrors    LessonAnalysisError[]
   ledgerOccurrences ErrorLedgerOccurrence[]
 
   @@unique([lessonId, userId, idx], map: "ux_utterances_lesson_user_idx")
@@ -412,32 +418,32 @@ model LessonUtterance {
 /// input, are what make a selection reproducible and comparable after the
 /// thresholds are retuned. Computed from one transcript, and deleted with it.
 model LessonExcerptSelection {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  lessonId         String   @map("lesson_id") @db.Uuid
-  userId           String   @map("user_id") @db.Uuid
-  transcriptId     String   @map("transcript_id") @db.Uuid
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId        String   @map("lesson_id") @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  transcriptId    String   @map("transcript_id") @db.Uuid
   /// `version` from rules/excerpt-selection.yaml.
-  ruleVersion      String   @map("rule_version") @db.VarChar(32)
+  ruleVersion     String   @map("rule_version") @db.VarChar(32)
   /// sha256 hex of the thresholds and the sorted lexicon.
-  ruleFingerprint  String   @map("rule_fingerprint") @db.Char(64)
+  ruleFingerprint String   @map("rule_fingerprint") @db.Char(64)
   /// Snapshot of the rules in force.
-  rules            Json
+  rules           Json
   /// `none` until F12 provides the ledger's pronunciation focus.
-  focusSource      String   @map("focus_source") @db.VarChar(40)
+  focusSource     String   @map("focus_source") @db.VarChar(40)
   /// The unmastered pronunciation tags used as input; a JSON array.
-  focusTags        Json     @map("focus_tags")
-  utteranceCount   Int      @map("utterance_count")
-  eligibleCount    Int      @map("eligible_count")
-  selectedCount    Int      @map("selected_count")
-  selectedAudioMs  Int      @map("selected_audio_ms")
+  focusTags       Json     @map("focus_tags")
+  utteranceCount  Int      @map("utterance_count")
+  eligibleCount   Int      @map("eligible_count")
+  selectedCount   Int      @map("selected_count")
+  selectedAudioMs Int      @map("selected_audio_ms")
   /// `sparse_pronunciation_sample`: fewer than the rules' `sparse_below` selected.
-  sparseSample     Boolean  @map("sparse_sample")
-  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  sparseSample    Boolean  @map("sparse_sample")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  lesson     Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  transcript LessonTranscript @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
-  excerpts   LessonExcerpt[]
+  lesson               Lesson                      @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user                 User                        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transcript           LessonTranscript            @relation(fields: [transcriptId], references: [id], onDelete: Cascade)
+  excerpts             LessonExcerpt[]
   pronunciationResults LessonPronunciationResult[]
 
   @@unique([lessonId, userId], map: "ux_excerpt_selections_lesson_user")
@@ -469,10 +475,10 @@ model LessonExcerpt {
   reason               String   @db.VarChar(200)
   createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  selection  LessonExcerptSelection    @relation(fields: [selectionId], references: [id], onDelete: Cascade)
-  lesson     Lesson                    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  user       User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  utterance  LessonUtterance           @relation(fields: [utteranceId], references: [id], onDelete: Cascade)
+  selection  LessonExcerptSelection   @relation(fields: [selectionId], references: [id], onDelete: Cascade)
+  lesson     Lesson                   @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user       User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  utterance  LessonUtterance          @relation(fields: [utteranceId], references: [id], onDelete: Cascade)
   assessment LessonExcerptAssessment?
 
   @@unique([selectionId, rank], map: "ux_excerpts_selection_rank")
@@ -573,49 +579,49 @@ model LessonPronunciationResult {
 /// whenever the stage re-runs, so a retry never leaves two analyses for the
 /// same participant. `scenarioFit` is set only for `scenario_context = full`.
 model LessonAnalysis {
-  id                         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  lessonId                   String   @map("lesson_id") @db.Uuid
-  userId                     String   @map("user_id") @db.Uuid
-  grammar                    Int      @db.SmallInt
-  vocabulary                 Int      @db.SmallInt
-  fluency                    Int      @db.SmallInt
-  interaction                Int      @db.SmallInt
-  comprehension              Int      @db.SmallInt
+  id                        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lessonId                  String   @map("lesson_id") @db.Uuid
+  userId                    String   @map("user_id") @db.Uuid
+  grammar                   Int      @db.SmallInt
+  vocabulary                Int      @db.SmallInt
+  fluency                   Int      @db.SmallInt
+  interaction               Int      @db.SmallInt
+  comprehension             Int      @db.SmallInt
   /// `{ grammar, vocabulary, fluency, interaction, comprehension }`: one sentence each.
-  justifications             Json
+  justifications            Json
   /// 3–5 strings.
-  strengths                  Json
+  strengths                 Json
   /// Tags flagged as recurring, filtered against the kept errors and the profile's own weakness tags.
-  recurringTags              Json     @map("recurring_tags")
+  recurringTags             Json     @map("recurring_tags")
   /// 3–6 strings.
-  topics                     Json
+  topics                    Json
   /// One of full, situation_only, none.
-  scenarioContext            String   @map("scenario_context") @db.VarChar(16)
+  scenarioContext           String   @map("scenario_context") @db.VarChar(16)
   /// `{ roleLabel, registerExpected, registerMatched, registerComment, expressionsUsed[], expressionsNotUsed[] }`, only for `full`.
-  scenarioFit                Json?    @map("scenario_fit")
+  scenarioFit               Json?    @map("scenario_fit")
   /// assessed or no_sample (F10's result).
-  pronunciationContext       String   @map("pronunciation_context") @db.VarChar(16)
-  transcriptTokensEstimated  Int      @map("transcript_tokens_estimated")
-  transcriptTruncated        Boolean  @map("transcript_truncated")
+  pronunciationContext      String   @map("pronunciation_context") @db.VarChar(16)
+  transcriptTokensEstimated Int      @map("transcript_tokens_estimated")
+  transcriptTruncated       Boolean  @map("transcript_truncated")
   /// `{ othersOmittedBeforeMs, ownOmittedBeforeMs, droppedOthers, droppedOwn }` when truncated.
-  truncation                 Json?
+  truncation                Json?
   /// Weakness tags sent from the profile port.
-  profileTagCount            Int      @default(0) @map("profile_tag_count") @db.SmallInt
+  profileTagCount           Int      @default(0) @map("profile_tag_count") @db.SmallInt
   /// Errors whose quote was not found in the owner's own utterances.
-  discardedErrorCount        Int      @default(0) @map("discarded_error_count") @db.SmallInt
+  discardedErrorCount       Int      @default(0) @map("discarded_error_count") @db.SmallInt
   /// `no_errors_long_lesson`, `scenario_fit_missing`.
-  curatorFlags               Json     @default("[]") @map("curator_flags")
-  taxonomyVersion            String   @map("taxonomy_version") @db.VarChar(32)
-  promptId                   String   @map("prompt_id") @db.VarChar(64)
-  promptVersion              String   @map("prompt_version") @db.VarChar(16)
-  model                      String   @db.VarChar(64)
+  curatorFlags              Json     @default("[]") @map("curator_flags")
+  taxonomyVersion           String   @map("taxonomy_version") @db.VarChar(32)
+  promptId                  String   @map("prompt_id") @db.VarChar(64)
+  promptVersion             String   @map("prompt_version") @db.VarChar(16)
+  model                     String   @db.VarChar(64)
   /// Gemini-reported, summed over both attempts.
-  inputTokens                Int?     @map("input_tokens")
-  outputTokens               Int?     @map("output_tokens")
-  latencyMs                  Int      @map("latency_ms")
+  inputTokens               Int?     @map("input_tokens")
+  outputTokens              Int?     @map("output_tokens")
+  latencyMs                 Int      @map("latency_ms")
   /// Whether F04's library retry was needed.
-  schemaRetried              Boolean  @map("schema_retried")
-  createdAt                  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  schemaRetried             Boolean  @map("schema_retried")
+  createdAt                 DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
   lesson Lesson                @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   user   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -631,26 +637,26 @@ model LessonAnalysis {
 /// tag. `utteranceId` goes null (never the row) if the transcript is ever
 /// replaced — the re-run that would cause that also replaces the analysis.
 model LessonAnalysisError {
-  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  analysisId   String   @map("analysis_id") @db.Uuid
-  lessonId     String   @map("lesson_id") @db.Uuid
-  userId       String   @map("user_id") @db.Uuid
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  analysisId  String   @map("analysis_id") @db.Uuid
+  lessonId    String   @map("lesson_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
   /// Order as returned, after discards.
-  idx          Int      @db.SmallInt
+  idx         Int      @db.SmallInt
   /// Verbatim, as the model returned it.
-  quote        String
+  quote       String
   /// A taxonomy tag, e.g. grammar:conditional-3.
-  tag          String   @db.VarChar(64)
-  correction   String
-  explanation  String
+  tag         String   @db.VarChar(64)
+  correction  String
+  explanation String
   /// One of minor, moderate, major.
-  severity     String   @db.VarChar(8)
-  utteranceId  String?  @map("utterance_id") @db.Uuid
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  severity    String   @db.VarChar(8)
+  utteranceId String?  @map("utterance_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  analysis  LessonAnalysis  @relation(fields: [analysisId], references: [id], onDelete: Cascade)
-  lesson    Lesson          @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analysis  LessonAnalysis   @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  lesson    Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   utterance LessonUtterance? @relation(fields: [utteranceId], references: [id], onDelete: SetNull)
 
   @@unique([analysisId, idx], map: "ux_analysis_errors_analysis_idx")
@@ -967,6 +973,7 @@ model ContentItem {
 
   servings        ContentItemServing[]
   generationSlots ContentGenerationSlot[]
+  planActivities  StudyPlanActivity[]
 
   @@index([type, cefrLevel], map: "ix_content_item_type_level")
   @@index([targetTags], map: "ix_content_item_target_tags", type: Gin)
@@ -1015,8 +1022,9 @@ model ContentGenerationRun {
   startedAt            DateTime  @default(now()) @map("started_at") @db.Timestamptz(6)
   finishedAt           DateTime? @map("finished_at") @db.Timestamptz(6)
 
-  user  User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  slots ContentGenerationSlot[]
+  user       User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  slots      ContentGenerationSlot[]
+  studyPlans StudyPlan[]
 
   @@unique([userId, runKey], map: "ux_generation_runs_user_key")
   @@index([userId, startedAt(sort: Desc)], map: "ix_generation_runs_user_started")
@@ -1075,4 +1083,161 @@ model ContentGenerationAttempt {
   @@unique([slotId, attempt], map: "ux_generation_attempts_slot_attempt")
   @@index([promptId, promptVersion, createdAt(sort: Desc)], map: "ix_generation_attempts_prompt_time")
   @@map("content_generation_attempts")
+}
+
+// ---------------------------------------------------------------------------
+// F15 Study Plan Generation. CHECK constraints and the two partial unique
+// indexes (exactly one active plan per user; at most one carried copy per
+// activity) live only in 0015_study_plans, as with every earlier migration.
+// ---------------------------------------------------------------------------
+
+/// One plan per (user, lesson, origin). Composed by `PlanComposerService` from
+/// F14's generated items and F13's bank on the owner's own Gemini key (or
+/// deterministically, with no model call), then written by
+/// `PlanActivationService` under a per-user advisory lock. Exactly one
+/// `active` row per user (partial unique index, SQL only).
+model StudyPlan {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId              String    @map("user_id") @db.Uuid
+  lessonId            String    @map("lesson_id") @db.Uuid
+  /// One of lesson, recording_failed, analysis_blocked.
+  origin              String    @db.VarChar(24)
+  /// One of active, archived.
+  status              String    @db.VarChar(16)
+  /// The lesson's started_at, falling back to opened_at — denormalised for precedence (spec A1).
+  precedenceAt        DateTime  @map("precedence_at") @db.Timestamptz(6)
+  /// One of model, deterministic.
+  composition         String    @db.VarChar(16)
+  /// Set exactly when composition = deterministic. One of gemini_key_missing,
+  /// gemini_key_rejected, gemini_quota_exhausted, model_call_failed,
+  /// model_output_invalid, no_profile.
+  deterministicReason String?   @map("deterministic_reason") @db.VarChar(32)
+  /// Composed with no unmastered tags (first lesson, no profile yet).
+  generalMaterial     Boolean   @default(false) @map("general_material")
+  /// `[{ code, text }]`, server-built, in the fixed order (spec A15).
+  notes               Json      @default("[]")
+  /// Up to 3 tags, for the summary line.
+  focusTags           String[]  @map("focus_tags")
+  /// Set exactly when composition = model.
+  promptId            String?   @map("prompt_id") @db.VarChar(64)
+  promptVersion       String?   @map("prompt_version") @db.VarChar(16)
+  model               String?   @db.VarChar(64)
+  /// `{ offered, returned, accepted, rejected: { unknown, duplicate, off_target } }`.
+  modelSelectionStats Json?     @map("model_selection_stats")
+  generationRunId     String?   @map("generation_run_id") @db.Uuid
+  rulesVersion        String    @map("rules_version") @db.VarChar(32)
+  rulesFingerprint    String    @map("rules_fingerprint") @db.Char(64)
+  taxonomyVersion     String    @map("taxonomy_version") @db.VarChar(16)
+  /// Set when this plan was superseded before or at activation, pointing at the plan that won.
+  supersededByPlanId  String?   @map("superseded_by_plan_id") @db.Uuid
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  /// Null for a plan archived on arrival (superseded before ever being active).
+  activatedAt         DateTime? @map("activated_at") @db.Timestamptz(6)
+  archivedAt          DateTime? @map("archived_at") @db.Timestamptz(6)
+
+  user          User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson        Lesson                @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  generationRun ContentGenerationRun? @relation(fields: [generationRunId], references: [id], onDelete: SetNull)
+  supersededBy  StudyPlan?            @relation("StudyPlanSupersedes", fields: [supersededByPlanId], references: [id], onDelete: SetNull)
+  superseded    StudyPlan[]           @relation("StudyPlanSupersedes")
+  activities    StudyPlanActivity[]
+  requests      StudyPlanRequest[]
+
+  @@unique([userId, lessonId, origin], map: "ux_study_plans_user_lesson_origin")
+  @@index([userId, createdAt(sort: Desc)], map: "ix_study_plans_user_created")
+  @@map("study_plans")
+}
+
+/// One activity in one plan's 7-day, 2–4-per-day grid. `contentItemId` is set
+/// for the five bank kinds; the three task kinds (writing, speaking,
+/// pronunciation) carry none — F17/F18 build the task when it opens.
+/// `carriedFromActivityId` chains a carried-over activity back to the row it
+/// continues in the previous plan, which is how the state contract resolves
+/// an old id forward.
+model StudyPlanActivity {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  planId                String    @map("plan_id") @db.Uuid
+  /// Denormalised owner, for the state contract's ownership guard.
+  userId                String    @map("user_id") @db.Uuid
+  day                   Int       @db.SmallInt
+  position              Int       @db.SmallInt
+  /// One of listening, reading, vocabulary, grammar, error_review, writing, speaking, pronunciation.
+  kind                  String    @db.VarChar(16)
+  /// Set exactly for the five bank kinds.
+  contentItemId         String?   @map("content_item_id") @db.Uuid
+  /// Snapshot at placement time.
+  title                 String    @db.VarChar(200)
+  targetTags            String[]  @default([]) @map("target_tags")
+  isReview              Boolean   @default(false) @map("is_review")
+  /// Computed in code from item metadata or the rules file, never from the model.
+  estimatedMinutes      Int       @map("estimated_minutes") @db.SmallInt
+  rationale             String    @db.VarChar(240)
+  /// One of model, template.
+  rationaleSource       String    @map("rationale_source") @db.VarChar(16)
+  /// One of model, guardrail, carry_over, task — what code placed it, for the curator.
+  placement             String    @db.VarChar(16)
+  carriedFromActivityId String?   @map("carried_from_activity_id") @db.Uuid
+  /// One of pending, in_progress, completed, skipped.
+  state                 String    @default("pending") @db.VarChar(16)
+  startedAt             DateTime? @map("started_at") @db.Timestamptz(6)
+  completedAt           DateTime? @map("completed_at") @db.Timestamptz(6)
+  skippedAt             DateTime? @map("skipped_at") @db.Timestamptz(6)
+  skipReason            String?   @map("skip_reason") @db.VarChar(200)
+  /// The attempt id that completed it; a repeat is a no-op.
+  completionKey         String?   @map("completion_key") @db.Uuid
+  scoreCorrect          Int?      @map("score_correct") @db.SmallInt
+  scoreTotal            Int?      @map("score_total") @db.SmallInt
+  timeSpentSeconds      Int?      @map("time_spent_seconds")
+  /// One of too_easy, just_right, too_hard.
+  difficultyRating      String?   @map("difficulty_rating") @db.VarChar(12)
+  notUseful             Boolean   @default(false) @map("not_useful")
+  ratedAt               DateTime? @map("rated_at") @db.Timestamptz(6)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  plan        StudyPlan           @relation(fields: [planId], references: [id], onDelete: Cascade)
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contentItem ContentItem?        @relation(fields: [contentItemId], references: [id], onDelete: NoAction)
+  carriedFrom StudyPlanActivity?  @relation("StudyPlanActivityCarry", fields: [carriedFromActivityId], references: [id], onDelete: SetNull)
+  carriedTo   StudyPlanActivity[] @relation("StudyPlanActivityCarry")
+
+  @@unique([planId, day, position], map: "ux_plan_activities_plan_slot")
+  @@index([userId, completedAt(sort: Desc)], map: "ix_plan_activities_user_completed")
+  @@map("study_plan_activities")
+}
+
+/// The fallback (F07's `StudyPlanFallbackPort`) and interim-plan (analysis
+/// blocked on a missing Gemini key) build queue `PlanRequestJob` polls — the
+/// two origins that run outside the `plan_generation` pipeline stage.
+model StudyPlanRequest {
+  id            String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String    @map("user_id") @db.Uuid
+  lessonId      String    @map("lesson_id") @db.Uuid
+  /// One of recording_failed, analysis_blocked.
+  origin        String    @db.VarChar(24)
+  /// One of pending, running, retrying, completed, superseded, failed.
+  status        String    @default("pending") @db.VarChar(16)
+  attempts      Int       @default(0) @db.SmallInt
+  /// Lease start while running.
+  claimedAt     DateTime? @map("claimed_at") @db.Timestamptz(6)
+  /// Set exactly while retrying.
+  nextAttemptAt DateTime? @map("next_attempt_at") @db.Timestamptz(6)
+  progressDone  Int?      @map("progress_done") @db.SmallInt
+  progressTotal Int?      @map("progress_total") @db.SmallInt
+  /// Set exactly when failed.
+  failureReason String?   @map("failure_reason") @db.VarChar(200)
+  /// Set when completed.
+  planId        String?   @map("plan_id") @db.Uuid
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  /// Set in completed, superseded and failed.
+  finishedAt    DateTime? @map("finished_at") @db.Timestamptz(6)
+
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  plan   StudyPlan? @relation(fields: [planId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, lessonId, origin], map: "ux_plan_requests_user_lesson_origin")
+  @@index([status, nextAttemptAt], map: "ix_plan_requests_claim")
+  @@map("study_plan_requests")
 }
