@@ -15,6 +15,7 @@ export const pipelineStageSchema = z.enum([
   'pronunciation_assessment',
   'lesson_analysis',
   'profile_update',
+  'plan_generation',
 ]);
 export type PipelineStage = z.infer<typeof pipelineStageSchema>;
 
@@ -30,6 +31,7 @@ export const pipelineStageLabels: Record<PipelineStage, { title: string; active:
   pronunciation_assessment: { title: 'Pronunciation assessed', active: 'Assessing pronunciation' },
   lesson_analysis: { title: 'Analyzed', active: 'Analyzing' },
   profile_update: { title: 'Profile updated', active: 'Updating profile' },
+  plan_generation: { title: 'Plan generated', active: 'Generating plan' },
 };
 
 /** A stage row's own lifecycle — see the state diagram in the F08 spec. */

@@ -17,6 +17,8 @@ import { PIPELINE_RETRY_OVERRIDES } from '../../../src/pipeline/pipeline-stage.r
 import { PIPELINE_QUEUE } from '../../../src/pipeline/pipeline.constants';
 import { PipelineQueueService } from '../../../src/pipeline/pipeline-queue.service';
 import { PipelineService } from '../../../src/pipeline/pipeline.service';
+import type { IngestionResult, ProfileSourceInput } from '../../../src/profile/profile-ingestion.contract';
+import { ProfileIngestionService } from '../../../src/profile/profile-ingestion.service';
 import { PromptRegistryService } from '../../../src/prompts/prompt-registry.service';
 import {
   PRONUNCIATION_EXCERPT_RETRY_DELAYS_OVERRIDE,
@@ -50,6 +52,9 @@ export const FAST_EXCERPT_RETRY_DELAYS = [10, 10];
 
 /** Lesson analysis's own stage retries (1, 5 and 15 minutes in production), shortened the same way. */
 export const FAST_ANALYSIS_RETRY_POLICY = { attempts: 4, delaysMs: [40, 40, 40] };
+
+/** The profile update's retries (5 s and 30 s in production), shortened the same way. */
+export const FAST_PROFILE_UPDATE_RETRY_POLICY = { attempts: 3, delaysMs: [40, 40] };
 
 export interface PipelineTestContext {
   ctx: TestContext;
@@ -120,6 +125,7 @@ export async function createPipelineTestContext(
           excerpt_selection: FAST_SELECTION_RETRY_POLICY,
           pronunciation_assessment: FAST_PRONUNCIATION_RETRY_POLICY,
           lesson_analysis: FAST_ANALYSIS_RETRY_POLICY,
+          profile_update: FAST_PROFILE_UPDATE_RETRY_POLICY,
         },
       },
       ...(typeof extra.overrides === 'function' ? extra.overrides() : (extra.overrides ?? [])),
@@ -530,6 +536,8 @@ export interface AnalysisReadyPronunciation {
     exampleExcerptId: string;
     exampleUtteranceId: string;
   }>;
+  /** F10's ledger tags, what F12 ingests. */
+  phonemeTags?: Array<{ tag: string; phoneme: string; occurrences: number; meanAccuracy: number; exampleWords: string[] }>;
 }
 
 export interface AnalysisReadyParticipant {
@@ -680,7 +688,7 @@ export async function makeAnalysisReadyLesson(
             assessedAudioMs: 5_000,
             worstPhonemes: pron.worstPhonemes ?? [],
             worstWords: [],
-            phonemeTags: [],
+            phonemeTags: pron.phonemeTags ?? [],
             provider: 'azure_pronunciation_assessment',
             locale: 'en-US',
             phonemeAlphabet: 'IPA',
@@ -721,6 +729,103 @@ export async function makeAnalysisReadyLesson(
   }
 
   return { lessonId: lesson.id, startedAt, branches, audioBytes: new Map() };
+}
+
+/** Adds the profile update job for a branch waiting at `profile_update`, as F11's completion does. */
+export async function startProfileUpdate(pipeline: PipelineTestContext, branchId: string, run = 1): Promise<void> {
+  await pipeline.ctx.app.get(PipelineQueueService).enqueue(branchId, 'profile_update', run);
+}
+
+export interface SeededAnalysis {
+  scores?: Partial<Record<'grammar' | 'vocabulary' | 'fluency' | 'interaction' | 'comprehension', number>>;
+  /** Each quoted from the owner's utterance at `utteranceIdx`, when given. */
+  errors?: Array<{ tag: string; quote: string; correction?: string; severity?: 'minor' | 'moderate' | 'major'; utteranceIdx?: number }>;
+}
+
+/** An analysis row with its errors, as F11's completing transaction writes it. */
+export async function seedAnalysis(
+  ctx: TestContext,
+  lessonId: string,
+  userId: string,
+  analysis: SeededAnalysis = {},
+): Promise<string> {
+  const scores = { grammar: 65, vocabulary: 70, fluency: 72, interaction: 68, comprehension: 75, ...analysis.scores };
+  const utterances = await ctx.prisma.lessonUtterance.findMany({ where: { lessonId, userId }, orderBy: { idx: 'asc' } });
+  const row = await ctx.prisma.lessonAnalysis.create({
+    data: {
+      lessonId,
+      userId,
+      ...scores,
+      justifications: { grammar: 'x', vocabulary: 'x', fluency: 'x', interaction: 'x', comprehension: 'x' },
+      strengths: ['a', 'b', 'c'],
+      recurringTags: [],
+      topics: ['a', 'b', 'c'],
+      scenarioContext: 'none',
+      pronunciationContext: 'no_sample',
+      transcriptTokensEstimated: 100,
+      transcriptTruncated: false,
+      taxonomyVersion: '2',
+      promptId: 'lesson-analysis',
+      promptVersion: '2',
+      model: 'gemini-test',
+      latencyMs: 1_000,
+      schemaRetried: false,
+    },
+  });
+  for (const [idx, error] of (analysis.errors ?? []).entries()) {
+    await ctx.prisma.lessonAnalysisError.create({
+      data: {
+        analysisId: row.id,
+        lessonId,
+        userId,
+        idx,
+        quote: error.quote,
+        tag: error.tag,
+        correction: error.correction ?? 'a corrected sentence',
+        explanation: 'why',
+        severity: error.severity ?? 'moderate',
+        utteranceId: error.utteranceIdx === undefined ? null : (utterances[error.utteranceIdx]?.id ?? null),
+      },
+    });
+  }
+  return row.id;
+}
+
+/**
+ * What F11's completing transaction leaves behind: everything
+ * `makeAnalysisReadyLesson` builds, plus each participant's analysis row,
+ * `lesson_analysis` completed and the branch waiting at `profile_update` /
+ * `queued` — F12's own resting point — with no job yet. A participant whose
+ * `analysis` is null stays waiting at `lesson_analysis` instead.
+ */
+export async function makeProfileUpdateReadyLesson(
+  pipeline: PipelineTestContext,
+  participants: Array<AnalysisReadyParticipant & { analysis?: SeededAnalysis | null }>,
+  options: { durationSeconds?: number } = {},
+): Promise<RecordedLesson> {
+  const { ctx } = pipeline;
+  const lesson = await makeAnalysisReadyLesson(pipeline, participants, options);
+  for (const participant of participants) {
+    if (participant.analysis === null) {
+      continue;
+    }
+    const userId = participant.speaker.id;
+    const branchId = lesson.branches.get(userId)!;
+    await seedAnalysis(ctx, lesson.lessonId, userId, participant.analysis);
+    const now = new Date();
+    await ctx.prisma.lessonPipelineStage.update({
+      where: { branchId_stage: { branchId, stage: 'lesson_analysis' } },
+      data: { status: 'completed', startedAt: now, finishedAt: now, attempts: 1 },
+    });
+    await ctx.prisma.lessonPipelineStage.create({
+      data: { branchId, stage: 'profile_update', status: 'queued', queuedAt: now },
+    });
+    await ctx.prisma.lessonPipelineBranch.update({
+      where: { id: branchId },
+      data: { stage: 'profile_update', status: 'queued' },
+    });
+  }
+  return lesson;
 }
 
 /** Polls a branch's stage row until it reaches one of `statuses`. The worker is asynchronous; tests wait on its end state. */
@@ -771,4 +876,139 @@ export async function resetPipelineTables(ctx: TestContext): Promise<void> {
   await ctx.prisma.credentialUsage.deleteMany();
   await ctx.prisma.userCredential.deleteMany();
   await ctx.prisma.user.deleteMany();
+}
+
+/** A bare account: no session and no keys — all the profile engine needs, since it never calls a provider. */
+export async function seedUser(ctx: TestContext, displayName: string): Promise<string> {
+  const user = await ctx.prisma.user.create({
+    data: { email: `${displayName.toLowerCase()}@example.com`, displayName, passwordHash: 'x'.repeat(60) },
+  });
+  return user.id;
+}
+
+/** An ended lesson the users took part in, started at `startedAt` — the anchor a lesson source is keyed by. */
+export async function seedLesson(ctx: TestContext, userIds: string[], startedAt: Date): Promise<string> {
+  const lesson = await ctx.prisma.lesson.create({
+    data: {
+      room: 'classroom-main',
+      openedBy: userIds[0]!,
+      maxParticipants: 4,
+      status: 'ended',
+      startedAt,
+      endedAt: new Date(startedAt.getTime() + 30 * 60_000),
+      endReason: 'ended_by_participant',
+      durationSeconds: 1_800,
+      recordingStatus: 'recorded',
+    },
+  });
+  for (const userId of userIds) {
+    await ctx.prisma.lessonParticipant.create({
+      data: { lessonId: lesson.id, userId, identity: userId, joinedAt: startedAt },
+    });
+  }
+  return lesson.id;
+}
+
+export interface ProfileOccurrenceSeed {
+  tag: string;
+  quote?: string | null;
+  correction?: string | null;
+  severity?: 'minor' | 'moderate' | 'major' | null;
+  exampleWords?: string[];
+  instances?: number;
+  utteranceId?: string | null;
+}
+
+/** A lesson source as `lesson-profile-sources.ts` builds it, from plain values. */
+export function lessonSourceInput(options: {
+  kind: 'lesson_analysis' | 'lesson_pronunciation';
+  userId: string;
+  lessonId: string;
+  occurredAt: Date;
+  revision?: string;
+  scores?: Partial<Record<'grammar' | 'vocabulary' | 'fluency' | 'interaction' | 'comprehension', number>>;
+  pronunciation?: { value: number; accuracy: number; prosody: number | null } | null;
+  occurrences?: ProfileOccurrenceSeed[];
+}): ProfileSourceInput {
+  const measurements =
+    options.kind === 'lesson_pronunciation'
+      ? options.pronunciation
+        ? [{ competency: 'pronunciation' as const, ...options.pronunciation }]
+        : []
+      : Object.entries(options.scores ?? {}).map(([competency, value]) => ({
+          competency: competency as 'grammar',
+          value: value!,
+          accuracy: null,
+          prosody: null,
+        }));
+  return {
+    userId: options.userId,
+    kind: options.kind,
+    sourceKey: options.lessonId,
+    revision: options.revision ?? `${options.kind}-${options.lessonId}`.slice(0, 64),
+    lessonId: options.lessonId,
+    activityId: null,
+    occurredAt: options.occurredAt,
+    label: null,
+    measurements,
+    occurrences: (options.occurrences ?? []).map((occurrence) => ({
+      tag: occurrence.tag,
+      quote: occurrence.quote ?? null,
+      correction: occurrence.correction ?? null,
+      severity: occurrence.severity ?? null,
+      exampleWords: occurrence.exampleWords ?? [],
+      instances: occurrence.instances ?? 1,
+      analysisErrorId: null,
+      utteranceId: occurrence.utteranceId ?? null,
+    })),
+    encounters: [],
+  };
+}
+
+/** Applies one source through the real engine, in its own transaction, as the stage or the job would. */
+export async function seedProfileSource(ctx: TestContext, input: ProfileSourceInput): Promise<IngestionResult> {
+  const ingestion = ctx.app.get(ProfileIngestionService);
+  return ctx.prisma.$transaction((tx) => ingestion.applySource(tx, input));
+}
+
+/**
+ * A lesson whose profile update already ran: a lesson row, then its
+ * pronunciation and analysis sources applied through the engine. For the
+ * suites that need a profile to exist rather than to be built by the stage.
+ */
+export async function makeProfiledLesson(
+  ctx: TestContext,
+  userId: string,
+  options: {
+    startedAt: Date;
+    scores?: Partial<Record<'grammar' | 'vocabulary' | 'fluency' | 'interaction' | 'comprehension', number>>;
+    pronunciation?: { value: number; accuracy: number; prosody: number | null } | null;
+    errors?: ProfileOccurrenceSeed[];
+    phonemes?: ProfileOccurrenceSeed[];
+  },
+): Promise<string> {
+  const lessonId = await seedLesson(ctx, [userId], options.startedAt);
+  await seedProfileSource(
+    ctx,
+    lessonSourceInput({
+      kind: 'lesson_pronunciation',
+      userId,
+      lessonId,
+      occurredAt: options.startedAt,
+      pronunciation: options.pronunciation ?? null,
+      occurrences: options.phonemes ?? [],
+    }),
+  );
+  await seedProfileSource(
+    ctx,
+    lessonSourceInput({
+      kind: 'lesson_analysis',
+      userId,
+      lessonId,
+      occurredAt: options.startedAt,
+      scores: options.scores ?? { grammar: 70, vocabulary: 70, fluency: 70, interaction: 70, comprehension: 70 },
+      occurrences: options.errors ?? [],
+    }),
+  );
+  return lessonId;
 }

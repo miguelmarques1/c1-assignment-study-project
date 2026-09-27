@@ -57,14 +57,16 @@ describe('status area', () => {
       'Pronunciation assessed',
       'Analyzed',
       'Profile updated',
+      'Plan generated',
     ]);
     expect(steps[0]).toHaveTextContent('Ready');
     expect(steps[2]).toHaveTextContent('DoneTook 1m 04s');
     expect(steps[5]).toHaveTextContent('Failed');
     expect(steps[6]).toHaveTextContent('Not started');
+    expect(steps[7]).toHaveTextContent('Not started');
 
     const others = within(screen.getByRole('list', { name: "Ana's processing" })).getAllByRole('listitem');
-    expect(others).toHaveLength(6);
+    expect(others).toHaveLength(7);
     expect(others[1]).toHaveTextContent('TranscribedDone');
     expect(others[3]).toHaveTextContent('In progress');
     expect(others[4]).toHaveTextContent('Not started');

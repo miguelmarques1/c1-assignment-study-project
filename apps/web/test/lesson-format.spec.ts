@@ -8,7 +8,7 @@ import {
   formatElapsed,
   formatParticipants,
 } from '@/components/lessons/format';
-import { formatRelativeDate } from '@/lib/relative-time';
+import { formatRelativeTime } from '@/lib/relative-time';
 
 /**
  * The case table shared with mobile's `lesson_format_test.dart` (and F12's
@@ -32,15 +32,15 @@ describe('lesson formatters', () => {
       ['2026-09-25T15:00:20.000Z', 'Just now'],
     ];
     for (const [iso, text] of cases) {
-      expect(formatRelativeDate(iso, NOW, 'UTC'), iso).toBe(text);
+      expect(formatRelativeTime(iso, NOW, 'UTC'), iso).toBe(text);
     }
   });
 
   it('calendar_days_are_the_viewers', () => {
     // 09:00 and 23:00 of the same São Paulo day, though UTC puts them on two different days.
     const now = new Date('2026-09-25T02:00:00.000Z');
-    expect(formatRelativeDate('2026-09-24T12:00:00.000Z', now, 'America/Sao_Paulo')).toBe('14 hours ago');
-    expect(formatRelativeDate('2026-09-24T12:00:00.000Z', now, 'UTC')).toBe('Yesterday');
+    expect(formatRelativeTime('2026-09-24T12:00:00.000Z', now, 'America/Sao_Paulo')).toBe('14 hours ago');
+    expect(formatRelativeTime('2026-09-24T12:00:00.000Z', now, 'UTC')).toBe('Yesterday');
   });
 
   it('durations_clocks_elapsed_and_sizes', () => {

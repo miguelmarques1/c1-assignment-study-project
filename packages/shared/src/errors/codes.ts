@@ -49,6 +49,12 @@ export const ERROR_CODES = {
   PIPELINE_NOT_RETRYABLE: 'PIPE001',
   /** The caller's branch failed at recording, which has its own retry route. */
   PIPELINE_RETRY_RECORDING: 'PIPE002',
+  /** No such ledger record for the caller — including another user's entry id, so existence never leaks. */
+  PROFILE_LEDGER_ENTRY_NOT_FOUND: 'PROF001',
+  /** No content item has this id. Internal to the content bank today; F16's activity route surfaces it. */
+  CONTENT_ITEM_NOT_FOUND: 'CONTENT001',
+  /** The slug belongs to an item of another type or provenance, so it is refused rather than overwritten. */
+  CONTENT_SLUG_CONFLICT: 'CONTENT002',
   /** At least one infrastructure dependency is unreachable. */
   HEALTH_DEPENDENCY_DOWN: 'HEALTH001',
   /** Unhandled server-side failure. */
@@ -82,6 +88,9 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   [ERROR_CODES.RECORDING_NOT_FINALIZED]: 409,
   [ERROR_CODES.PIPELINE_NOT_RETRYABLE]: 409,
   [ERROR_CODES.PIPELINE_RETRY_RECORDING]: 409,
+  [ERROR_CODES.PROFILE_LEDGER_ENTRY_NOT_FOUND]: 404,
+  [ERROR_CODES.CONTENT_ITEM_NOT_FOUND]: 404,
+  [ERROR_CODES.CONTENT_SLUG_CONFLICT]: 409,
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 503,
   [ERROR_CODES.INTERNAL_ERROR]: 500,
 };
@@ -119,6 +128,9 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ERROR_CODES.RECORDING_NOT_FINALIZED]: 'This lesson is still being processed.',
   [ERROR_CODES.PIPELINE_NOT_RETRYABLE]: 'There is nothing to retry at this stage.',
   [ERROR_CODES.PIPELINE_RETRY_RECORDING]: "This lesson's recording has to be retried first.",
+  [ERROR_CODES.PROFILE_LEDGER_ENTRY_NOT_FOUND]: 'This error record could not be found.',
+  [ERROR_CODES.CONTENT_ITEM_NOT_FOUND]: 'Content item not found.',
+  [ERROR_CODES.CONTENT_SLUG_CONFLICT]: 'This slug is already used by another content item.',
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 'One or more dependencies are unavailable.',
   [ERROR_CODES.INTERNAL_ERROR]: 'Something went wrong on our side.',
 };

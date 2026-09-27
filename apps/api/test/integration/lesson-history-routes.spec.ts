@@ -513,6 +513,7 @@ describe('GET /lessons/:lessonId', () => {
       ['pronunciation_assessment', 'not_started'],
       ['lesson_analysis', 'not_started'],
       ['profile_update', 'not_started'],
+      ['plan_generation', 'not_started'],
     ]);
     for (const stage of other.stages) {
       expect(Object.keys(stage).sort()).toEqual(['finishedAt', 'stage', 'startedAt', 'state']);
@@ -525,7 +526,13 @@ describe('GET /lessons/:lessonId', () => {
     // Bruno's own view carries his card's status, and Ana's stages coarsely.
     const asBruno = (await detail(lesson.lessonId, bruno)).body.data;
     expect(asBruno).toMatchObject({ status: 'blocked', scenario: { myCardStatus: 'failed' } });
-    expect(asBruno.others[0].stages.every((stage: { stage: string; state: string }) => stage.state === 'completed' || stage.stage === 'profile_update')).toBe(true);
+    // Ana's branch is ready: analysed, and waiting from profile_update on.
+    expect(
+      asBruno.others[0].stages.every(
+        (stage: { stage: string; state: string }) =>
+          stage.state === 'completed' || stage.stage === 'profile_update' || stage.stage === 'plan_generation',
+      ),
+    ).toBe(true);
     expect(JSON.stringify(asBruno)).not.toContain('ANA-CARD');
   }, 60_000);
 
@@ -586,7 +593,8 @@ describe('GET /lessons/:lessonId', () => {
     const retried = await http().post(`/lessons/${lesson.lessonId}/pipeline/retry`).set('Cookie', ana.cookie);
     expect(retried.status).toBe(202);
     await waitForStage(pipeline.ctx, branchId, 'lesson_analysis', ['completed'], 60_000);
-    await waitForStage(pipeline.ctx, branchId, 'profile_update', ['queued']);
+    // F12's profile_update handler runs at once; the branch then rests at plan_generation.
+    await waitForStage(pipeline.ctx, branchId, 'profile_update', ['completed']);
 
     const after = await pipeline.ctx.prisma.lessonPipelineStage.findMany({ where: { branchId } });
     expect(runOf(after, 'lesson_analysis')).toBe(runOf(before, 'lesson_analysis') + 1);

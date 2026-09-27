@@ -146,8 +146,8 @@ class OwnStepper extends StatelessWidget {
       ),
     ];
 
-    // The shared order, then any stage this build does not know yet (F12's
-    // `plan_generation`) — shown humanized rather than silently dropped.
+    // The shared order, then any stage this build does not know yet (one a
+    // later feature appends) — shown humanized rather than silently dropped.
     final order = [
       ...PipelineStage.order,
       for (final view in pipeline.stages)

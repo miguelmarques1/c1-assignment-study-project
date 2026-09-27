@@ -49,7 +49,7 @@ class LessonRow extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                '${formatRelativeDate(lesson.startedAt)} · ${formatDuration(lesson.durationSeconds)}',
+                '${formatRelativeTime(lesson.startedAt)} · ${formatDuration(lesson.durationSeconds)}',
                 style: palette.label.copyWith(color: palette.onSurfaceVariant),
               ),
               SizedBox(height: EqSpacing.sm),

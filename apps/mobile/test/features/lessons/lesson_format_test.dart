@@ -21,7 +21,7 @@ void main() {
       '2026-09-25T15:00:20.000Z': 'Just now',
     };
     for (final MapEntry(key: iso, value: text) in cases.entries) {
-      expect(formatRelativeDate(DateTime.parse(iso), now: now, utcOffset: Duration.zero), text, reason: iso);
+      expect(formatRelativeTime(DateTime.parse(iso), reference: now, utcOffset: Duration.zero), text, reason: iso);
     }
 
     expect(formatDuration(42 * 60), '42 min');
@@ -41,8 +41,8 @@ void main() {
   test('calendar_days_are_the_viewers', () {
     final late = DateTime.parse('2026-09-25T02:00:00.000Z');
     final morning = DateTime.parse('2026-09-24T12:00:00.000Z');
-    expect(formatRelativeDate(morning, now: late, utcOffset: const Duration(hours: -3)), '14 hours ago');
-    expect(formatRelativeDate(morning, now: late, utcOffset: Duration.zero), 'Yesterday');
+    expect(formatRelativeTime(morning, reference: late, utcOffset: const Duration(hours: -3)), '14 hours ago');
+    expect(formatRelativeTime(morning, reference: late, utcOffset: Duration.zero), 'Yesterday');
     expect(formatAbsoluteDate(DateTime.parse('2026-09-24T14:10:03.000Z'), utcOffset: Duration.zero), '24 Sep 2026, 14:10');
   });
 

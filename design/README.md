@@ -34,7 +34,7 @@ Two things intentionally have no row anywhere in this document: elements that ne
 | Region | Owner | Status | Reference |
 |---|---|---|---|
 | Header: logo + wordmark | F21 | implemented | Shared with settings; unchanged |
-| Header: pill navigation | F22 | implemented | Shared with settings; carries Dashboard, Lessons (F19, prefix-matched so a lesson's detail keeps it active) and Settings today, in the mobile tabs' order — F12's Profile goes between Dashboard and Lessons. "Scenarios & Practice" is a further pill entry deferred to F06 |
+| Header: pill navigation | F22 | implemented | Shared with settings; carries Dashboard, Profile (F12), Lessons (F19, prefix-matched so a lesson's detail keeps it active) and Settings, in the mobile shell's tab order. "Scenarios & Practice" is a further pill entry deferred to F06 |
 | Header: streak chip ("7 Day Streak") | — | dropped | Section 7, Social and comparison: "Leaderboards, streaks, badges…" |
 | Header: XP chip ("1,420 XP") | — | dropped | Section 7, Social and comparison: the same clause — XP is this product's name for the points mechanic it excludes |
 | Header: avatar | F22 | implemented | Shared with settings; initials avatar rather than the mockup's generic person icon |

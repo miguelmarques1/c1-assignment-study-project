@@ -25,7 +25,7 @@ class LessonHeader extends StatelessWidget {
         LessonStatusBadge(status: lesson.status, flags: lesson.flags),
         SizedBox(height: EqSpacing.sm),
         Text(
-          '${formatAbsoluteDate(lesson.startedAt)} (${formatRelativeDate(lesson.startedAt)})',
+          '${formatAbsoluteDate(lesson.startedAt)} (${formatRelativeTime(lesson.startedAt)})',
           style: palette.body.copyWith(color: palette.onSurfaceVariant),
         ),
         SizedBox(height: EqSpacing.xs),

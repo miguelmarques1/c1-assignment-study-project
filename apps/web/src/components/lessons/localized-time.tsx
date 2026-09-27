@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
-import { formatRelativeDate } from '@/lib/relative-time';
+import { formatRelativeTime } from '@/lib/relative-time';
 
 import { formatAbsoluteDate, formatTimeOfDay } from './format';
 
@@ -10,7 +10,7 @@ export type TimeFormat = 'relative' | 'absolute' | 'time';
 
 function formatIn(iso: string, format: TimeFormat, timeZone?: string): string {
   if (format === 'relative') {
-    return formatRelativeDate(iso, new Date(), timeZone);
+    return formatRelativeTime(iso, new Date(), timeZone);
   }
   return format === 'absolute' ? formatAbsoluteDate(iso, timeZone) : formatTimeOfDay(iso, timeZone);
 }

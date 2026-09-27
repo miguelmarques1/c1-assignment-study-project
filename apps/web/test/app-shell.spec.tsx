@@ -67,8 +67,8 @@ describe('AppHeader', () => {
     usePathname.mockReturnValue('/lessons');
     render(<AppHeader user={{ id: '3f8b1a20-5c6d-4e7f-8a91-2b3c4d5e6f70', email: 'miguel@example.com', displayName: 'Miguel Marques', sessionExpiresAt: '2026-10-01T00:00:00.000Z' }} />);
     const links = screen.getAllByRole('link').map((link) => link.textContent);
-    expect(links).toEqual(expect.arrayContaining(['Dashboard', 'Lessons', 'Settings']));
-    expect(links.indexOf('Lessons')).toBe(links.indexOf('Dashboard') + 1);
+    expect(links).toEqual(expect.arrayContaining(['Dashboard', 'Profile', 'Lessons', 'Settings']));
+    expect(links.indexOf('Lessons')).toBe(links.indexOf('Profile') + 1);
     expect(screen.getByRole('link', { name: 'Lessons' })).toHaveAttribute('aria-current', 'page');
   });
 });
@@ -101,5 +101,26 @@ describe('header', () => {
 
     expect(screen.queryByText(/streak/i)).toBeNull();
     expect(screen.queryByText(/\bXP\b/)).toBeNull();
+  });
+
+  it('the_header_carries_the_profile_destination', () => {
+    usePathname.mockReturnValue('/profile');
+    render(
+      <AppHeader
+        user={{
+          id: '4e5f6a7b-8c9d-4e0f-a1b2-c3d4e5f6a7b8',
+          email: 'miguel@example.com',
+          displayName: 'Miguel Marques',
+          sessionExpiresAt: '2026-09-26T10:00:00.000Z',
+        }}
+      />,
+    );
+
+    const nav = screen.getByRole('link', { name: 'Profile' }).closest('nav') ?? document.body;
+    const labels = Array.from(nav.querySelectorAll('a')).map((link) => link.textContent);
+    // The mobile tabs' order: Profile, then F19's Lessons.
+    expect(labels).toEqual(['Dashboard', 'Profile', 'Lessons', 'Settings']);
+    expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('href', '/profile');
+    expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('aria-current', 'page');
   });
 });

@@ -1,10 +1,12 @@
 import 'package:english_quest_tokens/english_quest_tokens.dart';
 import 'package:flutter/material.dart';
 
-/// Mirrors `apps/web/src/components/ui/chip.tsx`'s tone vocabulary.
+/// Mirrors `apps/web/src/components/ui/chip.tsx`'s five tones.
 enum EqChipTone { neutral, accent, success, warning, danger }
 
-/// A small outlined pill carrying a label and, optionally, a count (`×3`).
+/// A rounded label with an optional recurrence [count] (`×3`), as the web's
+/// `Chip`. Never interactive by itself: a tappable chip is wrapped by its
+/// owner, which also gives it its semantics.
 class EqChip extends StatelessWidget {
   const EqChip({super.key, required this.label, this.tone = EqChipTone.neutral, this.count});
 
@@ -28,11 +30,12 @@ class EqChip extends StatelessWidget {
         child: Text.rich(
           TextSpan(
             text: label,
+            style: EqTextStyles.labelMd(dark: dark).copyWith(color: foreground),
             children: [
-              if (count != null) TextSpan(text: ' ×$count', style: EqTextStyles.labelSm(dark: dark).copyWith(color: foreground)),
+              if (count != null)
+                TextSpan(text: ' ×$count', style: EqTextStyles.labelSm(dark: dark).copyWith(color: foreground)),
             ],
           ),
-          style: EqTextStyles.labelMd(dark: dark).copyWith(color: foreground),
         ),
       ),
     );

@@ -4,11 +4,11 @@ Next.js 15 (App Router) with React 19, Tailwind v4 built on `@english-quest/desi
 
 ## Layout
 
-- `src/app/`: `(app)/` holds the signed-in screens (dashboard, settings) under the shared `AppHeader` layout. `classroom/` is the lesson flow (pre-call, waiting room, live stage). `(dev)/design-system` is the component gallery. `login/` is the only public page.
+- `src/app/`: `(app)/` holds the signed-in screens (dashboard, profile, settings) under the shared `AppHeader` layout. `classroom/` is the lesson flow (pre-call, waiting room, live stage). `(dev)/design-system` is the component gallery. `login/` is the only public page.
 - `src/middleware.ts` redirects users without a session.
 - `src/components/ui/`: design-system primitives (Button, Card, Badge, Meter, Chip, Field, TextField, Stack, Grid, page states, Avatar, NavPill, Logo) and `ui/icons`. Build screens from these. Extend a primitive before hand-rolling a one-off.
 - `src/components/<area>/`: screen components (`classroom/`, `dashboard/`, …). Hooks that wrap browser or LiveKit APIs sit next to them (`use-classroom-room.ts`, `use-media-preview.ts`).
-- `src/lib/`: `api-client.ts` (`apiFetch`, which is browser-side, sends the session cookie and throws `ApiRequestError` with the error code), `server-session.ts` (server-component reads over the container network: `getCurrentUser`, `getClassroomSession`, `getScenarioView`), and one small module per API area (`classroom.ts`, `scenario.ts`, `credentials.ts`).
+- `src/lib/`: `api-client.ts` (`apiFetch`, which is browser-side, sends the session cookie and throws `ApiRequestError` with the error code), `server-session.ts` (server-component reads over the container network: `getCurrentUser`, `getClassroomSession`, `getScenarioView`, `getProfileView`), `relative-time.ts` (the relative-date wording both clients share), and one small module per API area (`classroom.ts`, `scenario.ts`, `credentials.ts`, `profile.ts`).
 
 ## Styling: tokens only
 

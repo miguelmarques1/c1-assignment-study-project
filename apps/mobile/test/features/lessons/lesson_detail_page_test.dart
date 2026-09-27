@@ -3,9 +3,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/design/eq_theme.dart';
 import 'package:mobile/features/lessons/lesson_detail_page.dart';
 import 'package:mobile/features/lessons/lessons_api.dart';
+import 'package:mobile/features/profile/profile_controller.dart';
 
 import '../../helpers/pump_screen.dart';
 import '../../helpers/scripted_dio.dart';
+import '../profile_fixtures.dart' as profile;
 import 'fixtures.dart';
 
 Map<String, Responder> _routes({Map<String, Responder> overrides = const {}}) => {
@@ -24,11 +26,18 @@ Future<ScriptedAdapter> _pump(
   WidgetTester tester, {
   Map<String, Responder> overrides = const {},
   void Function(String path)? onNavigate,
+  ProfileController? profileController,
   double textScale = 1,
   bool tall = true,
 }) async {
   final (dio, adapter) = scriptedDio(_routes(overrides: overrides));
-  final page = LessonDetailPage(key: UniqueKey(), lessonId: lessonId, api: LessonsApi(dio), onNavigate: onNavigate ?? (_) {});
+  final page = LessonDetailPage(
+    key: UniqueKey(),
+    lessonId: lessonId,
+    api: LessonsApi(dio),
+    profile: profileController,
+    onNavigate: onNavigate ?? (_) {},
+  );
   if (tall) {
     // Tall enough that every section of a tab is built, for content assertions.
     tester.view
@@ -87,6 +96,31 @@ void main() {
       expect(find.text('Not measured'), findsOneWidget);
       expect(find.text('Sounds to work on'), findsOneWidget);
       expect(find.text('Topics to practice'), findsOneWidget);
+    });
+
+    testWidgets('a_tag_chip_opens_its_ledger_record', (tester) async {
+      final navigated = <String>[];
+      final (profileDio, profileAdapter) = scriptedDio({
+        'GET /profile/ledger': ok({
+          'serverTime': profile.serverTime,
+          'entries': [profile.entryJson()],
+        }),
+        'GET /profile/ledger/${profile.entryId}': ok(profile.detailJson()),
+      });
+      await _pump(tester, onNavigate: navigated.add, profileController: ProfileController(profileDio));
+
+      await tester.tap(find.bySemanticsLabel('Third conditional: open in your error ledger'));
+      await tester.pumpAndSettle();
+
+      expect(profileAdapter.requests.first.queryParameters, {'tag': 'grammar:conditional-3'});
+      expect(find.byType(BottomSheet), findsOneWidget);
+      expect(find.text('Correction: if I had known'), findsOneWidget);
+
+      // The source is this very lesson: the sheet closes and nothing navigates.
+      await tester.tap(find.text('Lesson · 3 days ago · 2 times'));
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(navigated, isEmpty);
     });
 
     testWidgets('a_blocked_analysis_keeps_pronunciation_and_links_to_settings', (tester) async {
@@ -164,9 +198,11 @@ void main() {
     });
 
     testWidgets('a_stage_this_build_does_not_know_still_shows', (tester) async {
-      await _pump(tester, overrides: {'GET /lessons/$lessonId/pipeline': ok(pipelineJson(unknownStage: 'plan_generation'))});
+      await _pump(tester, overrides: {'GET /lessons/$lessonId/pipeline': ok(pipelineJson(unknownStage: 'weekly_review'))});
       await _openTab(tester, 'Status');
-      expect(find.text('Plan generation'), findsOneWidget);
+      expect(find.text('Weekly review'), findsOneWidget);
+      // F12's stage is known, so it reads by its label on both steppers.
+      expect(find.text('Plan generated'), findsNWidgets(2));
     });
 
     testWidgets('a_lesson_that_is_not_mine_reads_as_unavailable', (tester) async {

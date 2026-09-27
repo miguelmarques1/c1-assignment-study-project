@@ -8,6 +8,8 @@ import 'package:get/get.dart';
 
 import '../../design/widgets/eq_button.dart';
 import '../../design/widgets/eq_page_state.dart';
+import '../profile/ledger_entry_sheet.dart';
+import '../profile/profile_controller.dart';
 import 'lesson_detail_controller.dart';
 import 'lessons_api.dart';
 import 'lessons_page.dart';
@@ -22,12 +24,15 @@ import 'widgets/palette.dart';
 /// loading and failing on its own, and refreshing every 10 s while the
 /// viewer's own processing is still moving. There is no audio anywhere.
 class LessonDetailPage extends StatefulWidget {
-  const LessonDetailPage({super.key, required this.lessonId, this.api, this.onNavigate});
+  const LessonDetailPage({super.key, required this.lessonId, this.api, this.profile, this.onNavigate});
 
   final String lessonId;
 
   /// Tests pass a [LessonsApi] over a scripted `Dio`; the app uses the shared one.
   final LessonsApi? api;
+
+  /// Resolves an error's tag to its ledger record (F12); tests pass one over a scripted `Dio`.
+  final ProfileController? profile;
 
   /// Tests observe navigation here (the settings link); the app switches tab.
   final void Function(String path)? onNavigate;
@@ -39,6 +44,7 @@ class LessonDetailPage extends StatefulWidget {
 class _LessonDetailPageState extends State<LessonDetailPage> with SingleTickerProviderStateMixin {
   late final LessonDetailController _controller =
       LessonDetailController(widget.api ?? LessonsApi(inject<Dio>()), widget.lessonId);
+  late final ProfileController _profile = widget.profile ?? ProfileController(inject<Dio>());
   late final TabController _tabs;
   String? _anchoredUtterance;
   Timer? _poll;
@@ -69,6 +75,22 @@ class _LessonDetailPageState extends State<LessonDetailPage> with SingleTickerPr
     } else {
       context.navigate(path);
     }
+  }
+
+  /// The error-card chip's destination: the tag's record in the ledger, as a
+  /// bottom sheet over the lesson. A tag with no record yet opens nothing.
+  Future<void> _openTag(String tag) async {
+    try {
+      await showLedgerEntrySheetForTag(context, _profile, tag, onOpenLesson: _openLesson);
+    } on DioException {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Your error ledger could not be opened.')));
+    }
+  }
+
+  /// A lesson source in the ledger sheet: this lesson is already open, any other replaces it.
+  void _openLesson(String lessonId) {
+    if (lessonId != widget.lessonId) _navigate('/app/lessons/$lessonId');
   }
 
   void _openTranscriptAt(String utteranceId) {
@@ -129,6 +151,7 @@ class _LessonDetailPageState extends State<LessonDetailPage> with SingleTickerPr
                     onSeeInTranscript: _openTranscriptAt,
                     onOpenStatus: () => _tabs.animateTo(3),
                     onNavigate: _navigate,
+                    onOpenTag: _openTag,
                   ),
                   ScenarioTab(controller: _controller),
                   TranscriptTab(controller: _controller, anchoredUtteranceId: _anchoredUtterance),

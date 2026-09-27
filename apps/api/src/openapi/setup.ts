@@ -55,6 +55,7 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     .addTag('transcript', 'The merged lesson transcript')
     .addTag('pronunciation', "The caller's pronunciation assessment: scores, worst phonemes and words, per-excerpt detail")
     .addTag('analysis', "The caller's own AI lesson analysis: competency scores, tagged errors, scenario fit and topics to practice")
+    .addTag('profile', "The caller's learning profile: smoothed competency scores, recurring weaknesses and the error ledger")
     .addTag('lessons', "The caller's lesson history: every lesson with its own processing status, and one lesson's summary")
     .build();
 

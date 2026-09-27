@@ -41,7 +41,19 @@ function fakeTaxonomy(analysisTags: string[]): ErrorTaxonomyService {
  */
 const PINNED_FINGERPRINTS: Record<string, string> = {
   '1': '3485cba6a7eafa79661be8899803ba6480cc5f0df9d25eda9f8243d7bcacef72',
+  '2': '309b079c071b6f69502d6ce5c2797d0f4522926f3807ec759213a4fe379ff830',
 };
+
+/**
+ * Azure's en-US IPA inventory as F10 receives it, read from live calls in
+ * F12: `g` is ASCII, `ɹ` is U+0279, and the r-coloured vowels and /ju/ come
+ * back as single units (`ɛɹ` in "there", `ju` in "few"), not as two phonemes.
+ */
+const EN_US_PHONEMES = [
+  'i', 'ɪ', 'eɪ', 'ɛ', 'æ', 'ɑ', 'ɔ', 'oʊ', 'ʊ', 'u', 'ʌ', 'ə', 'ɚ', 'ɝ', 'aɪ', 'aʊ', 'ɔɪ',
+  'ɛɹ', 'ɪɹ', 'ʊɹ', 'ɑɹ', 'ɔɹ', 'aɪɹ', 'aʊɹ', 'ju',
+  'p', 'b', 't', 'd', 'k', 'g', 'f', 'v', 'θ', 'ð', 's', 'z', 'ʃ', 'ʒ', 'h', 'tʃ', 'dʒ', 'm', 'n', 'ŋ', 'l', 'ɹ', 'w', 'j',
+];
 
 function taxonomyFrom(raw: unknown): ErrorTaxonomy {
   const { taxonomy, issues } = parseErrorTaxonomy(raw);
@@ -73,20 +85,72 @@ function writeTempFile(content: unknown): string {
 }
 
 describe('error taxonomy', () => {
-  it('loads_the_committed_taxonomy', () => {
+  it('loads_taxonomy_v2_with_the_phoneme_family', () => {
     const loaded = loadErrorTaxonomyFile(ERROR_TAXONOMY_PATH);
 
-    expect(loaded.version).toBe('1');
-    expect(loaded.tags).toHaveLength(36);
-    expect(loaded.families.map((family) => family.id).sort()).toEqual(['discourse', 'grammar', 'vocab']);
-    expect(loaded.families.every((family) => family.analysis)).toBe(true);
-    expect(loaded.analysisTags).toHaveLength(36);
-    expect(loaded.tags.every((tag) => tag.label.length > 0)).toBe(true);
+    expect(loaded.version).toBe('2');
+    expect(loaded.tags).toHaveLength(85);
+    expect(loaded.families.map((family) => family.id).sort()).toEqual(['discourse', 'grammar', 'phoneme', 'vocab']);
+    const phoneme = loaded.families.find((family) => family.id === 'phoneme')!;
+    expect(phoneme).toMatchObject({ analysis: false, format: 'ipa' });
+    expect(loaded.families.filter((family) => family.id !== 'phoneme').every((family) => family.format === 'slug')).toBe(
+      true,
+    );
+
+    const phonemeTags = loaded.tags.filter((tag) => tag.family === 'phoneme');
+    expect(phonemeTags.map((tag) => tag.tag).sort()).toEqual(EN_US_PHONEMES.map((symbol) => `phoneme:/${symbol}/`).sort());
+    expect(phonemeTags.every((tag) => /^\/.+\/ as in ".+"$/u.test(tag.label))).toBe(true);
+    expect(loaded.tags.every((tag) => tag.label.length > 0 && tag.label.length <= 120)).toBe(true);
+    expect(loaded.familyOf.get('phoneme:/θ/')).toBe('phoneme');
+    expect(loaded.familyOf.get('grammar:conditional-3')).toBe('grammar');
   });
 
   it('pins_the_fingerprint_of_each_version', () => {
     const loaded = loadErrorTaxonomyFile(ERROR_TAXONOMY_PATH);
     expect(PINNED_FINGERPRINTS[loaded.version]).toBe(loaded.fingerprint);
+
+    // The same content under a new label, without a bump, is a different taxonomy.
+    const relabelled = {
+      ...loaded,
+      tags: loaded.tags.map((tag) => (tag.tag === 'phoneme:/θ/' ? { ...tag, label: 'Theta' } : tag)),
+    };
+    expect(taxonomyFingerprint(relabelled)).not.toBe(PINNED_FINGERPRINTS[loaded.version]);
+  });
+
+  it('the_analysis_tags_are_unchanged_by_v2', () => {
+    const loaded = loadErrorTaxonomyFile(ERROR_TAXONOMY_PATH);
+
+    expect(loaded.analysisTags).toHaveLength(36);
+    expect(loaded.analysisTags.some((tag) => tag.startsWith('phoneme:'))).toBe(false);
+    // v2 minus the phoneme family is byte-for-byte v1, so F11's prompt enum and every v1 analysis still line up.
+    const withoutPhonemes: ErrorTaxonomy = {
+      version: '1',
+      families: loaded.families.filter((family) => family.id !== 'phoneme'),
+      tags: loaded.tags.filter((tag) => tag.family !== 'phoneme'),
+    };
+    expect(taxonomyFingerprint(withoutPhonemes)).toBe(PINNED_FINGERPRINTS['1']);
+  });
+
+  it('accepts_ipa_tags_only_in_ipa_families', () => {
+    const file = {
+      version: '1',
+      families: [
+        { id: 'grammar', label: 'Grammar', analysis: true },
+        { id: 'phoneme', label: 'Pronunciation', analysis: false, format: 'ipa' },
+      ],
+      tags: [
+        { tag: 'grammar:/θ/', label: 'X', family: 'grammar', description: 'x' },
+        { tag: 'phoneme:theta', label: 'Y', family: 'phoneme', description: 'y' },
+        { tag: 'phoneme:/a b/', label: 'Z', family: 'phoneme', description: 'z' },
+        { tag: 'phoneme:/θ/', label: 'Theta', family: 'phoneme', description: 't' },
+      ],
+    };
+    const { taxonomy, issues } = parseErrorTaxonomy(file);
+    expect(taxonomy).toBeNull();
+    expect(issues).toHaveLength(3);
+    expect(issues.some((issue) => issue.startsWith('tags.0.tag') && issue.includes('kebab-slug'))).toBe(true);
+    expect(issues.some((issue) => issue.startsWith('tags.1.tag') && issue.includes('family:/symbol/'))).toBe(true);
+    expect(issues.some((issue) => issue.startsWith('tags.2.tag'))).toBe(true);
   });
 
   it('the_fingerprint_ignores_key_order_but_not_content', () => {

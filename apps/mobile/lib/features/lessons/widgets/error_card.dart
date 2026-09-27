@@ -10,12 +10,13 @@ import 'palette.dart';
 /// One tagged error: the quote in quotation marks, the correction with its
 /// changed span emphasized (server-built), the explanation, the tag, the
 /// ledger's recurrence badge and a way to the moment in the transcript. The
-/// tag chip stays plain until F12's ledger detail exists (F19, A14).
+/// tag chip opens that tag's record in F12's ledger (F19, A14).
 class ErrorCard extends StatelessWidget {
-  const ErrorCard({super.key, required this.error, this.onSeeInTranscript});
+  const ErrorCard({super.key, required this.error, this.onSeeInTranscript, this.onOpenTag});
 
   final AnalysisErrorView error;
   final VoidCallback? onSeeInTranscript;
+  final VoidCallback? onOpenTag;
 
   @override
   Widget build(BuildContext context) {
@@ -62,13 +63,44 @@ class ErrorCard extends StatelessWidget {
             runSpacing: EqSpacing.xs,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              EqChip(label: error.tagLabel),
+              if (onOpenTag == null) EqChip(label: error.tagLabel) else _TagChipButton(label: error.tagLabel, onTap: onOpenTag!),
               if (error.recurrence != null) EqBadge(status: EqBadgeStatus.warning, label: error.recurrence!.label),
               if (onSeeInTranscript != null)
                 TextButton(onPressed: onSeeInTranscript, child: const Text('See in transcript')),
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// The tag chip as a control: a 48 dp target around the pill, read out as
+/// one button that says where it goes.
+class _TagChipButton extends StatelessWidget {
+  const _TagChipButton({required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      container: true,
+      button: true,
+      label: '$label: open in your error ledger',
+      onTap: onTap,
+      excludeSemantics: true,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minHeight: 48),
+            child: Center(widthFactor: 1, child: EqChip(label: label)),
+          ),
+        ),
       ),
     );
   }

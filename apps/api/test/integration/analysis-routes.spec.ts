@@ -323,9 +323,6 @@ describe('GET /lessons/:lessonId/analysis', () => {
       tags: expect.arrayContaining(['grammar:conditional-3', 'vocab:register']),
     });
     expect(ledger.calls.at(-1)!.tags).toHaveLength(2);
-
-    // The production default knows no ledger, so it never produces a badge.
-    expect(await new ErrorLedgerPort().occurrencesThrough(ana.id, lesson.lessonId, ['grammar:conditional-3'])).toEqual(new Map());
   }, 60_000);
 
   it('rejects_a_non_participant', async () => {

@@ -1,8 +1,8 @@
 import 'json_read.dart';
 
 /// A pipeline stage by its wire value. Mirrors `pipelineStageLabels` in
-/// `packages/shared`: a stage the app does not know yet (F12 appends
-/// `plan_generation`) still renders, with its wire value humanized.
+/// `packages/shared`: a stage the app does not know yet (one a later
+/// feature appends) still renders, with its wire value humanized.
 class PipelineStage {
   const PipelineStage(this.wire);
 
@@ -15,6 +15,7 @@ class PipelineStage {
     PipelineStage('pronunciation_assessment'),
     PipelineStage('lesson_analysis'),
     PipelineStage('profile_update'),
+    PipelineStage('plan_generation'),
   ];
 
   static const _labels = <String, (String, String)>{
@@ -24,6 +25,7 @@ class PipelineStage {
     'pronunciation_assessment': ('Pronunciation assessed', 'Assessing pronunciation'),
     'lesson_analysis': ('Analyzed', 'Analyzing'),
     'profile_update': ('Profile updated', 'Updating profile'),
+    'plan_generation': ('Plan generated', 'Generating plan'),
   };
 
   bool get isKnown => _labels.containsKey(wire);

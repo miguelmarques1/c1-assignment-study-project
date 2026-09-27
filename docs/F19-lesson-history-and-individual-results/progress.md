@@ -3,7 +3,7 @@
 **Status:** success
 **Branch:** claude/lesson-history-individual-results-3cc933
 **Started:** 2026-09-25
-**Last updated:** 2026-09-26
+**Last updated:** 2026-09-27
 
 ## Stage 1: Contracts and route extensions — ✅ done
 
@@ -149,3 +149,35 @@ _2026-09-26. Correction to Stage 5's validation line: the mobile suite is **64/6
 - Regenerate the stale `field-*` baselines and commit the missing `icons-*` / `login-screen-*` ones in a visual-baseline chore (run serially: `--workers=1`).
 - Fix the design-tokens drift guard's line-ending comparison, or add a `.gitattributes` `eol=lf` for the generated files.
 - The `eq-f19` compose project (containers stopped, volumes kept) and the worktree's gitignored `.env` can be removed with `docker compose -p eq-f19 down -v` once no further live check is wanted.
+
+## Merge with main (2026-09-27)
+
+`origin/main` had gained F13 (content bank) and F12 (learning profile and error ledger), which was built concurrently on the same base. It was merged into this branch before the PR. F12 landed first, so this merge applied the six F19 wiring items F12's progress log lists (stage 7).
+
+**Conflicts (19 files), resolved as follows:**
+- Kept both sides, since both features appended at the same spot: `app.module.ts` (`LessonsModule`, `ProfileUpdateModule`, `ContentModule`), the Swagger tags, `openapi/components.ts`, the shared `index.ts` barrel, and the F09/F11/F22 progress notes (F12's first, then F19's).
+- `profile/error-ledger.port.ts` and `profile.module.ts`: F12's versions. The ledger-backed port replaces F19's empty default, and the contract is identical. F11's F19 note records that the badge is now real.
+- One module per client for relative time. Web `lib/relative-time.ts` and mobile `core/format/relative_time.dart` export `formatRelativeTime(value, reference, timeZone | utcOffset)` and `formatShortDate`, and F19's callers were renamed. The rules were already identical, and both case tables (F12's `relative-time` and F19's `lesson-format`) pass.
+- `EqMeter`: F12's widget (hatched warming-up track, `eq-meter-warming-track` key), plus F19's `noPreviousResult` (em dash read as "no previous result") and U+2212 for negatives, matching the web `Meter`. F12's `showNullDelta` became `noPreviousResult`, and F12's web profile test now expects `▼ −1`. `EqChip`: F12's widget, which is functionally the same. The tests were merged into one file each. `pump_screen.dart`: F19's (a superset, with `dark`).
+- The header pill is Dashboard, Profile, Lessons, Settings. Both header tests and `design/README.md`'s dashboard pill row now say so.
+
+**F12 wiring applied (F12 progress, stage 7):**
+1. Ledger lesson sources link to the lesson. On the web, `ledger-entry-sheet.tsx`'s `LESSON_DETAIL_HREF` constant is gone and a lesson source is a `Link` to `lessonHref(id)`. The test `lesson_examples_link_to_the_lesson` is back under its spec name. On mobile, `showLedgerEntrySheet` takes `onOpenLesson`: it defaults to `navigate('/app/lessons/{id}')`, and from a lesson's own detail the current lesson is a no-op.
+2. The error-card tag chip opens the tag's record. The web wraps it in a `Link` to `/profile?tag={tag}`, named "{label}: open in your error ledger". On mobile, the chip is a 48 dp button that calls `showLedgerEntrySheetForTag`, and a failed lookup shows a snackbar. `LessonDetailPage` takes an optional `ProfileController`.
+3. `plan_generation` reads `Plan generated` / `Generating plan` in `pipelineStageLabels` and the Dart `PipelineStage` (labels and order). The unknown-stage tests now use a hypothetical `weekly_review`.
+4. Shared widgets and formatters reconciled (above).
+5. Pill order (above).
+6. The recurrence badge reads F12's port. The test-only fake stays for the view's badge rules. A new `profile-seams.spec.ts > the_lesson_result_badge_reads_the_real_ledger` proves the real path end to end: three earlier occurrences, then a real analysis and `profile_update`, and the result reads `4th time`.
+
+**Adapted to F12's pipeline:** `plan_generation` is now the seventh stage everywhere (the API's coarse stages, the web and mobile steppers, and their fixtures). The real `profile_update` handler runs at once, so `retry_reruns_the_failed_stage_and_downstream_reusing_upstream` now waits for `profile_update` to complete rather than stay queued. The `Ready` rule (A3) is unchanged: a branch resting at `plan_generation` / `queued` is `Ready`.
+
+**Validation after the merge:**
+
+- `pnpm -r typecheck` ✅ (after `prisma generate` for F12's and F13's models) and `pnpm lint` ✅.
+- API unit **367/367** ✅.
+- API integration **427/427** ✅. The full serial run passed 408 across 35 files. `lesson-history-routes.spec.ts` failed its setup once on a Testcontainers reaper error ("Expected Reaper to map exposed port 8080", environmental) and passed **19/19** when re-run. The new `the_lesson_result_badge_reads_the_real_ledger` passed, and so did this time the two timing-sensitive F08/F10 tests from the final verification.
+- Web **188/188** ✅, including the design-reference, token-resolution and no-raw-values guards.
+- Mobile: `flutter analyze` 0 issues ✅, `flutter test` **79/79** ✅, `flutter build apk --debug` ✅.
+- `docs/api/openapi.json` regenerated with `pnpm build` + `node dist/openapi/generate.js`: **30 operations**, F19's 27 plus F12's three `/profile` routes, and the `profile` and `lessons` tags.
+- Pre-existing and unchanged: the design-tokens drift guard (CRLF).
+- Not re-run: the live stack checks and the visual baselines. F12's only change to a primitive the baselines cover is `EmptyState`'s new `href` action, which leaves the button variant the gallery renders untouched, and the merged `Meter` is F19's, whose baselines were regenerated in Stage 5. On-device mobile review remains the user's.

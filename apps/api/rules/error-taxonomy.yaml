@@ -1,19 +1,26 @@
-# Error taxonomy (F11).
+# Error taxonomy (F11, v2 by F12).
 #
 # The fixed vocabulary every tagged error is drawn from. The lesson-analysis
 # prompt's error schema mirrors the `analysis: true` tags below as its own
 # `enum` (apps/api/prompts/lesson-analysis.yaml); a boot check refuses to
-# start when the two disagree. F12 adds the `pronunciation` family
-# (`analysis: false` — the model never tags pronunciation, F10 measures it)
-# and F14/F17 read tag labels from the same file.
+# start when the two disagree. The `phoneme` family (`analysis: false` — the
+# model never tags pronunciation, F10 measures it) holds one tag per phoneme
+# in Azure's en-US IPA inventory, spelled exactly as F10 writes them
+# (`phoneme:/θ/`, `format: ipa`), so every failing phoneme F10 measures lands
+# in F12's ledger instead of being rejected as unknown. The inventory was read
+# from live Azure calls, not a phone-set table: it includes the r-coloured
+# vowels and /ju/ as single units (`phoneme:/ɛɹ/`, `phoneme:/ju/`). F12's ledger, and
+# later F14 and F17, read tag labels from this file. There is no `stress:`
+# family: no stage measures lexical stress.
 #
 # Changing any tag, label or family changes what the taxonomy means, so bump
 # `version` with it: every analysis and ledger record stores the version in
 # force when it was written, and test/unit/error-taxonomy.spec.ts pins the
-# fingerprint of each version, so a change without a bump fails CI.
+# fingerprint of each version, so a change without a bump fails CI. A tag
+# removed in a later version keeps its ledger records as read-only history.
 #
 # Read only when the API boots: restart it after editing this file.
-version: "1"
+version: "2"
 
 families:
   - id: grammar
@@ -25,6 +32,10 @@ families:
   - id: discourse
     label: Discourse
     analysis: true
+  - id: phoneme
+    label: Pronunciation
+    analysis: false
+    format: ipa
 
 tags:
   # Grammar (22)
@@ -176,3 +187,205 @@ tags:
     label: Politeness
     family: discourse
     description: A request, disagreement or refusal phrased less politely than the context calls for.
+
+  # Pronunciation: vowels and diphthongs (17)
+  - tag: phoneme:/i/
+    label: '/i/ as in "see"'
+    family: phoneme
+    description: 'The long close front vowel, as in "see" and "meet".'
+  - tag: phoneme:/ɪ/
+    label: '/ɪ/ as in "sit"'
+    family: phoneme
+    description: 'The short near-close front vowel, as in "sit" and "ship", distinct from /i/ in "sheep".'
+  - tag: phoneme:/eɪ/
+    label: '/eɪ/ as in "say"'
+    family: phoneme
+    description: 'The diphthong in "say" and "late".'
+  - tag: phoneme:/ɛ/
+    label: '/ɛ/ as in "bed"'
+    family: phoneme
+    description: 'The open-mid front vowel, as in "bed" and "said".'
+  - tag: phoneme:/æ/
+    label: '/æ/ as in "cat"'
+    family: phoneme
+    description: 'The near-open front vowel, as in "cat" and "bad", distinct from /ɛ/ in "bed".'
+  - tag: phoneme:/ɑ/
+    label: '/ɑ/ as in "father"'
+    family: phoneme
+    description: 'The open back vowel, as in "father" and, in American English, "hot".'
+  - tag: phoneme:/ɔ/
+    label: '/ɔ/ as in "thought"'
+    family: phoneme
+    description: 'The open-mid back rounded vowel, as in "thought" and "law".'
+  - tag: phoneme:/oʊ/
+    label: '/oʊ/ as in "go"'
+    family: phoneme
+    description: 'The diphthong in "go" and "home".'
+  - tag: phoneme:/ʊ/
+    label: '/ʊ/ as in "book"'
+    family: phoneme
+    description: 'The short near-close back vowel, as in "book" and "full", distinct from /u/ in "fool".'
+  - tag: phoneme:/u/
+    label: '/u/ as in "food"'
+    family: phoneme
+    description: 'The long close back vowel, as in "food" and "blue".'
+  - tag: phoneme:/ʌ/
+    label: '/ʌ/ as in "cup"'
+    family: phoneme
+    description: 'The stressed mid-central vowel, as in "cup" and "love".'
+  - tag: phoneme:/ə/
+    label: '/ə/ as in "about"'
+    family: phoneme
+    description: 'The unstressed schwa, as in "about" and "sofa".'
+  - tag: phoneme:/ɚ/
+    label: '/ɚ/ as in "butter"'
+    family: phoneme
+    description: 'The unstressed r-coloured vowel, as in "butter" and "teacher".'
+  - tag: phoneme:/ɝ/
+    label: '/ɝ/ as in "bird"'
+    family: phoneme
+    description: 'The stressed r-coloured vowel, as in "bird" and "work".'
+  - tag: phoneme:/aɪ/
+    label: '/aɪ/ as in "time"'
+    family: phoneme
+    description: 'The diphthong in "time" and "my".'
+  - tag: phoneme:/aʊ/
+    label: '/aʊ/ as in "now"'
+    family: phoneme
+    description: 'The diphthong in "now" and "house".'
+  - tag: phoneme:/ɔɪ/
+    label: '/ɔɪ/ as in "boy"'
+    family: phoneme
+    description: 'The diphthong in "boy" and "choice".'
+
+  # Pronunciation: r-coloured vowels and /ju/, each one unit in Azure's en-US alignment (8)
+  - tag: phoneme:/ɛɹ/
+    label: '/ɛɹ/ as in "air"'
+    family: phoneme
+    description: 'The r-coloured vowel in "air" and "there", which Azure scores as one unit.'
+  - tag: phoneme:/ɪɹ/
+    label: '/ɪɹ/ as in "ear"'
+    family: phoneme
+    description: 'The r-coloured vowel in "ear" and "here", which Azure scores as one unit.'
+  - tag: phoneme:/ʊɹ/
+    label: '/ʊɹ/ as in "sure"'
+    family: phoneme
+    description: 'The r-coloured vowel in "sure", which Azure scores as one unit.'
+  - tag: phoneme:/ɑɹ/
+    label: '/ɑɹ/ as in "car"'
+    family: phoneme
+    description: 'The r-coloured vowel in "car" and "start", which Azure scores as one unit.'
+  - tag: phoneme:/ɔɹ/
+    label: '/ɔɹ/ as in "four"'
+    family: phoneme
+    description: 'The r-coloured vowel in "four", "more" and "north", which Azure scores as one unit.'
+  - tag: phoneme:/aɪɹ/
+    label: '/aɪɹ/ as in "fire"'
+    family: phoneme
+    description: 'The diphthong plus r in "fire" and "hired", which Azure scores as one unit.'
+  - tag: phoneme:/aʊɹ/
+    label: '/aʊɹ/ as in "hour"'
+    family: phoneme
+    description: 'The diphthong plus r in "hour", "our" and "flower", which Azure scores as one unit.'
+  - tag: phoneme:/ju/
+    label: '/ju/ as in "few"'
+    family: phoneme
+    description: 'The /j/ glide with /u/ in "few", "cute" and "music", which Azure scores as one unit.'
+
+  # Pronunciation: consonants (24)
+  - tag: phoneme:/p/
+    label: '/p/ as in "pen"'
+    family: phoneme
+    description: 'The voiceless bilabial stop, as in "pen", aspirated at the start of a stressed syllable.'
+  - tag: phoneme:/b/
+    label: '/b/ as in "bad"'
+    family: phoneme
+    description: 'The voiced bilabial stop, as in "bad" and "job".'
+  - tag: phoneme:/t/
+    label: '/t/ as in "top"'
+    family: phoneme
+    description: 'The voiceless alveolar stop, as in "top" and "cat".'
+  - tag: phoneme:/d/
+    label: '/d/ as in "dog"'
+    family: phoneme
+    description: 'The voiced alveolar stop, as in "dog" and "bed".'
+  - tag: phoneme:/k/
+    label: '/k/ as in "cat"'
+    family: phoneme
+    description: 'The voiceless velar stop, as in "cat" and "key".'
+  - tag: phoneme:/g/
+    label: '/g/ as in "go"'
+    family: phoneme
+    description: 'The voiced velar stop, as in "go" and "bag".'
+  - tag: phoneme:/f/
+    label: '/f/ as in "fish"'
+    family: phoneme
+    description: 'The voiceless labiodental fricative, as in "fish" and "off".'
+  - tag: phoneme:/v/
+    label: '/v/ as in "voice"'
+    family: phoneme
+    description: 'The voiced labiodental fricative, as in "voice" and "very", distinct from /b/ and /w/.'
+  - tag: phoneme:/θ/
+    label: '/θ/ as in "think"'
+    family: phoneme
+    description: 'The voiceless dental fricative, as in "think" and "three".'
+  - tag: phoneme:/ð/
+    label: '/ð/ as in "this"'
+    family: phoneme
+    description: 'The voiced dental fricative, as in "this" and "mother".'
+  - tag: phoneme:/s/
+    label: '/s/ as in "sun"'
+    family: phoneme
+    description: 'The voiceless alveolar fricative, as in "sun" and "miss".'
+  - tag: phoneme:/z/
+    label: '/z/ as in "zoo"'
+    family: phoneme
+    description: 'The voiced alveolar fricative, as in "zoo" and "is".'
+  - tag: phoneme:/ʃ/
+    label: '/ʃ/ as in "she"'
+    family: phoneme
+    description: 'The voiceless postalveolar fricative, as in "she" and "nation".'
+  - tag: phoneme:/ʒ/
+    label: '/ʒ/ as in "measure"'
+    family: phoneme
+    description: 'The voiced postalveolar fricative, as in "measure" and "vision".'
+  - tag: phoneme:/h/
+    label: '/h/ as in "hat"'
+    family: phoneme
+    description: 'The glottal fricative, as in "hat" and "behind".'
+  - tag: phoneme:/tʃ/
+    label: '/tʃ/ as in "church"'
+    family: phoneme
+    description: 'The voiceless postalveolar affricate, as in "church" and "watch".'
+  - tag: phoneme:/dʒ/
+    label: '/dʒ/ as in "judge"'
+    family: phoneme
+    description: 'The voiced postalveolar affricate, as in "judge" and "age".'
+  - tag: phoneme:/m/
+    label: '/m/ as in "man"'
+    family: phoneme
+    description: 'The bilabial nasal, as in "man" and "time".'
+  - tag: phoneme:/n/
+    label: '/n/ as in "no"'
+    family: phoneme
+    description: 'The alveolar nasal, as in "no" and "ten".'
+  - tag: phoneme:/ŋ/
+    label: '/ŋ/ as in "sing"'
+    family: phoneme
+    description: 'The velar nasal, as in "sing" and "thinking", with no /g/ released after it.'
+  - tag: phoneme:/l/
+    label: '/l/ as in "leg"'
+    family: phoneme
+    description: 'The alveolar lateral, as in "leg" and "feel".'
+  - tag: phoneme:/ɹ/
+    label: '/ɹ/ as in "red"'
+    family: phoneme
+    description: 'The English approximant r, as in "red" and "very".'
+  - tag: phoneme:/w/
+    label: '/w/ as in "we"'
+    family: phoneme
+    description: 'The labial-velar approximant, as in "we" and "quick".'
+  - tag: phoneme:/j/
+    label: '/j/ as in "yes"'
+    family: phoneme
+    description: 'The palatal approximant, as in "yes" and "use".'

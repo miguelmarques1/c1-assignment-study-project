@@ -77,6 +77,16 @@ describe('result area', () => {
     expect(within(minor).queryByText(/time$/)).toBeNull();
   });
 
+  it('a_tag_chip_opens_its_ledger_record', () => {
+    renderReady();
+    const major = screen.getByRole('list', { name: 'Major errors' });
+    // F12's `/profile?tag=` resolves the tag and opens its record (A14).
+    expect(within(major).getByRole('link', { name: 'Third conditional: open in your error ledger' })).toHaveAttribute(
+      'href',
+      '/profile?tag=grammar%3Aconditional-3',
+    );
+  });
+
   it('scenario_fit_lists_used_and_not_used_expressions', () => {
     renderReady();
     const fit = screen.getByRole('region', { name: 'Scenario fit' });

@@ -9,8 +9,8 @@ import { transcriptHref } from '../links';
  * One tagged error: the quote in quotation marks, the correction with the
  * span it changed emphasized (server-built, so web and mobile emphasize the
  * same words), the explanation, the tag, the ledger's recurrence badge and
- * a link to the moment in the transcript. The tag chip stays plain text
- * until F12's ledger detail exists to open (F19, A14).
+ * a link to the moment in the transcript. The tag chip opens that tag's
+ * record in F12's ledger (`/profile?tag=`, F19 A14).
  */
 export function ErrorCard({ error, lessonId }: { error: AnalysisErrorView; lessonId: string }) {
   return (
@@ -33,7 +33,13 @@ export function ErrorCard({ error, lessonId }: { error: AnalysisErrorView; lesso
       </p>
       <p className="text-body-md text-on-surface">{error.explanation}</p>
       <div className="flex flex-wrap items-center gap-sm">
-        <Chip>{error.tagLabel}</Chip>
+        <Link
+          href={`/profile?tag=${encodeURIComponent(error.tag)}`}
+          aria-label={`${error.tagLabel}: open in your error ledger`}
+          className="rounded-full outline-offset-2 outline-outline-strong focus-visible:outline-2"
+        >
+          <Chip>{error.tagLabel}</Chip>
+        </Link>
         {error.recurrence ? <Badge status="warning">{error.recurrence.label}</Badge> : null}
         {error.utteranceId ? (
           <Link

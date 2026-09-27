@@ -30,7 +30,7 @@ void main() {
     final detail = LessonDetail.fromJson(detailJson());
     expect(detail.scenarioStatus, 'ready');
     expect(detail.myCardStatus, 'ready');
-    expect(detail.others.single.stages.map((s) => s.state.label), ['Done', 'Done', 'Done', 'In progress', 'Not started', 'Not started']);
+    expect(detail.others.single.stages.map((s) => s.state.label), ['Done', 'Done', 'Done', 'In progress', 'Not started', 'Not started', 'Not started']);
 
     final analysis = LessonAnalysisView.fromJson(analysisJson()).analysis!;
     expect(analysis.competencies.map((c) => c.delta), [4, -2, 0, null, 1]);
@@ -63,10 +63,11 @@ void main() {
   });
 
   test('an_unknown_stage_falls_back_to_its_humanized_name', () {
-    final pipeline = LessonPipelineView.fromJson(pipelineJson(unknownStage: 'plan_generation'));
+    final pipeline = LessonPipelineView.fromJson(pipelineJson(unknownStage: 'weekly_review'));
     final unknown = pipeline.stages.last;
     expect(unknown.stage.isKnown, isFalse);
-    expect(unknown.stage.title, 'Plan generation');
+    expect(unknown.stage.title, 'Weekly review');
+    expect(const PipelineStage('plan_generation').title, 'Plan generated');
     expect(unknown.status, PipelineStageStatus.queued);
 
     final failed = pipeline.stage(const PipelineStage('lesson_analysis'))!;

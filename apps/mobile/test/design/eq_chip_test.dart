@@ -4,16 +4,40 @@ import 'package:mobile/design/eq_theme.dart';
 import 'package:mobile/design/widgets/eq_chip.dart';
 
 void main() {
-  testWidgets('chip_renders_tone_and_count', (tester) async {
-    for (final tone in EqChipTone.values) {
+  group('EqChip', () {
+    testWidgets('renders_each_tone_with_its_label', (tester) async {
       await tester.pumpWidget(
-        MaterialApp(theme: EqTheme.light(), home: Scaffold(body: Center(child: EqChip(label: 'Conditionals', tone: tone, count: 3)))),
+        MaterialApp(
+          theme: EqTheme.light(),
+          home: Scaffold(
+            body: Wrap(
+              children: [
+                for (final tone in EqChipTone.values) EqChip(label: tone.name, tone: tone),
+                const EqChip(label: 'Third conditional', tone: EqChipTone.warning, count: 3),
+              ],
+            ),
+          ),
+        ),
       );
-      expect(find.text('Conditionals ×3', findRichText: true), findsOneWidget);
-    }
 
-    await tester.pumpWidget(MaterialApp(theme: EqTheme.dark(), home: const Scaffold(body: Center(child: EqChip(label: 'travel')))));
-    expect(find.text('travel', findRichText: true), findsOneWidget);
-    expect(find.textContaining('×'), findsNothing);
+      for (final tone in EqChipTone.values) {
+        expect(find.text(tone.name, findRichText: true), findsOneWidget);
+      }
+      expect(find.text('Third conditional ×3', findRichText: true), findsOneWidget);
+
+      final decorations = tester
+          .widgetList<DecoratedBox>(find.descendant(of: find.byType(EqChip), matching: find.byType(DecoratedBox)))
+          .map((box) => (box.decoration as BoxDecoration).color)
+          .toSet();
+      // Five tones, five distinct fills (the counted chip shares warning's).
+      expect(decorations, hasLength(EqChipTone.values.length));
+    });
+
+    testWidgets('a_chip_without_a_count_shows_only_its_label', (tester) async {
+      await tester.pumpWidget(MaterialApp(theme: EqTheme.dark(), home: const Scaffold(body: Center(child: EqChip(label: 'travel')))));
+
+      expect(find.text('travel', findRichText: true), findsOneWidget);
+      expect(find.textContaining('×'), findsNothing);
+    });
   });
 }

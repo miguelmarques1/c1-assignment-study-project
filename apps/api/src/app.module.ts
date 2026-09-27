@@ -7,12 +7,14 @@ import { AnalysisModule } from './analysis/analysis.module';
 import { AuthModule } from './auth/auth.module';
 import { SessionGuard } from './auth/session.guard';
 import { ClassroomModule } from './classroom/classroom.module';
+import { ContentModule } from './content/content.module';
 import { env } from './config/env';
 import { CredentialsModule } from './credentials/credentials.module';
 import { ExcerptSelectionModule } from './excerpts/excerpt-selection.module';
 import { HealthModule } from './health/health.module';
 import { LessonsModule } from './lessons/lessons.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { ProfileUpdateModule } from './profile-update/profile-update.module';
 import { PromptsModule } from './prompts/prompts.module';
 import { PronunciationModule } from './pronunciation/pronunciation.module';
 import { RedisModule } from './redis/redis.module';
@@ -44,6 +46,8 @@ import { TranscriptionModule } from './transcription/transcription.module';
     TaxonomyModule,
     AnalysisModule,
     LessonsModule,
+    ProfileUpdateModule,
+    ContentModule,
   ],
   providers: [
     // Authentication is global: a route is protected unless it opts out with

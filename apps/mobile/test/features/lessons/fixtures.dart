@@ -57,6 +57,7 @@ Map<String, dynamic> detailJson({String status = 'ready', String? statusReason})
         {'stage': 'pronunciation_assessment', 'state': 'pending', 'startedAt': null, 'finishedAt': null},
         {'stage': 'lesson_analysis', 'state': 'not_started', 'startedAt': null, 'finishedAt': null},
         {'stage': 'profile_update', 'state': 'not_started', 'startedAt': null, 'finishedAt': null},
+        {'stage': 'plan_generation', 'state': 'not_started', 'startedAt': null, 'finishedAt': null},
       ],
     },
   ],

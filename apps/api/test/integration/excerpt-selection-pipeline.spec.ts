@@ -10,7 +10,7 @@ import {
   NO_PRONUNCIATION_FOCUS,
   PronunciationFocusPort,
   type PronunciationFocus,
-} from '../../src/excerpts/pronunciation-focus.port';
+} from '../../src/profile/pronunciation-focus.port';
 import { PIPELINE_QUEUE, pipelineJobId } from '../../src/pipeline/pipeline.constants';
 import { PipelineDrainJob } from '../../src/pipeline/pipeline-drain.job';
 import { PipelineStateService } from '../../src/pipeline/pipeline-state.service';
@@ -30,12 +30,16 @@ import {
   type SeedUtterance,
 } from './helpers/pipeline-fixtures';
 
-/** Records whose focus was asked for, and answers with whatever the test sets. */
-class FakePronunciationFocus extends PronunciationFocusPort {
+/**
+ * Records whose focus was asked for, and answers with whatever the test
+ * sets. Structural rather than a subclass: F12's real port reads the ledger
+ * through injected readers this suite doesn't need.
+ */
+class FakePronunciationFocus implements Pick<PronunciationFocusPort, 'focusFor'> {
   asked: string[] = [];
   focus: PronunciationFocus = NO_PRONUNCIATION_FOCUS;
 
-  override async focusFor(userId: string): Promise<PronunciationFocus> {
+  async focusFor(userId: string): Promise<PronunciationFocus> {
     this.asked.push(userId);
     return this.focus;
   }

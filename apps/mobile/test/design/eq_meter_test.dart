@@ -3,41 +3,54 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/design/eq_theme.dart';
 import 'package:mobile/design/widgets/eq_meter.dart';
 
-Future<void> _pump(WidgetTester tester, Widget child) => tester.pumpWidget(
-  MaterialApp(theme: EqTheme.light(), home: Scaffold(body: Padding(padding: const EdgeInsets.all(16), child: child))),
+Widget _wrap(Widget child) => MaterialApp(
+  theme: EqTheme.light(),
+  home: Scaffold(body: Padding(padding: const EdgeInsets.all(16), child: child)),
 );
-
-String _text(WidgetTester tester) =>
-    tester.widgetList<RichText>(find.byType(RichText)).map((text) => text.text.toPlainText()).join(' | ');
 
 void main() {
   group('EqMeter', () {
-    testWidgets('meter_renders_value_delta_and_dash', (tester) async {
-      await _pump(tester, const EqMeter(label: 'Grammar', value: 72, delta: 4));
-      expect(_text(tester), contains('72 ▲ +4'));
+    testWidgets('shows_value_and_signed_delta', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          const Column(
+            children: [
+              EqMeter(label: 'Grammar', value: 68, delta: 3),
+              EqMeter(label: 'Vocabulary', value: 74, delta: -1),
+              EqMeter(label: 'Fluency', value: 71, delta: 0),
+              EqMeter(label: 'Comprehension', value: 60),
+            ],
+          ),
+        ),
+      );
 
-      await _pump(tester, const EqMeter(label: 'Vocabulary', value: 41, delta: -2));
-      expect(_text(tester), contains('41 ▼ −2'));
+      expect(find.text('68 ▲ +3', findRichText: true), findsOneWidget);
+      // U+2212, like the web's Meter.
+      expect(find.text('74 ▼ −1', findRichText: true), findsOneWidget);
+      // A zero change and an omitted delta render only the value, as on the web.
+      expect(find.text('71', findRichText: true), findsOneWidget);
+      expect(find.text('60', findRichText: true), findsOneWidget);
+      expect(find.bySemanticsLabel('Grammar: 68 out of 100, up 3'), findsOneWidget);
+      expect(find.bySemanticsLabel('Vocabulary: 74 out of 100, down 1'), findsOneWidget);
+      expect(find.bySemanticsLabel('Fluency: 71 out of 100'), findsOneWidget);
+    });
 
-      await _pump(tester, const EqMeter(label: 'Interaction', value: 66, noPreviousResult: true));
-      expect(_text(tester), contains('66 —'));
+    testWidgets('no_previous_result_reads_as_a_dash', (tester) async {
+      await tester.pumpWidget(_wrap(const EqMeter(label: 'Interaction', value: 66, noPreviousResult: true)));
+
+      expect(find.text('66 —', findRichText: true), findsOneWidget);
       expect(find.bySemanticsLabel('Interaction: 66 out of 100, no previous result'), findsOneWidget);
-
-      // No change and an omitted delta print only the value.
-      await _pump(tester, const EqMeter(label: 'Fluency', value: 70, delta: 0));
-      expect(_text(tester), isNot(contains('▲')));
-      expect(_text(tester), isNot(contains('—')));
     });
 
-    testWidgets('meter_in_warming_up_renders_copy_instead_of_a_number', (tester) async {
-      await _pump(tester, const EqMeter(label: 'Fluency', value: null, state: EqMeterState.warmingUp));
+    testWidgets('warming_up_hides_the_value_and_announces_it', (tester) async {
+      await tester.pumpWidget(
+        _wrap(const EqMeter(label: 'Interaction', value: null, state: EqMeterState.warmingUp, delta: 2)),
+      );
+
       expect(find.text('Warming up'), findsOneWidget);
-      expect(find.bySemanticsLabel('Fluency: warming up, not enough data yet'), findsOneWidget);
-    });
-
-    testWidgets('meter_announces_its_value_and_change', (tester) async {
-      await _pump(tester, const EqMeter(label: 'Grammar', value: 72, delta: 4));
-      expect(find.bySemanticsLabel('Grammar: 72 out of 100, up 4'), findsOneWidget);
+      expect(find.textContaining('▲'), findsNothing);
+      expect(find.byKey(const Key('eq-meter-warming-track')), findsOneWidget);
+      expect(find.bySemanticsLabel('Interaction: warming up, not enough data yet'), findsOneWidget);
     });
   });
 }

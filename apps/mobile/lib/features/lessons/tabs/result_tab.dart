@@ -40,12 +40,16 @@ class ResultTab extends StatelessWidget {
     required this.onSeeInTranscript,
     required this.onOpenStatus,
     required this.onNavigate,
+    required this.onOpenTag,
   });
 
   final LessonDetailController controller;
   final void Function(String utteranceId) onSeeInTranscript;
   final VoidCallback onOpenStatus;
   final void Function(String path) onNavigate;
+
+  /// Opens a tag's record in F12's error ledger.
+  final void Function(String tag) onOpenTag;
 
   @override
   Widget build(BuildContext context) {
@@ -152,6 +156,7 @@ class ResultTab extends StatelessWidget {
                   child: ErrorCard(
                     error: error,
                     onSeeInTranscript: error.utteranceId == null ? null : () => onSeeInTranscript(error.utteranceId!),
+                    onOpenTag: () => onOpenTag(error.tag),
                   ),
                 ),
             ],

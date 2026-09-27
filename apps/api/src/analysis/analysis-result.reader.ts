@@ -30,6 +30,8 @@ export interface StoredAnalysisCompetencyScore {
 }
 
 export interface StoredAnalysisError {
+  /** The error row — what F12's ledger occurrence points back to. */
+  id: string;
   idx: number;
   quote: string;
   tag: string;
@@ -152,6 +154,7 @@ export class LessonAnalysisReader {
       },
       strengths: stringArraySchema.parse(analysis.strengths),
       errors: analysis.errors.map((error) => ({
+        id: error.id,
         idx: error.idx,
         quote: error.quote,
         tag: error.tag,

@@ -201,6 +201,7 @@ describe('coarseStages', () => {
       'pronunciation_assessment',
       'lesson_analysis',
       'profile_update',
+      'plan_generation',
     ]);
     expect(stages.map((stage) => stage.state)).toEqual([
       'completed',
@@ -208,6 +209,7 @@ describe('coarseStages', () => {
       'unavailable',
       'pending',
       'pending',
+      'not_started',
       'not_started',
     ]);
     // Times only on completed stages; the recording spans the lesson to its finalization.
@@ -232,6 +234,7 @@ describe('coarseStages', () => {
     const failed = coarseStages({ ...branch('recording', 'failed', [], 'Recording missing.'), launchedAt: null }, lesson());
     expect(failed.map((stage) => stage.state)).toEqual([
       'unavailable',
+      'not_started',
       'not_started',
       'not_started',
       'not_started',
