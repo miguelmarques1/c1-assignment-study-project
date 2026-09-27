@@ -7,7 +7,9 @@
 # model never tags pronunciation, F10 measures it) holds one tag per phoneme
 # in Azure's en-US IPA inventory, spelled exactly as F10 writes them
 # (`phoneme:/θ/`, `format: ipa`), so every failing phoneme F10 measures lands
-# in F12's ledger instead of being rejected as unknown. F12's ledger, and
+# in F12's ledger instead of being rejected as unknown. The inventory was read
+# from live Azure calls, not a phone-set table: it includes the r-coloured
+# vowels and /ju/ as single units (`phoneme:/ɛɹ/`, `phoneme:/ju/`). F12's ledger, and
 # later F14 and F17, read tag labels from this file. There is no `stress:`
 # family: no stage measures lexical stress.
 #
@@ -255,6 +257,40 @@ tags:
     label: '/ɔɪ/ as in "boy"'
     family: phoneme
     description: 'The diphthong in "boy" and "choice".'
+
+  # Pronunciation: r-coloured vowels and /ju/, each one unit in Azure's en-US alignment (8)
+  - tag: phoneme:/ɛɹ/
+    label: '/ɛɹ/ as in "air"'
+    family: phoneme
+    description: 'The r-coloured vowel in "air" and "there", which Azure scores as one unit.'
+  - tag: phoneme:/ɪɹ/
+    label: '/ɪɹ/ as in "ear"'
+    family: phoneme
+    description: 'The r-coloured vowel in "ear" and "here", which Azure scores as one unit.'
+  - tag: phoneme:/ʊɹ/
+    label: '/ʊɹ/ as in "sure"'
+    family: phoneme
+    description: 'The r-coloured vowel in "sure", which Azure scores as one unit.'
+  - tag: phoneme:/ɑɹ/
+    label: '/ɑɹ/ as in "car"'
+    family: phoneme
+    description: 'The r-coloured vowel in "car" and "start", which Azure scores as one unit.'
+  - tag: phoneme:/ɔɹ/
+    label: '/ɔɹ/ as in "four"'
+    family: phoneme
+    description: 'The r-coloured vowel in "four", "more" and "north", which Azure scores as one unit.'
+  - tag: phoneme:/aɪɹ/
+    label: '/aɪɹ/ as in "fire"'
+    family: phoneme
+    description: 'The diphthong plus r in "fire" and "hired", which Azure scores as one unit.'
+  - tag: phoneme:/aʊɹ/
+    label: '/aʊɹ/ as in "hour"'
+    family: phoneme
+    description: 'The diphthong plus r in "hour", "our" and "flower", which Azure scores as one unit.'
+  - tag: phoneme:/ju/
+    label: '/ju/ as in "few"'
+    family: phoneme
+    description: 'The /j/ glide with /u/ in "few", "cute" and "music", which Azure scores as one unit.'
 
   # Pronunciation: consonants (24)
   - tag: phoneme:/p/

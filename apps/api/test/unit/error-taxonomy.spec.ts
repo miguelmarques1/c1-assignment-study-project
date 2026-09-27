@@ -41,12 +41,17 @@ function fakeTaxonomy(analysisTags: string[]): ErrorTaxonomyService {
  */
 const PINNED_FINGERPRINTS: Record<string, string> = {
   '1': '3485cba6a7eafa79661be8899803ba6480cc5f0df9d25eda9f8243d7bcacef72',
-  '2': '0b04072773c2672f7649fc578b1456c3b8dfa797d2476d079b4fbb1bf7dbf75d',
+  '2': '309b079c071b6f69502d6ce5c2797d0f4522926f3807ec759213a4fe379ff830',
 };
 
-/** Azure's en-US IPA inventory as F10 receives it (confirmed live in F12 stage 1): `g` is ASCII, `ɹ` is U+0279. */
+/**
+ * Azure's en-US IPA inventory as F10 receives it, read from live calls in
+ * F12: `g` is ASCII, `ɹ` is U+0279, and the r-coloured vowels and /ju/ come
+ * back as single units (`ɛɹ` in "there", `ju` in "few"), not as two phonemes.
+ */
 const EN_US_PHONEMES = [
   'i', 'ɪ', 'eɪ', 'ɛ', 'æ', 'ɑ', 'ɔ', 'oʊ', 'ʊ', 'u', 'ʌ', 'ə', 'ɚ', 'ɝ', 'aɪ', 'aʊ', 'ɔɪ',
+  'ɛɹ', 'ɪɹ', 'ʊɹ', 'ɑɹ', 'ɔɹ', 'aɪɹ', 'aʊɹ', 'ju',
   'p', 'b', 't', 'd', 'k', 'g', 'f', 'v', 'θ', 'ð', 's', 'z', 'ʃ', 'ʒ', 'h', 'tʃ', 'dʒ', 'm', 'n', 'ŋ', 'l', 'ɹ', 'w', 'j',
 ];
 
@@ -84,7 +89,7 @@ describe('error taxonomy', () => {
     const loaded = loadErrorTaxonomyFile(ERROR_TAXONOMY_PATH);
 
     expect(loaded.version).toBe('2');
-    expect(loaded.tags).toHaveLength(77);
+    expect(loaded.tags).toHaveLength(85);
     expect(loaded.families.map((family) => family.id).sort()).toEqual(['discourse', 'grammar', 'phoneme', 'vocab']);
     const phoneme = loaded.families.find((family) => family.id === 'phoneme')!;
     expect(phoneme).toMatchObject({ analysis: false, format: 'ipa' });

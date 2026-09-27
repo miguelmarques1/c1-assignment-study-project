@@ -131,3 +131,11 @@
 - The `openapi:generate` / `db:seed` npm scripts' `tsx`/esbuild `emitDecoratorMetadata` gap (first surfaced by F10) also affects `AnalysisStageHandler`'s constructor; worked around identically (`pnpm build` then `node dist/openapi/generate.js`). Still a project-wide tooling decision outside any single feature's scope.
 - The optional real two-window Chrome lesson (this feature's own live checklist) remains unrun, same as F09's and F10's.
 - Two Testcontainers/Prisma resource-pressure flakes were observed during this run's exhaustive validation (documented above with root-cause evidence) — not a defect to fix, but worth knowing if a future long `pnpm -r test` run on this machine shows a similar one-off failure in unrelated code: re-running the affected file alone is the fast way to confirm it was transient.
+
+## F12 follow-up (2026-09-26)
+
+- The `profile_update` stage this feature queued now runs (F12): both of a lesson's sources, pronunciation then analysis, are applied to the owner's profile inside the stage's completing transaction, and the branch moves on to `plan_generation` / `queued`, where it waits for F15. `analysis-pipeline.spec.ts > completion_advances_to_profile_update` now waits for `profile_update` to complete and asserts the branch at `plan_generation`; `pipeline-drain.spec.ts > ignores_stages_without_a_registered_handler` uses `plan_generation` as its handler-less stage.
+- The open question of how the pronunciation dimension updates while this stage is blocked or failed is answered by F12's `ProfileReconciliationJob`: every 15 s it applies any pronunciation result the profile has not applied yet, and `GET /profile` carries a partial-update note.
+- `ProfileTagsPort` is real, so `recurring_weakness_tags` carries the owner's recurring analysis-family tags and `recurring_tags` can survive the output rules (`profile-seams.spec.ts > the_analysis_input_carries_the_owners_recurring_tags`).
+- `StoredAnalysisError` gained `id` (additive), which F12 stores as each ledger occurrence's `analysis_error_id`.
+- The error taxonomy is v2: the `phoneme` family (49 tags, `analysis: false`, `format: ipa`) was added, and the three analysis families are byte-identical to v1 (asserted by fingerprint), so this feature's prompt `enum` and boot check are untouched.

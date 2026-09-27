@@ -63,7 +63,7 @@ describe('compact profile summary', () => {
 
   it('never_exceeds_1500_estimated_tokens', () => {
     const longLabel = 'L'.repeat(120);
-    const weaknesses = Array.from({ length: 77 }, (_, index) => ({
+    const weaknesses = Array.from({ length: 85 }, (_, index) => ({
       tag: `grammar:${'x'.repeat(50)}-${String(index).padStart(2, '0')}`,
       label: longLabel,
       occurrenceCount: 32_767,

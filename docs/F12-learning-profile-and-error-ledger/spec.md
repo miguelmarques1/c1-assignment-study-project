@@ -111,6 +111,8 @@ How the Core-only data model behaves for the lifecycle fields that F12's Provide
 | Vowels and diphthongs (17) | `i` (see), `ɪ` (sit), `eɪ` (say), `ɛ` (bed), `æ` (cat), `ɑ` (father), `ɔ` (thought), `oʊ` (go), `ʊ` (book), `u` (food), `ʌ` (cup), `ə` (about), `ɚ` (butter), `ɝ` (bird), `aɪ` (time), `aʊ` (now), `ɔɪ` (boy) |
 | Consonants (24) | `p`, `b`, `t`, `d`, `k`, `g`, `f`, `v`, `θ` (think), `ð` (this), `s`, `z`, `ʃ` (she), `ʒ` (measure), `h`, `tʃ` (church), `dʒ` (judge), `m`, `n`, `ŋ` (sing), `l`, `ɹ` (red), `w`, `j` (yes) |
 
+**Implementation note (2026-09-26):** the live checks found that Azure's en-US alignment also returns eight compound units the table above lacks: the r-coloured vowels `ɛɹ` (air), `ɪɹ` (ear), `ʊɹ` (sure), `ɑɹ` (car), `ɔɹ` (four), `aɪɹ` (fire), `aʊɹ` (hour), and `ju` (few). They were added to v2 before it left the branch, so the family has 49 tags and the taxonomy 85 (see `progress.md`, stage 7).
+
 The file's `version` becomes `"2"` and its fingerprint is pinned. The three analysis families are unchanged, so F11's prompt `enum` and boot check are unaffected.
 
 ## 2. Architecture Impact
