@@ -165,6 +165,21 @@ export class ContentBankService {
     return rows.map(toCandidate);
   }
 
+  /**
+   * Metadata for exactly the ids given, in no particular order, with no
+   * served-window exclusion and no bodies (F15: an offer already knows
+   * which ids F14's run produced and just needs their candidate shape).
+   * An id that no longer exists is silently absent from the result.
+   */
+  async candidatesFor(ids: readonly string[]): Promise<ContentItemCandidate[]> {
+    const unique = [...new Set(ids)].filter((id) => UUID.safeParse(id).success);
+    if (unique.length === 0) {
+      return [];
+    }
+    const rows = await this.prisma.contentItem.findMany({ where: { id: { in: unique } }, select: candidateSelect });
+    return rows.map(toCandidate);
+  }
+
   /** The full item, answers and explanations included, for F16 to project before a client sees it. */
   async getPayload(itemId: string): Promise<ContentItemPayload> {
     const row = UUID.safeParse(itemId).success

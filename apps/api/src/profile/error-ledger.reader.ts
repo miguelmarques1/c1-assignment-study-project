@@ -270,4 +270,57 @@ export class ErrorLedgerReader {
       return example ? [example] : [];
     });
   }
+
+  /**
+   * How often each of `tags` occurred across the user's most recent
+   * `lastLessons` analysed lessons — the evidence F15's rationale sentences
+   * quote ("appeared in N of your last M lessons"). "Analysed" means a
+   * `lesson_analysis` profile source exists, so a lesson counts toward the
+   * window even if it produced zero occurrences of a given tag. An entry is
+   * returned for every requested tag, `{ lessons: 0, of, inLatest: false }`
+   * when the tag never occurred there — evidence outside any lesson
+   * (activity-sourced only) reads the same as no lesson evidence at all.
+   */
+  async lessonSightings(
+    userId: string,
+    tags: readonly string[],
+    lastLessons = 5,
+  ): Promise<Map<string, { lessons: number; of: number; inLatest: boolean }>> {
+    if (tags.length === 0) {
+      return new Map();
+    }
+    const recentLessons = await this.prisma.profileSource.findMany({
+      where: { userId, kind: 'lesson_analysis' },
+      orderBy: { occurredAt: 'desc' },
+      take: lastLessons,
+      select: { lessonId: true },
+    });
+    const lessonIds = recentLessons.flatMap((row) => (row.lessonId ? [row.lessonId] : []));
+    const result = new Map<string, { lessons: number; of: number; inLatest: boolean }>();
+    if (lessonIds.length === 0) {
+      tags.forEach((tag) => result.set(tag, { lessons: 0, of: 0, inLatest: false }));
+      return result;
+    }
+    const latestLessonId = lessonIds[0];
+
+    const occurrences = await this.prisma.errorLedgerOccurrence.findMany({
+      where: { userId, tag: { in: [...tags] }, lessonId: { in: lessonIds } },
+      select: { tag: true, lessonId: true },
+    });
+    const lessonsByTag = new Map<string, Set<string>>();
+    for (const occurrence of occurrences) {
+      if (!occurrence.lessonId) {
+        continue;
+      }
+      const set = lessonsByTag.get(occurrence.tag) ?? new Set<string>();
+      set.add(occurrence.lessonId);
+      lessonsByTag.set(occurrence.tag, set);
+    }
+
+    for (const tag of tags) {
+      const lessons = lessonsByTag.get(tag) ?? new Set<string>();
+      result.set(tag, { lessons: lessons.size, of: lessonIds.length, inLatest: lessons.has(latestLessonId!) });
+    }
+    return result;
+  }
 }

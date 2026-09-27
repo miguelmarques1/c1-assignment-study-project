@@ -1,124 +1,124 @@
+# study-plan-compose (F15, version 2): an ordered selection over a bank of
+# candidate metadata, with a one-sentence rationale each. The model never
+# sees a full item body, an answer key, or another participant's data —
+# only ids, types, levels, topics, skills, target tags and durations
+# (spec §5 "candidates" variable). It proposes; the deterministic
+# guardrails in code (composition/model-selection.ts, plan-selection.ts)
+# reject unknown or duplicate refs, enforce quotas, add the writing,
+# speaking and pronunciation task slots, and recompute every time
+# estimate. A missing key, a quota error, or output that is mostly
+# invalid all fall back to a plan composed by code alone.
+#
+# Bump `version` on any change that can alter output. Read only when the
+# API boots: restart it after editing this file.
+
 id: study-plan-compose
-version: "1"
+version: "2"
 model: gemini-3.6-flash
-temperature: 0.5
-max_output_tokens: 1800
+temperature: 0.4
+max_output_tokens: 2000
 system: |
-  You compose a 7-day study plan for a C1-level English learner by selecting
-  from an existing item bank. You never invent item content — you only
-  reference item ids from the bank you are given, and you never see full
-  item bodies, only their metadata.
+  You choose which items from an existing content bank belong in one
+  learner's next study plan. You never invent an item or see its body —
+  only the metadata you are given. You prioritise what is due for review,
+  then the learner's recurring weaknesses, and you explain each choice in
+  one plain sentence naming the weakness by name, never by quoting the
+  learner or by claiming a score.
 user_template: |
-  Item bank metadata (id, type, target tags, difficulty — JSON):
-  {{item_bank_metadata}}
+  This learner's profile:
+  {{profile_summary}}
 
-  This learner's unmastered tags: {{unmastered_tags}}
+  Weaknesses to target, ranked (most important first):
+  {{focus_tags}}
 
-  Compose exactly 7 daily sessions, each with 2 to 4 activities. Reference
-  items only by their id from the bank above — never invent an id. Each
-  session should include a mix of activity types where the bank allows it.
-  At most 30% of all activities across the week may be marked as review
-  (is_review: true); the rest should target the learner's unmastered tags.
+  Tags due for review right now:
+  {{review_tags}}
+
+  Candidate items (id | type | level | topic | skills | target tags | estimated minutes | note):
+  {{candidates}}
+
+  Select {{selection_range}} candidates, each at most once, in priority
+  order. Put a due review tag's candidates first, then recurring
+  weaknesses. Keep review-tagged candidates at or below 30% of your
+  selection. Include at least one listening and one reading candidate
+  when the list above offers one. Do not select anything for writing,
+  speaking or pronunciation — the app adds those itself.
+
+  For each selection, write one plain sentence explaining why: name the
+  weakness by its label, never quote the learner's own words, never
+  state a score, and never promise an outcome.
 variables:
-  - name: item_bank_metadata
+  - name: profile_summary
     required: true
-  - name: unmastered_tags
+  - name: focus_tags
+    required: true
+  - name: review_tags
+    required: true
+  - name: candidates
+    required: true
+  - name: selection_range
     required: true
 response_schema:
   type: object
   properties:
-    sessions:
+    selections:
       type: array
-      minItems: 7
-      maxItems: 7
+      minItems: 1
+      maxItems: 24
       items:
         type: object
         properties:
-          day:
-            type: integer
-            minimum: 1
-            maximum: 7
-          activities:
-            type: array
-            minItems: 2
-            maxItems: 4
-            items:
-              type: object
-              properties:
-                item_id:
-                  type: string
-                type:
-                  type: string
-                  enum: [listening, reading, speaking, pronunciation, writing, review]
-                is_review:
-                  type: boolean
-              required: [item_id, type, is_review]
-        required: [day, activities]
-  required: [sessions]
+          ref:
+            type: string
+            minLength: 1
+          rationale:
+            type: string
+            minLength: 1
+        required: [ref, rationale]
+  required: [selections]
 examples:
   - user: |
-      Item bank metadata: [{"id":"read-101","type":"reading","tags":["idioms-work"]}, ...]
-      Unmastered tags: idioms-work, present-perfect
+      This learner's profile:
+      Grammar 58 (3 measurements, flat). Vocabulary 64 (5 measurements, up). Fluency 70 (4 measurements, flat).
+      Interaction 66 (3 measurements, flat). Comprehension 72 (6 measurements, up). Pronunciation 60 (4 measurements, down).
+
+      Weaknesses to target, ranked (most important first):
+      - grammar:conditional-3 (Third conditional): recurring, seen in 4 of the last 5 lessons
+      - vocab:phrasal-verb (Phrasal verb): recurring, seen in 2 of the last 5 lessons
+      - discourse:hedging (Hedging): unmastered
+
+      Tags due for review right now:
+      None due.
+
+      Candidate items (id | type | level | topic | skills | target tags | estimated minutes | note):
+      c01 | reading | C1 | urban housing | reading, grammar | grammar:conditional-3, discourse:hedging | 7 min | new for this plan
+      c02 | listening | C1 | workplace negotiation | listening | vocab:phrasal-verb | 9 min |
+      c03 | grammar | C1 | — | grammar | grammar:conditional-3 | 6 min | new for this plan
+      c04 | vocabulary | C1 | — | vocabulary | vocab:phrasal-verb | 6 min |
+      c05 | error_review | C1 | — | reading | discourse:hedging | 6 min | new for this plan
+
+      Select between 3 and 5 candidates, each at most once, in priority
+      order. Put a due review tag's candidates first, then recurring
+      weaknesses. Keep review-tagged candidates at or below 30% of your
+      selection. Include at least one listening and one reading candidate
+      when the list above offers one. Do not select anything for writing,
+      speaking or pronunciation — the app adds those itself.
+
+      For each selection, write one plain sentence explaining why: name the
+      weakness by its label, never quote the learner's own words, never
+      state a score, and never promise an outcome.
     output:
-      sessions:
-        - day: 1
-          activities:
-            - item_id: "read-101"
-              type: reading
-              is_review: false
-            - item_id: "gram-204"
-              type: writing
-              is_review: false
-        - day: 2
-          activities:
-            - item_id: "listen-050"
-              type: listening
-              is_review: false
-            - item_id: "vocab-018"
-              type: reading
-              is_review: false
-        - day: 3
-          activities:
-            - item_id: "speak-009"
-              type: speaking
-              is_review: false
-            - item_id: "read-076"
-              type: reading
-              is_review: true
-        - day: 4
-          activities:
-            - item_id: "pron-014"
-              type: pronunciation
-              is_review: false
-            - item_id: "gram-205"
-              type: writing
-              is_review: false
-        - day: 5
-          activities:
-            - item_id: "read-102"
-              type: reading
-              is_review: false
-            - item_id: "vocab-019"
-              type: reading
-              is_review: false
-        - day: 6
-          activities:
-            - item_id: "listen-051"
-              type: listening
-              is_review: false
-            - item_id: "speak-010"
-              type: speaking
-              is_review: false
-        - day: 7
-          activities:
-            - item_id: "write-033"
-              type: writing
-              is_review: false
-            - item_id: "read-077"
-              type: reading
-              is_review: false
+      selections:
+        - ref: c01
+          rationale: Third conditional keeps recurring, and this reading puts it alongside hedging language in one natural text.
+        - ref: c02
+          rationale: Phrasal verbs are a steady weak spot, and this listening item is built around exactly that pattern.
+        - ref: c03
+          rationale: A short grammar drill gives the third conditional focused, low-pressure repetition.
+        - ref: c05
+          rationale: Hedging has not been mastered yet, so a review item keeps it in front of the learner.
 constraints:
-  - Reference only item ids present in the item bank metadata — never invent one.
-  - At most 30% of the week's activities may be marked is_review true.
-  - Every session must include at least one activity targeting an unmastered tag.
+  - Select only from the candidates given, each at most once — never invent an id.
+  - Never select a candidate for writing, speaking or pronunciation.
+  - A rationale is one plain sentence, names the weakness by label, and never quotes the learner, states a score, or promises an outcome.
 banned_phrases: []

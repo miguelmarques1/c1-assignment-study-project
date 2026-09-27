@@ -46,19 +46,28 @@
 - `candidate-ranking.ts`'s `isEligible` requires the CEFR level to be in `candidates.cefrLevels` even outside general mode (spec A7's "Eligible candidates are items at a CEFR level in `candidates.cefr_levels` **whose** target_tags intersect…" — both conditions, not either).
 
 **Validation:** typecheck ✅ · lint ✅ (zero warnings, after removing one unused import `session-packer.spec.ts` flagged) · API unit `npx vitest run test/unit`: 593/594 passing, the same known-pending `openapi.spec.ts` failure as Stage 1 (still deferred to Stage 5). New test files: `plan-estimates.spec.ts` (6), `plan-precedence.spec.ts` (4), `plan-tag-priority.spec.ts` (8), `plan-candidate-ranking.spec.ts` (14), `plan-model-selection.spec.ts` (8), `plan-rationale.spec.ts` (19), `plan-carry-over.spec.ts` (6), `plan-selection.spec.ts` (9), `session-packer.spec.ts` (10), `plan-summary-line.spec.ts` (9) — 93 new tests, all green.
+**Commit:** `b6b5675` "F15 stage 2 - composition core"
+
+## Stage 3: Composition Service and Prompt — ✅ done (integration proof deferred to Stage 4)
+
+- [x] **10. Additive Reads on Finished Features**
+- [x] **11. Composition Prompt, Version 2**
+- [x] **12. Plan Composer**
+- [x] **13. Supersession and Activation**
+
+**Observations:**
+- `ErrorLedgerReader.lessonSightings(userId, tags, lastLessons=5)`: finds the user's most recent `lastLessons` **analysed** lessons via `profile_sources` rows of `kind='lesson_analysis'` (a lesson counts as analysed — and occupies a window slot — even if it produced zero occurrences of the tag being asked about), then counts, per requested tag, how many of those lessons have an `error_ledger_occurrences` row for it. Returns an entry for every requested tag, `{lessons:0, of, inLatest:false}` when never seen — `rationale.ts`'s templates already treat that the same as no evidence at all (falls to the "still on your error list" sentence), so no special-casing was needed downstream.
+- `ContentBankService.candidatesFor(ids)`: deliberately has **no** served-window exclusion and no body fields — it exists purely so the composer can look up metadata for the ids F14's run just produced, which by construction were never served to anyone before.
+- `study-plan-compose` v2's prompt file loaded and validated cleanly against F04's envelope + response-schema checks on the first write (`plan-prompt.spec.ts`'s 9 tests all passed without a second attempt), including its one example validating against the response schema.
+- **`PlanComposerService.compose()` is the one place all of F15's I/O for one build happens** — F12 readers, F02's credential status, F14's `generateForPlan`, F13's pool, F04's `execute`. Everything after it (candidate ranking, offer building, selection, packing) is the pure Stage-2 code. `PlanActivationService.activate()` is the only writer.
+- **Deviation, `deterministicNoteCode`:** the spec's A15 notes table only assigns the `gemini_key_missing` note to "a missing or rejected key" and to `analysis_blocked` plans — NOT to `model_call_failed` or `model_output_invalid` (the Failure-modes table says so explicitly: "no user note" for both). First draft of `deterministicNoteCode` mapped all four `DeterministicReason` values needing a "the model path didn't run" explanation onto the same note text, which would have shown a misleading "your Gemini key is missing" message when the key was actually fine and only the *compose call itself* failed or was discarded. Fixed before it reached a test: `model_call_failed` and `model_output_invalid` now earn no note at all, matching the spec's own Failure-modes table.
+- **`no_profile` (general mode) earns no note of its own** — `generalMaterial: true` on the plan is what the `general_material` note keys off, independent of `deterministicReason`. Both can be true's on the same plan (e.g. a first lesson's `recording_failed` plan, which is simultaneously general-mode); `PLAN_NOTE_ORDER` places `recording_failed`, then `gemini_key_missing`, then `general_material`, so all applicable notes show in a stable order.
+- **`PlanActivationService.activate` signature takes `lessonTime` as an explicit parameter** rather than re-deriving it from a DB read inside the service — the caller (Stage 4's stage handler and request job) already has the lesson row loaded to decide whether to build at all, so passing it in avoids a second query and keeps the activation transaction shorter.
+- `PlanRepository`'s compound-unique `where` keys follow Prisma's actual generated field-name convention (`userId_lessonId_origin`), **not** the `map:`-aliased SQL constraint name (`ux_study_plans_user_lesson_origin`) — confirmed against F14's own `generation-run.repository.ts` (`userId_runKey`, not `ux_generation_runs_user_key`) before writing it, so this wasn't a trial-and-error fix.
+- **No integration test written yet for the composer/activation pair in isolation.** Stage 4 wires the pipeline stage handler and the request job around them, and that stage's integration suites (`plan-generation-pipeline.spec.ts`, `plan-deterministic.spec.ts`, `plan-activation.spec.ts`) are what actually exercise `compose()` and `activate()` against a real (Testcontainers) Postgres — there is no consumer that calls them standalone before Stage 4 exists, so a Stage-3-only integration test would just be a smaller version of the same setup. Recorded here rather than silently skipped.
+
+**Validation:** typecheck ✅ · lint ✅ (zero warnings, after removing two: an unused `PrismaService` import in `plan-activation.service.ts` and an eslint-disable-comment vitest flagged as unused in `plan.repository.ts`) · API unit `npx vitest run test/unit`: 602/603 passing, the same known-pending `openapi.spec.ts` failure (still deferred to Stage 5). New: `plan-prompt.spec.ts` (9 tests, all green — the prompt file itself, loaded and schema-checked by F04's real loader). `PlansModule` registered in `app.module.ts`; `PlanRulesService.onModuleInit` will load and validate `rules/study-plan.yaml` the next time the API boots.
 **Commit:** _(pending — see below)_
-
-## Stage 3: Composition Service and Prompt — ⬜ pending
-
-- [ ] **10. Additive Reads on Finished Features**
-- [ ] **11. Composition Prompt, Version 2**
-- [ ] **12. Plan Composer**
-- [ ] **13. Supersession and Activation**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 4: Triggers and Activity State — ⬜ pending
 
