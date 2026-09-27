@@ -1,0 +1,72 @@
+{
+  "title": "The Branch We Were Told We Could Spare",
+  "topic": "public library closures",
+  "body": "Sir, your editorial of 14 March argued that the closure of the Marlowe Street library was an unfortunate but unavoidable economy, and that residents had been consulted at every stage. I would gently dispute both claims. Had the council published its footfall figures before the vote rather than after it, the consultation would have looked rather different, because those figures describe a branch that is arguably busier now than at any point in the past decade. The spreadsheet that has since been released was compiled hastily, and it seems to count only borrowers, not the pensioners, students and job seekers who use the reading room without ever taking out a book.\n\nThose invisible visitors are precisely the people a library exists to serve. On a wet Tuesday afternoon I counted forty-three of them: a retired engineer annotating planning applications, two teenagers revising for their chemistry resits, and a woman drafting a complaint to her landlord with the patient help of a volunteer. None of them was asked for an opinion, and few of them, I suspect, even knew that a petition existed. If the officers had spent a single afternoon in the building, they might have reached a less convenient conclusion.\n\nThe financial case is presented as self-evident, yet it rests on assumptions that deserve scrutiny. The projected saving of 180,000 pounds assumes that the building will be sold within a year, although three comparable properties on the same street have stood empty for considerably longer. It also assumes that demand will simply migrate to the central library, which is two bus journeys away for most residents of the estate. Arguably, the council has confused a reduction in its own expenditure with a reduction in public need; the second does not follow from the first, and the cost is merely shifted onto households least able to absorb it.\n\nSupporters of the closure insist that digital lending will fill the gap. Perhaps it will, for readers who own a tablet and a reliable broadband connection. For everyone else, e-lending is a polite fiction. The recent survey commissioned by the council has been widely quoted, yet its methodology is quietly revealing. If its authors had read their own appendix, they would have noticed that the sample was drawn almost entirely from existing online members.\n\nNone of this is to deny that the budget is under genuine strain, nor that painful trade-offs must be made. Nevertheless, a decision of this magnitude ought to be taken in daylight. I would urge the council to postpone the sale for twelve months, to commission an independent count of visitors, and to publish the results in full. Had the council waited for such figures in the first place, it would have avoided much of the present anger. If the branch really is surplus to requirements, the evidence will vindicate the closure; if it is not, the council will have been spared a costly and probably irreversible mistake.",
+  "questions": [
+    {
+      "format": "multiple_choice",
+      "prompt": "According to the writer, what should the council have done before the vote?",
+      "options": ["Published its footfall figures", "Sold the building", "Surveyed its online members", "Increased the library budget"],
+      "answer": "Published its footfall figures",
+      "explanation": "The writer says the consultation would have looked different had the figures been published before the vote.",
+      "evidence": "Had the council published its footfall figures before the vote rather than after it"
+    },
+    {
+      "format": "multiple_choice",
+      "prompt": "Why does the writer think the council's spreadsheet understates how much the branch is used?",
+      "options": ["It counts only borrowers", "It was compiled by volunteers", "It ignores the central library", "It omits weekend opening hours"],
+      "answer": "It counts only borrowers",
+      "explanation": "Visitors who use the reading room without borrowing a book are missing from the count.",
+      "evidence": "it seems to count only borrowers, not the pensioners, students and job seekers"
+    },
+    {
+      "format": "fill_blank",
+      "prompt": "The writer argues that the cost of the closure is merely ___ onto households least able to absorb it.",
+      "accepted_answers": ["shifted"],
+      "explanation": "Saving money for the council moves the cost to residents rather than removing it.",
+      "evidence": "the cost is merely shifted onto households least able to absorb it"
+    },
+    {
+      "format": "multiple_choice",
+      "prompt": "What flaw does the writer find in the council's survey?",
+      "options": ["Its sample came almost entirely from existing online members", "It was never published", "It asked leading questions", "It deliberately excluded pensioners"],
+      "answer": "Its sample came almost entirely from existing online members",
+      "explanation": "A survey of people who already borrow online says little about readers without a tablet or broadband.",
+      "evidence": "the sample was drawn almost entirely from existing online members"
+    },
+    {
+      "format": "fill_blank",
+      "prompt": "The writer asks the council to ___ the sale for twelve months.",
+      "accepted_answers": ["postpone", "delay"],
+      "explanation": "A delay would allow an independent count of visitors before the building is sold.",
+      "evidence": "I would urge the council to postpone the sale for twelve months"
+    }
+  ],
+  "target_occurrences": [
+    { "tag": "grammar:conditional-3", "quote": "Had the council published its footfall figures before the vote rather than after it, the consultation would have looked rather different" },
+    { "tag": "grammar:conditional-3", "quote": "If the officers had spent a single afternoon in the building, they might have reached a less convenient conclusion" },
+    { "tag": "grammar:conditional-3", "quote": "If its authors had read their own appendix, they would have noticed" },
+    { "tag": "grammar:conditional-3", "quote": "Had the council waited for such figures in the first place, it would have avoided much of the present anger" },
+    { "tag": "discourse:hedging", "quote": "it seems to count only borrowers" },
+    { "tag": "discourse:hedging", "quote": "a branch that is arguably busier now" },
+    { "tag": "discourse:hedging", "quote": "Perhaps it will, for readers who own a tablet" },
+    { "tag": "discourse:hedging", "quote": "a costly and probably irreversible mistake" },
+    { "tag": "grammar:passive-voice", "quote": "residents had been consulted at every stage" },
+    { "tag": "grammar:passive-voice", "quote": "The financial case is presented as self-evident" },
+    { "tag": "grammar:passive-voice", "quote": "the building will be sold within a year" },
+    { "tag": "grammar:passive-voice", "quote": "has been widely quoted" },
+    { "tag": "grammar:passive-voice", "quote": "ought to be taken in daylight" },
+    { "tag": "discourse:connector", "quote": "because those figures describe a branch" },
+    { "tag": "discourse:connector", "quote": "yet it rests on assumptions" },
+    { "tag": "discourse:connector", "quote": "although three comparable properties" },
+    { "tag": "discourse:connector", "quote": "Nevertheless, a decision of this magnitude" },
+    { "tag": "vocab:collocation", "quote": "with the patient help of a volunteer" },
+    { "tag": "vocab:collocation", "quote": "assumptions that deserve scrutiny" },
+    { "tag": "vocab:collocation", "quote": "under genuine strain" },
+    { "tag": "vocab:collocation", "quote": "surplus to requirements" },
+    { "tag": "grammar:present-perfect", "quote": "The spreadsheet that has since been released" },
+    { "tag": "grammar:present-perfect", "quote": "have stood empty for considerably longer" },
+    { "tag": "grammar:present-perfect", "quote": "the council has confused a reduction" },
+    { "tag": "grammar:present-perfect", "quote": "The recent survey commissioned by the council has been widely quoted" }
+  ]
+}

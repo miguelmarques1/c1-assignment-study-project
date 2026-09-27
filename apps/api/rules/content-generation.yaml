@@ -183,16 +183,16 @@ structure_markers:
     - "\\b(?:if|unless|suppose|supposing|imagine|provided)\\b.*\\b(?:would|could|might)(?!n't\\s+have\\b)(?:n't)?\\b(?!\\s+(?:not\\s+)?have\\b)"
     - "\\bwere\\s+\\w+\\s+to\\b"
   grammar:conditional-3:
-    - "(?:\\bhad|'d)\\s+(?:\\w+\\s+){0,2}?(?:\\w+ed|\\w+en|{participle})\\b.*\\b(?:would|could|might|should)(?:\\s+not|n't)?\\s+have\\b"
-    - "\\b(?:would|could|might|should)(?:\\s+not|n't)?\\s+have\\b.*(?:\\bhad|'d)\\s+(?:\\w+\\s+){0,2}?(?:\\w+ed|\\w+en|{participle})\\b"
+    - "(?:\\bhad|'d)\\s+(?:\\w+\\s+){0,4}?(?:\\w+ed|\\w+en|{participle})\\b.*\\b(?:would|could|might|should)(?:\\s+not|n't)?\\s+have\\b"
+    - "\\b(?:would|could|might|should)(?:\\s+not|n't)?\\s+have\\b.*(?:\\bhad|'d)\\s+(?:\\w+\\s+){0,4}?(?:\\w+ed|\\w+en|{participle})\\b"
   grammar:conditional-mixed:
-    - "(?:\\bhad|'d)\\s+(?:\\w+\\s+){0,2}?(?:\\w+ed|\\w+en|{participle})\\b.*\\b(?:would|could|might)(?!n't\\s+have\\b)(?:n't)?\\b(?!\\s+(?:not\\s+)?have\\b)"
+    - "(?:\\bhad|'d)\\s+(?:\\w+\\s+){0,4}?(?:\\w+ed|\\w+en|{participle})\\b.*\\b(?:would|could|might)(?!n't\\s+have\\b)(?:n't)?\\b(?!\\s+(?:not\\s+)?have\\b)"
     - "\\b(?:if|unless)\\b.*\\b(?:were|was|did|\\w+ed)\\b.*\\b(?:would|could|might)(?:\\s+not|n't)?\\s+have\\b"
   grammar:present-perfect:
-    - "\\b(?:have|has|haven't|hasn't)\\b(?:\\s+(?:not|never|already|just|ever|always|long|recently|also|since|finally))*\\s+(?:\\w+ed|\\w+en|{participle})\\b"
-    - "'(?:ve|s)\\s+(?:(?:not|never|already|just|ever|always|also)\\s+)*(?:\\w+ed|\\w+en|{participle})\\b"
+    - "\\b(?:have|has|haven't|hasn't)\\b(?:\\s+(?:not|never|already|just|ever|always|long|recently|also|since|finally|now|still))*\\s+(?:\\w+ed|\\w+en|{participle})\\b"
+    - "'(?:ve|s)\\s+(?:(?:not|never|already|just|ever|always|also|now|still)\\s+)*(?:\\w+ed|\\w+en|{participle})\\b"
   grammar:past-perfect:
-    - "(?:\\bhad|\\bhadn't|'d)(?:\\s+(?:not|never|already|just|ever|long|since|also|finally))*\\s+(?:\\w+ed|\\w+en|{participle})\\b"
+    - "(?:\\bhad|\\bhadn't|'d)(?:\\s+(?:not|never|already|just|ever|long|since|also|finally|now|still))*\\s+(?:\\w+ed|\\w+en|{participle})\\b"
   grammar:passive-voice:
     - "(?:\\b(?:am|is|are|was|were|be|been|being|get|gets|got|gotten|getting|isn't|aren't|wasn't|weren't)|'s|'re)(?:\\s+(?:not|never|also|often|always|still|widely|largely|rarely|already|then|now|increasingly|being|been))*\\s+(?:\\w+ed|\\w+en|{participle})\\b"
   grammar:modal-verb:

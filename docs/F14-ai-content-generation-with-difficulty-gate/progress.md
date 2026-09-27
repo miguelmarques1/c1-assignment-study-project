@@ -24,19 +24,25 @@
 - **`GenerationModule` exists from this stage on** (the spec lists it with Stage 4's wiring), holding only the frequency list and rules services, and `AppModule` imports it. That makes step 3's boot refusal real now. `test/integration/health.spec.ts` boots the full `AppModule` through `createTestContext()`, and it initialised with both files loaded.
 
 **Validation:** typecheck ✅ · lint ✅ (new and touched files) · unit: generation-rules 13, frequency-list 6, frequency-list-builder 6, text-metrics 13 = 38 new ✅ · integration `health.spec.ts` 4/4 (full `AppModule` boots with `GenerationModule`) ✅
+**Commit:** 600035b "F14 stage 1 - reference data and rules"
+
+## Stage 2: The Difficulty Gate — ✅ done
+
+- [x] **5. Target Structure Verification**
+- [x] **6. Gate Checks and Metrics**
+- [x] **7. Correction Notes**
+- [x] **8. Output Mapping**
+
+**Observations:**
+- **Rules v1 amended before any item was generated under it.** Writing the fixtures showed two markers were too strict for ordinary C1 prose: `had … participle` allowed only two intervening words (`Had the museum simply added` has three), and the present and past perfect markers did not accept `now` or `still` (`have now rewritten`). Both were loosened, to up to four intervening words and the two extra adverbs. The v1 fingerprint pinned in Stage 1 (`372a576b…`) was re-pinned to `369ead23…9e4ca` instead of bumping to v2, because v1 had not left this branch and no item or attempt records it. Once the feature ships, any change bumps the version as the rules file says.
+- **Where shape problems are found:** the mapper never validates or throws. It passes F13's union through with missing fields left absent, and the gate runs F13's own `validateGeneratedInput` (with a placeholder `gateMetrics`). Issues under `/questions` become the `questions` check, and every other issue except `/gateMetrics` becomes `item_shape`. When the count itself is wrong, F13's array-level `/questions` issue is dropped, because the gate's own "has N questions" line already says it.
+- `GateReport` keeps `answer_evidence` out of `metrics` and returns it separately as `evidence`. Only the passing item's `gateMetrics` carries it, so an attempt row (Stage 4) can store metrics without any text from a failed draft, as A23 requires.
+- `banned_phrases_found` stores `{ phrase, count }` pairs rather than the spec example's bare list, so the count the appendix quotes is also in the record.
+- The learner-quote check compares word sequences, not characters: `words(normalizeForMatch(…))` on both sides, space-joined and space-padded, so punctuation between words cannot hide a reproduced run.
+- **Fixtures (deviation in count):** the spec asked for two readings plus one short passage per short type. Two passages cover every case instead. `reading-library-letter.json` (491 words, 22 sentences, mean sentence length 22.32, TTR 0.574, OOF 12.5%) lists occurrences for six tags, and `short-museum-labels.json` (278 words, 12 sentences, 23.17, 0.622, 13.3%) for six. `test/fixtures/generation/fixtures.ts` filters the occurrences to whichever tags a slot targets, so one passage serves every short type and every tag pair. Both passed the real gate on the first measurement. Real C1 argumentative prose landing at 12.5% against the wordfreq top-3,000 is a sign the PRD's threshold is attainable but tight. The live run (step 18) will show what the model does.
+
+**Validation:** typecheck ✅ · lint ✅ · unit: difficulty-gate 17, target-structures 7, gate-feedback 4, generated-item.mapper 8 = 36 new ✅; generation-rules 13 ✅ after the re-pin
 **Commit:** _(recorded in the next stage)_
-
-## Stage 2: The Difficulty Gate — ⬜ pending
-
-- [ ] **5. Target Structure Verification**
-- [ ] **6. Gate Checks and Metrics**
-- [ ] **7. Correction Notes**
-- [ ] **8. Output Mapping**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 3: Prompts and the Prompt Library Extension — ⬜ pending
 

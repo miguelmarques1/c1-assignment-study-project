@@ -21,7 +21,7 @@ import { ERROR_TAXONOMY_PATH } from '../../src/taxonomy/error-taxonomy.constants
  * new value here, so items checked under different rules never share a version.
  */
 const PINNED_FINGERPRINTS: Record<string, string> = {
-  '1': '372a576b82de1694b1008368476cb8cf81dea2dc1b0271561a611ad747249c97',
+  '1': '369ead2363941aa274c4f781e89566bfa4110462852253542ec4ff9fd490e4ca',
 };
 
 const taxonomy = loadErrorTaxonomyFile(ERROR_TAXONOMY_PATH);
