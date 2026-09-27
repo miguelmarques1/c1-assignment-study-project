@@ -6,7 +6,7 @@ import { CredentialExecutorService } from '../credentials/credential-executor.se
 import { withTimeout } from '../credentials/validation/validation-outcome';
 import { PromptExecutionTelemetryService } from './prompt-execution-telemetry.service';
 import { PromptRegistryService } from './prompt-registry.service';
-import type { ExecutionOutcome, LoadedPrompt, PromptExecutionResult } from './prompt-types';
+import type { ExecutionOutcome, LoadedPrompt, PromptExecutionOptions, PromptExecutionResult } from './prompt-types';
 import { buildRetryMessage, renderUserMessage } from './template-renderer';
 import { validateResponse } from './response-validator';
 
@@ -37,13 +37,19 @@ export class PromptExecutionService {
     private readonly telemetry: PromptExecutionTelemetryService,
   ) {}
 
+  /**
+   * `options` (added by F14) is optional and changes rendering only: an
+   * appendix after the rendered message, which the schema retry keeps, and
+   * a selection of the prompt's examples.
+   */
   async execute(
     userId: string,
     promptId: string,
     variables: Record<string, string>,
+    options: PromptExecutionOptions = {},
   ): Promise<PromptExecutionResult> {
     const prompt = this.registry.get(promptId);
-    const message = renderUserMessage(prompt, variables);
+    const message = renderUserMessage(prompt, variables, options);
 
     const startedAt = Date.now();
     let attempted = false;

@@ -42,18 +42,25 @@
 - **Fixtures (deviation in count):** the spec asked for two readings plus one short passage per short type. Two passages cover every case instead. `reading-library-letter.json` (491 words, 22 sentences, mean sentence length 22.32, TTR 0.574, OOF 12.5%) lists occurrences for six tags, and `short-museum-labels.json` (278 words, 12 sentences, 23.17, 0.622, 13.3%) for six. `test/fixtures/generation/fixtures.ts` filters the occurrences to whichever tags a slot targets, so one passage serves every short type and every tag pair. Both passed the real gate on the first measurement. Real C1 argumentative prose landing at 12.5% against the wordfreq top-3,000 is a sign the PRD's threshold is attainable but tight. The live run (step 18) will show what the model does.
 
 **Validation:** typecheck ✅ · lint ✅ · unit: difficulty-gate 17, target-structures 7, gate-feedback 4, generated-item.mapper 8 = 36 new ✅; generation-rules 13 ✅ after the re-pin
+**Commit:** a71ba27 "F14 stage 2 - the difficulty gate"
+
+## Stage 3: Prompts and the Prompt Library Extension — ✅ done
+
+- [x] **9. Prompt Library Options**
+- [x] **10. Generation Prompts, Version 2**
+- [x] **11. Boot Verification of Generation Prompts**
+
+**Observations:**
+- **F04 extension** as specified. `renderUserMessage(prompt, variables, options = {})` and `execute(userId, promptId, variables, options = {})`. An out-of-range `exampleIndexes` entry throws a new `InvalidExampleSelectionError` (a code bug, like `MissingRequiredVariableError`), and a blank appendix is ignored. `template-renderer.spec.ts` proves the rendering without options is unchanged. The dated note is in `docs/F04-prompt-library/progress.md`.
+- **Exemplars:** three passages by G. K. Chesterton from *All Things Considered* (1908; the author died in 1936, so public domain in Brazil and the US), taken verbatim from Project Gutenberg ebook #11505 by text anchors rather than transcribed. "The Fallacy of Success" (126 words), "The Error of Impartiality" (136) and "On Running After One's Hat" (134) were each cut at a sentence boundary to stay within A17's 150 words. Gutenberg's `_italic_` markers were removed. The same three passages serve all four prompts, each with its own questions and occurrences for that prompt's focus. The error-review exemplars carry invented learner errors, never real data. Attribution is in each file's header comment. The Conversation (the spec's other suggestion) was not used: it is CC BY-ND, and a verbatim excerpt could not be fetched and checked as reliably as a Gutenberg text file.
+- **Response schema** uses only the JSON Schema keywords the existing prompts already send to Gemini (`enum`, `minItems`, `maxItems`, `required`), with no `minLength` or `maxLength`. F11 found that Gemini rejects some keyword combinations, and these are the ones proven live. `target_occurrences[].tag` is a plain string with no `enum`, the combination F11's live check warned about.
+- **Every constraint line is a YAML double-quoted string.** One contained `: ` and was parsed as a mapping, which F04's loader rejected as `/constraints/3 must be string`. The loader caught it at load, as designed.
+- **The exemplar check found gaps in rules v1, which were fixed, and v1 was re-pinned again** (`4747a6f7…b008`; still no item generated under it). The connector lexicon lacked `but`, `as for`, `to begin with`, `for instance` and `for example`. The passive marker's adverb slot lacked `sometimes`, `usually`, `generally`, `frequently`, `commonly` and `seldom`. The hedge lexicon lacked `sometimes`, `often` and `usually`. Without these, ordinary prose such as `It is sometimes made an objection` or `But really this view…` would have its occurrences rejected as `no marker match`. The check is now a permanent test (`generation-prompts.spec.ts::exemplars_quote_their_evidence_and_occurrences_verbatim`): every exemplar's evidence and occurrences must be verbatim, and every occurrence must pass its markers.
+- `verifyGenerationPrompts` takes the allowed formats from the rules in force (`GenerationRulesService`), so a rules change that drops `fill_blank` would also refuse a prompt still asking for it. `main.ts` calls it right after `verifyAnalysisPrompt`. The boot sequence itself is exercised live in Stage 5, and `test/integration/prompt-boot.spec.ts` still passes (6/6).
+- `generation.constants.ts` gained `GENERATION_PROMPT_IDS`, and `prompt-variables.ts` holds `GENERATION_PROMPT_VARIABLES`, the single list the verifier compares against, plus the pure `buildPromptVariables`. Stage 4's slot generator only feeds it the ledger examples.
+
+**Validation:** typecheck ✅ · lint ✅ (all of `apps/api/src` and `apps/api/test`) · unit: generation-prompts 8 new, template-renderer +4, prompt-execution.service +2, and generation-rules, difficulty-gate, target-structures, gate-feedback, mapper and prompt-file-loader re-run: 9 files, 90 tests ✅ · integration `prompt-boot.spec.ts` 6/6 ✅
 **Commit:** _(recorded in the next stage)_
-
-## Stage 3: Prompts and the Prompt Library Extension — ⬜ pending
-
-- [ ] **9. Prompt Library Options**
-- [ ] **10. Generation Prompts, Version 2**
-- [ ] **11. Boot Verification of Generation Prompts**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 4: Generation Runs — ⬜ pending
 

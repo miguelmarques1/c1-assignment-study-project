@@ -52,6 +52,21 @@ export interface LoadedPrompt {
 }
 
 /**
+ * Optional per-call rendering controls (added by F14). Every existing call
+ * passes none and renders exactly as before.
+ */
+export interface PromptExecutionOptions {
+  /**
+   * Text appended after the rendered template, constraints and examples.
+   * F14 uses it for the difficulty gate's correction notes when it
+   * regenerates an item; the schema retry keeps it.
+   */
+  appendix?: string;
+  /** Which of the prompt's examples to render, in this order (`[]` renders none). Default: all of them. */
+  exampleIndexes?: readonly number[];
+}
+
+/**
  * The caller-visible unit of work: `ok` on the first try, the two
  * schema-retry results, and three failures that are never retried by this
  * library — timeout, an empty/blocked response, and any other provider error.

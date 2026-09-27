@@ -1,30 +1,78 @@
+# vocabulary-generate (F14, version 2): vocabulary-in-context passages built around the learner's weak vocabulary.
+#
+# Difficulty is asked for as measurable constraints, never as "C1": every
+# number below arrives as a variable rendered from rules/content-generation.yaml,
+# and the difficulty gate measures the answer against the same file in code
+# (word count, sentence length, type-token ratio, share of words outside the
+# 3,000 most frequent, target-structure occurrences, banned phrases, questions
+# and their evidence). A failing item is regenerated once with the failed
+# checks appended after this message.
+#
+# The three examples are style exemplars: short, authentic, public-domain
+# passages by G. K. Chesterton, from "All Things Considered" (1908), via
+# Project Gutenberg (ebook #11505): "The Fallacy of Success", "The Error of
+# Impartiality" and "On Running After One's Hat". They show register, not
+# content, length or structure. F14 renders one of them per generation, in
+# rotation (execute's exampleIndexes).
+#
+# Bump `version` on any change that can alter output. Read only when the API
+# boots: restart it after editing this file.
+
 id: vocabulary-generate
-version: "1"
+version: "2"
 model: gemini-3.6-flash
 temperature: 0.8
-max_output_tokens: 3000
+max_output_tokens: 4500
 system: |
-  You write short vocabulary-in-context passages for C1-level English
-  learners, each followed by exactly five comprehension questions that test
-  whether the target words were understood from context, not memorized.
+  You write short vocabulary-in-context texts for adults preparing for the C1 English exam,
+  each followed by five questions that test whether words were understood from context, not
+  memorised. The text must read like authentic published prose, never like a word list dressed
+  up as a paragraph. Every number you are given is measured in code after you answer, and a text
+  that misses one is rejected.
 user_template: |
-  Write a short passage (roughly 300 to 500 words) that naturally uses every
-  one of these target vocabulary items in context, for a C1-level learner at
-  difficulty {{difficulty_level}}: {{target_tags}}.
+  Subject area to find a concrete situation in: {{topic_domain}}
 
-  Follow the passage with exactly 5 multiple-choice comprehension questions.
-  Each question has exactly 4 options with exactly one correct option, and at
-  least 3 of the 5 questions should test understanding of a target word from
-  its context rather than plain recall.
+  Target vocabulary. The learner gets this wrong; use it correctly and naturally:
+  {{target_structures}}
+
+  Write one text that:
+  - is {{word_range}} words long, in paragraphs separated by a blank line;
+  - averages {{sentence_length_range}} words per sentence;
+  - keeps a type-token ratio of at least {{min_type_token_ratio}};
+  - uses less common vocabulary, so that at least {{min_out_of_frequency_percent}}% of its words fall outside the 3,000 most frequent English words;
+  - uses the target vocabulary at least {{min_occurrences}} times, with different words or phrases each time, spread across the beginning, the middle and the end;
+  - makes a point or tells a situation with concrete specifics, in a formal or semi-formal register.
+
+  At least 3 of the 5 questions must test the meaning or use of a word or phrase from its context.
+
+  Then write exactly 5 questions about the text. Use only the formats "multiple_choice" and "fill_blank".
+  - multiple_choice: exactly 4 distinct options with exactly one correct; "answer" repeats the correct option's text exactly.
+  - fill_blank: "prompt" contains exactly one blank written as ___ and "accepted_answers" lists the correct form (1 to 5 accepted forms, no duplicates).
+  - Every question has an "explanation" of one or two sentences saying why the answer is right.
+  - Every question has an "evidence": 4 to 60 words copied exactly from the text that prove the answer. For fill_blank the evidence contains the answer.
+
+  Finally, in "target_occurrences", list every use of each target structure: the tag exactly as written above, and the words copied exactly from the text (2 to 40 words, the whole phrase that shows the structure).
 variables:
-  - name: difficulty_level
+  - name: topic_domain
     required: true
-  - name: target_tags
+  - name: target_structures
+    required: true
+  - name: word_range
+    required: true
+  - name: sentence_length_range
+    required: true
+  - name: min_type_token_ratio
+    required: true
+  - name: min_out_of_frequency_percent
+    required: true
+  - name: min_occurrences
     required: true
 response_schema:
   type: object
   properties:
     title:
+      type: string
+    topic:
       type: string
     body:
       type: string
@@ -35,7 +83,10 @@ response_schema:
       items:
         type: object
         properties:
-          question:
+          format:
+            type: string
+            enum: [multiple_choice, fill_blank]
+          prompt:
             type: string
           options:
             type: array
@@ -43,64 +94,177 @@ response_schema:
             maxItems: 4
             items:
               type: string
-          correct_option_index:
-            type: integer
-            minimum: 0
-            maximum: 3
-        required: [question, options, correct_option_index]
-    target_tags:
+          answer:
+            type: string
+          accepted_answers:
+            type: array
+            minItems: 1
+            maxItems: 5
+            items:
+              type: string
+          explanation:
+            type: string
+          evidence:
+            type: string
+        required: [format, prompt, explanation, evidence]
+    target_occurrences:
       type: array
       items:
-        type: string
-  required: [title, body, questions, target_tags]
+        type: object
+        properties:
+          tag:
+            type: string
+          quote:
+            type: string
+        required: [tag, quote]
+  required: [title, topic, body, questions, target_occurrences]
 examples:
-  - user: |
-      Write a short passage using: procrastinate, meticulous, ambiguous
+  - user: "Style exemplar (register only: the real request has its own subject, length and target vocabulary). Target vocabulary: vocab:collocation."
     output:
-      title: "The Meticulous Procrastinator"
-      body: >
-        Dani had a reputation for being meticulous about everything except
-        deadlines... (passage continues, using each target word naturally
-        at least once)
+      title: "The Fallacy of Success"
+      topic: "self-help literature"
+      body: >-
+        There has appeared in our time a particular class of books and articles which I sincerely and
+        solemnly think may be called the silliest ever known among men. They are much more wild than the
+        wildest romances of chivalry and much more dull than the dullest religious tract. Moreover, the
+        romances of chivalry were at least about chivalry; the religious tracts are about religion. But
+        these things are about nothing; they are about what is called Success. On every bookstall, in
+        every magazine, you may find works telling people how to succeed. They are books showing men how
+        to succeed in everything; they are written by men who cannot even succeed in writing books. To
+        begin with, of course, there is no such thing as Success.
       questions:
-        - question: "Based on the passage, someone who is 'meticulous' is most likely to..."
-          options:
-            - "Rush through tasks without checking them"
-            - "Pay very close attention to detail"
-            - "Avoid difficult tasks entirely"
-            - "Delegate work to others"
-          correct_option_index: 1
-        - question: "The word 'ambiguous' in the passage most likely describes something that is..."
-          options:
-            - "Clearly stated"
-            - "Open to more than one interpretation"
-            - "Completed on time"
-            - "Extremely detailed"
-          correct_option_index: 1
-        - question: "What does Dani do that shows she 'procrastinates'?"
-          options:
-            - "She finishes tasks early"
-            - "She delays starting tasks until the last moment"
-            - "She refuses every new project"
-            - "She works meticulously under pressure"
-          correct_option_index: 1
-        - question: "What is the passage mainly about?"
-          options:
-            - "A manager evaluating a team"
-            - "A contrast between Dani's care for detail and her delay in starting"
-            - "A story about missed deadlines with no explanation"
-            - "Advice on time management techniques"
-          correct_option_index: 1
-        - question: "Which word could replace 'meticulous' with the closest meaning?"
-          options:
-            - "Careless"
-            - "Thorough"
-            - "Fast"
-            - "Uncertain"
-          correct_option_index: 1
-      target_tags: [procrastinate, meticulous, ambiguous]
+          - format: multiple_choice
+            prompt: "In the passage, \"solemnly\" is closest in meaning to:"
+            options: ["Seriously", "Cheerfully", "Secretly", "Hesitantly"]
+            answer: "Seriously"
+            explanation: "He pairs it with \"sincerely\": he means what he says."
+            evidence: "which I sincerely and solemnly think may be called the silliest"
+          - format: multiple_choice
+            prompt: "A \"tract\", as used here, is:"
+            options: ["A short pamphlet arguing a point", "A stretch of land", "A railway line", "A legal contract"]
+            answer: "A short pamphlet arguing a point"
+            explanation: "A religious tract is a short persuasive pamphlet."
+            evidence: "much more dull than the dullest religious tract"
+          - format: fill_blank
+            prompt: "Works telling people how to succeed can be found on every ___."
+            accepted_answers: ["bookstall"]
+            explanation: "A bookstall is a stand or shop selling books and papers."
+            evidence: "On every bookstall, in every magazine, you may find works"
+          - format: multiple_choice
+            prompt: "Which word could replace \"To begin with\" without changing the meaning?"
+            options: ["Firstly", "Finally", "However", "Meanwhile"]
+            answer: "Firstly"
+            explanation: "\"To begin with\" introduces the first point of an argument."
+            evidence: "To begin with, of course, there is no such thing as Success"
+          - format: multiple_choice
+            prompt: "\"Romances of chivalry\" are stories about:"
+            options: ["Knights and their code of honour", "Modern business", "Love letters", "Religious doctrine"]
+            answer: "Knights and their code of honour"
+            explanation: "Chivalry is the medieval code of knights."
+            evidence: "the romances of chivalry were at least about chivalry"
+      target_occurrences:
+          - { tag: "vocab:collocation", quote: "a particular class of books and articles" }
+          - { tag: "vocab:collocation", quote: "sincerely and solemnly think" }
+          - { tag: "vocab:collocation", quote: "the dullest religious tract" }
+  - user: "Style exemplar (register only: the real request has its own subject, length and target vocabulary). Target vocabulary: vocab:collocation."
+    output:
+      title: "The Error of Impartiality"
+      topic: "juries and impartiality"
+      body: >-
+        What people call impartiality may simply mean indifference, and what people call partiality may
+        simply mean mental activity. It is sometimes made an objection, for instance, to a juror that he
+        has formed some primâ-facie opinion upon a case: if he can be forced under sharp questioning to
+        admit that he has formed such an opinion, he is regarded as manifestly unfit to conduct the
+        inquiry. Surely this is unsound. If his bias is one of interest, of class, or creed, or
+        notorious propaganda, then that fact certainly proves that he is not an impartial arbiter. But
+        the mere fact that he did form some temporary impression from the first facts as far as he knew
+        them—this does not prove that he is not an impartial arbiter—it only proves that he is not a
+        cold-blooded fool.
+      questions:
+          - format: multiple_choice
+            prompt: "\"Manifestly unfit\" means:"
+            options: ["Clearly unsuitable", "Physically unwell", "Secretly biased", "Legally banned"]
+            answer: "Clearly unsuitable"
+            explanation: "\"Manifestly\" means obviously; \"unfit\" means unsuitable."
+            evidence: "he is regarded as manifestly unfit to conduct the inquiry"
+          - format: multiple_choice
+            prompt: "\"Sharp questioning\" is questioning that is:"
+            options: ["Probing and demanding", "Rude and loud", "Brief and casual", "Written rather than spoken"]
+            answer: "Probing and demanding"
+            explanation: "Sharp questions press for an admission."
+            evidence: "if he can be forced under sharp questioning to admit"
+          - format: fill_blank
+            prompt: "The author contrasts impartiality with ___ activity."
+            accepted_answers: ["mental"]
+            explanation: "Partiality, he says, may just mean thinking."
+            evidence: "what people call partiality may simply mean mental activity"
+          - format: multiple_choice
+            prompt: "An \"arbiter\" is someone who:"
+            options: ["Settles a dispute", "Defends the accused", "Writes the law", "Reports on a trial"]
+            answer: "Settles a dispute"
+            explanation: "An arbiter judges between two sides."
+            evidence: "that fact certainly proves that he is not an impartial arbiter"
+          - format: fill_blank
+            prompt: "A juror may form a ___ impression from the first facts."
+            accepted_answers: ["temporary"]
+            explanation: "A temporary impression is one that may change."
+            evidence: "he did form some temporary impression from the first facts"
+      target_occurrences:
+          - { tag: "vocab:collocation", quote: "sharp questioning" }
+          - { tag: "vocab:collocation", quote: "manifestly unfit" }
+          - { tag: "vocab:collocation", quote: "notorious propaganda" }
+          - { tag: "vocab:collocation", quote: "temporary impression" }
+  - user: "Style exemplar (register only: the real request has its own subject, length and target vocabulary). Target vocabulary: vocab:collocation."
+    output:
+      title: "On Running After One's Hat"
+      topic: "everyday inconveniences"
+      body: >-
+        Some consider such romantic views of flood or fire slightly lacking in reality. But really this
+        romantic view of such inconveniences is quite as practical as the other. The true optimist who
+        sees in such things an opportunity for enjoyment is quite as logical and much more sensible than
+        the ordinary “Indignant Ratepayer” who sees in them an opportunity for grumbling. Real pain, as
+        in the case of being burnt at Smithfield or having a toothache, is a positive thing; it can be
+        supported, but scarcely enjoyed. But, after all, our toothaches are the exception, and as for
+        being burnt at Smithfield, it only happens to us at the very longest intervals. And most of the
+        inconveniences that make men swear or women cry are really sentimental or imaginative
+        inconveniences—things altogether of the mind.
+      questions:
+          - format: multiple_choice
+            prompt: "\"Scarcely enjoyed\" means:"
+            options: ["Hardly enjoyed at all", "Enjoyed in secret", "Enjoyed too much", "Enjoyed by few people"]
+            answer: "Hardly enjoyed at all"
+            explanation: "\"Scarcely\" means almost not."
+            evidence: "it can be supported, but scarcely enjoyed"
+          - format: multiple_choice
+            prompt: "To \"grumble\" is to:"
+            options: ["Complain in a low, bad-tempered way", "Laugh loudly", "Pay a tax", "Ask for help"]
+            answer: "Complain in a low, bad-tempered way"
+            explanation: "The ratepayer sees floods as a chance to complain."
+            evidence: "who sees in them an opportunity for grumbling"
+          - format: fill_blank
+            prompt: "The true optimist sees in such things an ___ for enjoyment."
+            accepted_answers: ["opportunity"]
+            explanation: "\"An opportunity for\" is a fixed pairing."
+            evidence: "The true optimist who sees in such things an opportunity for enjoyment"
+          - format: multiple_choice
+            prompt: "\"Slightly lacking in reality\" suggests the views are:"
+            options: ["A little unrealistic", "Completely false", "Very practical", "Deeply sad"]
+            answer: "A little unrealistic"
+            explanation: "\"Slightly lacking\" softens the criticism."
+            evidence: "Some consider such romantic views of flood or fire slightly lacking in reality"
+          - format: fill_blank
+            prompt: "Some inconveniences make men swear or women ___."
+            accepted_answers: ["cry"]
+            explanation: "The inconveniences provoke strong reactions."
+            evidence: "the inconveniences that make men swear or women cry"
+      target_occurrences:
+          - { tag: "vocab:collocation", quote: "slightly lacking in reality" }
+          - { tag: "vocab:collocation", quote: "an opportunity for enjoyment" }
+          - { tag: "vocab:collocation", quote: "an opportunity for grumbling" }
 constraints:
-  - Never write a listening-style passage (no dialogue-only scripts, no audio cues).
-  - Every target word must appear at least once in the passage.
-  - Every question must have exactly one clearly correct option among the four.
-banned_phrases: []
+  - "Never write a listicle or a catalogue of points (numbered items, \"Firstly... Secondly...\" sequences), headings or bullet points in the body."
+  - "Never write a dialogue-only script or audio cues; this is a text to read."
+  - "Never mention that the text is for learners, and never name or explain the target structures inside the text."
+  - "Copy nothing from the style exemplars (not their topic, sentences or wording); they only show register."
+  - "Quote evidence and target occurrences exactly as they appear in the text, with the same words in the same order."
+banned_phrases: ["vocabulary list", "word of the day"]

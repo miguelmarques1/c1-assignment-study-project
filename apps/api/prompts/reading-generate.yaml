@@ -1,29 +1,80 @@
-id: reading-generate
-version: "1"
-model: gemini-3.6-flash
-temperature: 0.8
-max_output_tokens: 3000
-system: |
-  You write short reading passages for C1-level English learners, each
-  followed by exactly five comprehension questions. Passages should read
-  like real writing — an article, an email, a review — not a language
-  exercise pretending to be one.
-user_template: |
-  Write a reading passage for a C1-level learner at difficulty {{difficulty_level}}.
-  Target vocabulary tags: {{target_tags}}.
-  Aim for roughly 450 to 700 words with a natural mix of sentence lengths.
+# reading-generate (F14, version 2): reading passages built around the learner's weak structures.
+#
+# Difficulty is asked for as measurable constraints, never as "C1": every
+# number below arrives as a variable rendered from rules/content-generation.yaml,
+# and the difficulty gate measures the answer against the same file in code
+# (word count, sentence length, type-token ratio, share of words outside the
+# 3,000 most frequent, target-structure occurrences, banned phrases, questions
+# and their evidence). A failing item is regenerated once with the failed
+# checks appended after this message.
+#
+# The three examples are style exemplars: short, authentic, public-domain
+# passages by G. K. Chesterton, from "All Things Considered" (1908), via
+# Project Gutenberg (ebook #11505): "The Fallacy of Success", "The Error of
+# Impartiality" and "On Running After One's Hat". They show register, not
+# content, length or structure. F14 renders one of them per generation, in
+# rotation (execute's exampleIndexes).
+#
+# Bump `version` on any change that can alter output. Read only when the API
+# boots: restart it after editing this file.
 
-  Follow the passage with exactly 5 multiple-choice comprehension questions.
-  Each question has exactly 4 options with exactly one correct option.
+id: reading-generate
+version: "2"
+model: gemini-3.6-flash
+temperature: 0.9
+max_output_tokens: 6000
+system: |
+  You write reading texts for adults preparing for the C1 English exam. Each text must
+  read like authentic published writing in the genre you are given (a real opinion column,
+  obituary, book review or conference talk), never like a language exercise, a textbook unit
+  or an encyclopedia entry. Every number you are given is measured in code after you answer,
+  and a text that misses one is rejected.
+user_template: |
+  Genre: {{genre}}
+  Subject area to find a concrete situation in: {{topic_domain}}
+
+  Target structures. The learner gets these wrong; use each one correctly, in natural sentences:
+  {{target_structures}}
+
+  Write one text in this genre that:
+  - is {{word_range}} words long, in paragraphs separated by a blank line;
+  - averages {{sentence_length_range}} words per sentence, mixing short and long sentences;
+  - keeps a type-token ratio of at least {{min_type_token_ratio}}: vary the vocabulary instead of repeating words;
+  - uses less common vocabulary, so that at least {{min_out_of_frequency_percent}}% of its words fall outside the 3,000 most frequent English words;
+  - uses each target structure at least {{min_occurrences}} times, spread across the beginning, the middle and the end;
+  - takes a position or develops a tension, argued through concrete specifics (named places, figures, dates, a particular case) rather than a neutral survey;
+  - includes at least two idiomatic or figurative expressions, in an abstract or argumentative register.
+
+  Then write exactly 5 questions about the text. Use only the formats "multiple_choice" and "fill_blank".
+  - multiple_choice: exactly 4 distinct options with exactly one correct; "answer" repeats the correct option's text exactly.
+  - fill_blank: "prompt" contains exactly one blank written as ___ and "accepted_answers" lists the correct form (1 to 5 accepted forms, no duplicates).
+  - Every question has an "explanation" of one or two sentences saying why the answer is right.
+  - Every question has an "evidence": 4 to 60 words copied exactly from the text that prove the answer. For fill_blank the evidence contains the answer.
+
+  Finally, in "target_occurrences", list every use of each target structure: the tag exactly as written above, and the words copied exactly from the text (2 to 40 words, the whole phrase that shows the structure).
 variables:
-  - name: difficulty_level
+  - name: genre
     required: true
-  - name: target_tags
+  - name: topic_domain
+    required: true
+  - name: target_structures
+    required: true
+  - name: word_range
+    required: true
+  - name: sentence_length_range
+    required: true
+  - name: min_type_token_ratio
+    required: true
+  - name: min_out_of_frequency_percent
+    required: true
+  - name: min_occurrences
     required: true
 response_schema:
   type: object
   properties:
     title:
+      type: string
+    topic:
       type: string
     body:
       type: string
@@ -34,7 +85,10 @@ response_schema:
       items:
         type: object
         properties:
-          question:
+          format:
+            type: string
+            enum: [multiple_choice, fill_blank]
+          prompt:
             type: string
           options:
             type: array
@@ -42,65 +96,184 @@ response_schema:
             maxItems: 4
             items:
               type: string
-          correct_option_index:
-            type: integer
-            minimum: 0
-            maximum: 3
-        required: [question, options, correct_option_index]
-    target_tags:
+          answer:
+            type: string
+          accepted_answers:
+            type: array
+            minItems: 1
+            maxItems: 5
+            items:
+              type: string
+          explanation:
+            type: string
+          evidence:
+            type: string
+        required: [format, prompt, explanation, evidence]
+    target_occurrences:
       type: array
       items:
-        type: string
-  required: [title, body, questions, target_tags]
+        type: object
+        properties:
+          tag:
+            type: string
+          quote:
+            type: string
+        required: [tag, quote]
+  required: [title, topic, body, questions, target_occurrences]
 examples:
-  - user: |
-      Write a reading passage for a C1-level learner at difficulty medium.
-      Target vocabulary tags: remote-work, idioms-work
+  - user: "Style exemplar (register only: the real request has its own genre, subject, length and target structures). Genre: newspaper column. Target structures: discourse:connector, grammar:comparison."
     output:
-      title: "The Four-Day Experiment"
-      body: >
-        When the marketing agency Halden & Cole switched to a four-day week
-        last spring, most of the staff expected chaos. Instead, the change
-        forced everyone to rethink how meetings were run... (full passage
-        continues for several paragraphs)
+      title: "The Fallacy of Success"
+      topic: "self-help literature"
+      body: >-
+        There has appeared in our time a particular class of books and articles which I sincerely and
+        solemnly think may be called the silliest ever known among men. They are much more wild than the
+        wildest romances of chivalry and much more dull than the dullest religious tract. Moreover, the
+        romances of chivalry were at least about chivalry; the religious tracts are about religion. But
+        these things are about nothing; they are about what is called Success. On every bookstall, in
+        every magazine, you may find works telling people how to succeed. They are books showing men how
+        to succeed in everything; they are written by men who cannot even succeed in writing books. To
+        begin with, of course, there is no such thing as Success.
       questions:
-        - question: "Why did the switch to a four-day week not cause chaos?"
-          options:
-            - "The agency hired extra staff to cover the missing day."
-            - "It forced the team to reconsider how meetings were run."
-            - "Clients agreed to reduce their expectations."
-            - "The agency reduced its client list."
-          correct_option_index: 1
-        - question: "What best describes the staff's initial expectation?"
-          options:
-            - "Enthusiasm"
-            - "Indifference"
-            - "Apprehension"
-            - "Confusion"
-          correct_option_index: 2
-        - question: "Which idiom captures the team's early attitude, based on the passage?"
-          options:
-            - "Bracing for impact"
-            - "Riding high"
-            - "Playing it by ear"
-            - "Back to square one"
-          correct_option_index: 0
-        - question: "What change did the agency make to its meeting structure?"
-          options:
-            - "Meetings became longer but less frequent."
-            - "Meetings were replaced entirely by written updates."
-            - "Meetings became shorter and more focused."
-            - "Meetings moved to the start of the missing day."
-          correct_option_index: 2
-        - question: "What is the passage's overall tone toward the experiment?"
-          options:
-            - "Skeptical"
-            - "Cautiously positive"
-            - "Dismissive"
-            - "Strongly critical"
-          correct_option_index: 1
-      target_tags: [remote-work, idioms-work]
+          - format: multiple_choice
+            prompt: "What kind of writing does the author attack?"
+            options: ["Books and articles that teach people how to succeed", "Romances of chivalry", "Religious tracts", "Magazine advertisements"]
+            answer: "Books and articles that teach people how to succeed"
+            explanation: "The whole passage targets the literature of \"Success\"."
+            evidence: "you may find works telling people how to succeed"
+          - format: multiple_choice
+            prompt: "How does the author compare these works with romances of chivalry?"
+            options: ["They are wilder and duller", "They are more realistic", "They are better written", "They are more religious"]
+            answer: "They are wilder and duller"
+            explanation: "He calls them wilder than the wildest romances and duller than the dullest tract."
+            evidence: "They are much more wild than the wildest romances of chivalry and much more dull than the dullest religious tract"
+          - format: fill_blank
+            prompt: "According to the author, the romances of chivalry were at least ___ chivalry."
+            accepted_answers: ["about"]
+            explanation: "Unlike books on success, the romances had a real subject."
+            evidence: "the romances of chivalry were at least about chivalry"
+          - format: multiple_choice
+            prompt: "What irony does the author point out about the writers of these books?"
+            options: ["They cannot succeed even in writing books", "They have never read a romance", "They are all millionaires", "They refuse to be paid"]
+            answer: "They cannot succeed even in writing books"
+            explanation: "Men who teach success fail at the one thing they are doing."
+            evidence: "they are written by men who cannot even succeed in writing books"
+          - format: fill_blank
+            prompt: "The author claims that there is no such thing as ___."
+            accepted_answers: ["Success"]
+            explanation: "He treats \"Success\" in the abstract as an empty idea."
+            evidence: "there is no such thing as Success"
+      target_occurrences:
+          - { tag: "discourse:connector", quote: "Moreover, the romances of chivalry were at least about chivalry" }
+          - { tag: "discourse:connector", quote: "But these things are about nothing" }
+          - { tag: "discourse:connector", quote: "To begin with, of course, there is no such thing as Success" }
+          - { tag: "grammar:comparison", quote: "much more wild than the wildest romances of chivalry" }
+          - { tag: "grammar:comparison", quote: "much more dull than the dullest religious tract" }
+          - { tag: "grammar:comparison", quote: "the silliest ever known among men" }
+  - user: "Style exemplar (register only: the real request has its own genre, subject, length and target structures). Genre: newspaper column. Target structures: discourse:hedging, grammar:passive-voice."
+    output:
+      title: "The Error of Impartiality"
+      topic: "juries and impartiality"
+      body: >-
+        What people call impartiality may simply mean indifference, and what people call partiality may
+        simply mean mental activity. It is sometimes made an objection, for instance, to a juror that he
+        has formed some primâ-facie opinion upon a case: if he can be forced under sharp questioning to
+        admit that he has formed such an opinion, he is regarded as manifestly unfit to conduct the
+        inquiry. Surely this is unsound. If his bias is one of interest, of class, or creed, or
+        notorious propaganda, then that fact certainly proves that he is not an impartial arbiter. But
+        the mere fact that he did form some temporary impression from the first facts as far as he knew
+        them—this does not prove that he is not an impartial arbiter—it only proves that he is not a
+        cold-blooded fool.
+      questions:
+          - format: multiple_choice
+            prompt: "According to the author, what may impartiality simply mean?"
+            options: ["Indifference", "Mental activity", "Wisdom", "Cruelty"]
+            answer: "Indifference"
+            explanation: "He argues that what passes for impartiality may be a lack of interest."
+            evidence: "What people call impartiality may simply mean indifference"
+          - format: multiple_choice
+            prompt: "Why is a juror sometimes regarded as unfit?"
+            options: ["He admits he has formed an opinion on the case", "He belongs to a political party", "He refuses to answer questions", "He knows the accused personally"]
+            answer: "He admits he has formed an opinion on the case"
+            explanation: "Admitting a first opinion under questioning is treated as disqualifying."
+            evidence: "if he can be forced under sharp questioning to admit that he has formed such an opinion"
+          - format: fill_blank
+            prompt: "The author calls the practice of rejecting such jurors ___."
+            accepted_answers: ["unsound"]
+            explanation: "He rejects the practice in a four-word sentence."
+            evidence: "Surely this is unsound"
+          - format: multiple_choice
+            prompt: "Which kind of bias does the author accept as disqualifying?"
+            options: ["A bias of interest, class, creed or propaganda", "Any first impression", "Mental activity", "A temporary opinion"]
+            answer: "A bias of interest, class, creed or propaganda"
+            explanation: "Only a real interest or allegiance proves partiality."
+            evidence: "If his bias is one of interest, of class, or creed, or notorious propaganda"
+          - format: fill_blank
+            prompt: "Forming a first impression, the author says, only proves that a juror is not a cold-blooded ___."
+            accepted_answers: ["fool"]
+            explanation: "A first impression shows thought, not bias."
+            evidence: "it only proves that he is not a cold-blooded fool"
+      target_occurrences:
+          - { tag: "discourse:hedging", quote: "What people call impartiality may simply mean indifference" }
+          - { tag: "discourse:hedging", quote: "what people call partiality may simply mean mental activity" }
+          - { tag: "discourse:hedging", quote: "It is sometimes made an objection, for instance, to a juror" }
+          - { tag: "grammar:passive-voice", quote: "It is sometimes made an objection" }
+          - { tag: "grammar:passive-voice", quote: "if he can be forced under sharp questioning" }
+          - { tag: "grammar:passive-voice", quote: "he is regarded as manifestly unfit to conduct the inquiry" }
+  - user: "Style exemplar (register only: the real request has its own genre, subject, length and target structures). Genre: newspaper column. Target structures: grammar:comparison, discourse:connector."
+    output:
+      title: "On Running After One's Hat"
+      topic: "everyday inconveniences"
+      body: >-
+        Some consider such romantic views of flood or fire slightly lacking in reality. But really this
+        romantic view of such inconveniences is quite as practical as the other. The true optimist who
+        sees in such things an opportunity for enjoyment is quite as logical and much more sensible than
+        the ordinary “Indignant Ratepayer” who sees in them an opportunity for grumbling. Real pain, as
+        in the case of being burnt at Smithfield or having a toothache, is a positive thing; it can be
+        supported, but scarcely enjoyed. But, after all, our toothaches are the exception, and as for
+        being burnt at Smithfield, it only happens to us at the very longest intervals. And most of the
+        inconveniences that make men swear or women cry are really sentimental or imaginative
+        inconveniences—things altogether of the mind.
+      questions:
+          - format: multiple_choice
+            prompt: "How does the author regard the romantic view of floods and fires?"
+            options: ["As just as practical as the ordinary view", "As dangerously unrealistic", "As a symptom of illness", "As a purely religious view"]
+            answer: "As just as practical as the ordinary view"
+            explanation: "He says the romantic view is quite as practical as the other."
+            evidence: "this romantic view of such inconveniences is quite as practical as the other"
+          - format: multiple_choice
+            prompt: "Who, according to the author, sees an opportunity for grumbling?"
+            options: ["The Indignant Ratepayer", "The true optimist", "A man with a toothache", "A romantic poet"]
+            answer: "The Indignant Ratepayer"
+            explanation: "The ratepayer is the grumbler set against the optimist."
+            evidence: "the ordinary “Indignant Ratepayer” who sees in them an opportunity for grumbling"
+          - format: fill_blank
+            prompt: "Real pain can be supported, but scarcely ___."
+            accepted_answers: ["enjoyed"]
+            explanation: "Real pain is the exception to his argument."
+            evidence: "it can be supported, but scarcely enjoyed"
+          - format: multiple_choice
+            prompt: "What does the author say about being burnt at Smithfield?"
+            options: ["It happens only at the very longest intervals", "It is a sentimental inconvenience", "It is a pleasant surprise", "It is common in the country"]
+            answer: "It happens only at the very longest intervals"
+            explanation: "He jokes that such real pain is rare."
+            evidence: "it only happens to us at the very longest intervals"
+          - format: fill_blank
+            prompt: "Most inconveniences, the author argues, are things altogether of the ___."
+            accepted_answers: ["mind"]
+            explanation: "He calls most inconveniences sentimental or imaginative."
+            evidence: "things altogether of the mind"
+      target_occurrences:
+          - { tag: "grammar:comparison", quote: "quite as practical as the other" }
+          - { tag: "grammar:comparison", quote: "much more sensible than the ordinary" }
+          - { tag: "grammar:comparison", quote: "at the very longest intervals" }
+          - { tag: "discourse:connector", quote: "But really this romantic view of such inconveniences" }
+          - { tag: "discourse:connector", quote: "But, after all, our toothaches are the exception" }
+          - { tag: "discourse:connector", quote: "as for being burnt at Smithfield" }
 constraints:
-  - Never write a listening-style passage (no dialogue-only scripts, no audio cues).
-  - Every question must have exactly one clearly correct option among the four.
-banned_phrases: []
+  - "Never write a listicle or a catalogue of points (numbered items, \"Firstly... Secondly...\" sequences), headings or bullet points in the body."
+  - "Never write a dialogue-only script or audio cues; this is a text to read."
+  - "Never mention that the text is for learners, and never name or explain the target structures inside the text."
+  - "Copy nothing from the style exemplars (not their topic, sentences or wording); they only show register."
+  - "Quote evidence and target occurrences exactly as they appear in the text, with the same words in the same order."
+banned_phrases: ["in this article", "this essay will", "let us explore", "in the following paragraphs", "without further ado"]

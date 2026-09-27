@@ -1,34 +1,84 @@
-id: error-review-generate
-version: "1"
-model: gemini-3.6-flash
-temperature: 0.7
-max_output_tokens: 3000
-system: |
-  You write short review passages for C1-level English learners that are
-  built around correcting a specific pattern of mistakes the learner has
-  made before, followed by exactly five comprehension questions.
-user_template: |
-  This learner has repeatedly made mistakes with: {{recurring_errors}}.
-  Write a short passage (roughly 300 to 500 words) for a C1-level learner at
-  difficulty {{difficulty_level}} that models the CORRECT use of these
-  patterns clearly and repeatedly, so the learner sees the right form in
-  natural context. Target tags: {{target_tags}}.
+# error-review-generate (F14, version 2): passages that model the correct form of a mistake the learner keeps making.
+#
+# Difficulty is asked for as measurable constraints, never as "C1": every
+# number below arrives as a variable rendered from rules/content-generation.yaml,
+# and the difficulty gate measures the answer against the same file in code
+# (word count, sentence length, type-token ratio, share of words outside the
+# 3,000 most frequent, target-structure occurrences, banned phrases, questions
+# and their evidence). A failing item is regenerated once with the failed
+# checks appended after this message.
+#
+# The three examples are style exemplars: short, authentic, public-domain
+# passages by G. K. Chesterton, from "All Things Considered" (1908), via
+# Project Gutenberg (ebook #11505): "The Fallacy of Success", "The Error of
+# Impartiality" and "On Running After One's Hat". They show register, not
+# content, length or structure. F14 renders one of them per generation, in
+# rotation (execute's exampleIndexes).
+#
+# Bump `version` on any change that can alter output. Read only when the API
+# boots: restart it after editing this file.
 
-  Follow the passage with exactly 5 multiple-choice comprehension questions.
-  Each question has exactly 4 options with exactly one correct option, and at
-  least 2 of the 5 questions should test the previously-mistaken pattern
-  directly.
+id: error-review-generate
+version: "2"
+model: gemini-3.6-flash
+temperature: 0.8
+max_output_tokens: 4500
+system: |
+  You write short review texts for adults preparing for the C1 English exam, built around a
+  mistake the learner has made more than once. The text models the correct form in new,
+  natural sentences; it never repeats or adapts the learner's own sentences, because the text
+  may be shown to other learners. Every number you are given is measured in code after you
+  answer, and a text that misses one is rejected.
+user_template: |
+  Subject area to find a concrete situation in: {{topic_domain}}
+
+  The pattern to review:
+  {{target_structures}}
+
+  The learner's own mistakes with it, each with its correction. Use them only to understand
+  the pattern. Never repeat, quote or adapt these sentences, and do not reuse their topic:
+  {{learner_errors}}
+
+  Write one text that:
+  - is {{word_range}} words long, in paragraphs separated by a blank line;
+  - averages {{sentence_length_range}} words per sentence;
+  - keeps a type-token ratio of at least {{min_type_token_ratio}};
+  - uses less common vocabulary, so that at least {{min_out_of_frequency_percent}}% of its words fall outside the 3,000 most frequent English words;
+  - uses the correct form of the pattern at least {{min_occurrences}} times, in new sentences, spread across the beginning, the middle and the end;
+  - makes a point or tells a situation with concrete specifics, in a formal or semi-formal register.
+
+  At least 2 of the 5 questions must test the pattern the learner got wrong.
+
+  Then write exactly 5 questions about the text. Use only the formats "multiple_choice" and "fill_blank".
+  - multiple_choice: exactly 4 distinct options with exactly one correct; "answer" repeats the correct option's text exactly.
+  - fill_blank: "prompt" contains exactly one blank written as ___ and "accepted_answers" lists the correct form (1 to 5 accepted forms, no duplicates).
+  - Every question has an "explanation" of one or two sentences saying why the answer is right.
+  - Every question has an "evidence": 4 to 60 words copied exactly from the text that prove the answer. For fill_blank the evidence contains the answer.
+
+  Finally, in "target_occurrences", list every use of each target structure: the tag exactly as written above, and the words copied exactly from the text (2 to 40 words, the whole phrase that shows the structure).
 variables:
-  - name: difficulty_level
+  - name: topic_domain
     required: true
-  - name: target_tags
+  - name: target_structures
     required: true
-  - name: recurring_errors
+  - name: word_range
+    required: true
+  - name: sentence_length_range
+    required: true
+  - name: min_type_token_ratio
+    required: true
+  - name: min_out_of_frequency_percent
+    required: true
+  - name: min_occurrences
+    required: true
+  - name: learner_errors
     required: true
 response_schema:
   type: object
   properties:
     title:
+      type: string
+    topic:
       type: string
     body:
       type: string
@@ -39,7 +89,10 @@ response_schema:
       items:
         type: object
         properties:
-          question:
+          format:
+            type: string
+            enum: [multiple_choice, fill_blank]
+          prompt:
             type: string
           options:
             type: array
@@ -47,65 +100,175 @@ response_schema:
             maxItems: 4
             items:
               type: string
-          correct_option_index:
-            type: integer
-            minimum: 0
-            maximum: 3
-        required: [question, options, correct_option_index]
-    target_tags:
+          answer:
+            type: string
+          accepted_answers:
+            type: array
+            minItems: 1
+            maxItems: 5
+            items:
+              type: string
+          explanation:
+            type: string
+          evidence:
+            type: string
+        required: [format, prompt, explanation, evidence]
+    target_occurrences:
       type: array
       items:
-        type: string
-  required: [title, body, questions, target_tags]
+        type: object
+        properties:
+          tag:
+            type: string
+          quote:
+            type: string
+        required: [tag, quote]
+  required: [title, topic, body, questions, target_occurrences]
 examples:
-  - user: |
-      This learner has repeatedly made mistakes with: subject-verb agreement, present perfect vs simple past.
+  - user: "Style exemplar (register only: the real request has its own subject, length and pattern; these learner errors are invented). Pattern: grammar:article-definite. Learner errors: \"The success is not a real thing.\" → \"Success is not a real thing.\"; \"I read it in the every magazine.\" → \"I read it in every magazine.\""
     output:
-      title: "A Week That Has Changed Everything"
-      body: >
-        Maria has lived in three different cities this year, and each one
-        has taught her something new... (passage continues, modeling correct
-        subject-verb agreement and correct present perfect / simple past use
-        repeatedly)
+      title: "The Fallacy of Success"
+      topic: "self-help literature"
+      body: >-
+        There has appeared in our time a particular class of books and articles which I sincerely and
+        solemnly think may be called the silliest ever known among men. They are much more wild than the
+        wildest romances of chivalry and much more dull than the dullest religious tract. Moreover, the
+        romances of chivalry were at least about chivalry; the religious tracts are about religion. But
+        these things are about nothing; they are about what is called Success. On every bookstall, in
+        every magazine, you may find works telling people how to succeed. They are books showing men how
+        to succeed in everything; they are written by men who cannot even succeed in writing books. To
+        begin with, of course, there is no such thing as Success.
       questions:
-        - question: "Which sentence is grammatically correct?"
-          options:
-            - "She have lived here for two years."
-            - "She has lived here for two years."
-            - "She living here for two years."
-            - "She lives here since two years."
-          correct_option_index: 1
-        - question: "'Maria has lived in three cities this year' implies that..."
-          options:
-            - "She no longer lives in any of them."
-            - "The year is not over and this is still relevant now."
-            - "She lived there many years ago."
-            - "She will live there next year."
-          correct_option_index: 1
-        - question: "Which verb form correctly completes: 'They ___ the report yesterday.'?"
-          options:
-            - "have finished"
-            - "finishes"
-            - "finished"
-            - "finishing"
-          correct_option_index: 2
-        - question: "What is the passage mainly about?"
-          options:
-            - "A woman adapting to life in several cities"
-            - "A comparison of three different countries"
-            - "An argument about grammar rules"
-            - "A story about a failed move"
-          correct_option_index: 0
-        - question: "Which subject-verb pair is correctly matched?"
-          options:
-            - "The team have arrived and is ready."
-            - "The team has arrived and is ready."
-            - "The team have arrived and are was ready."
-            - "The team has arrive and is ready."
-          correct_option_index: 1
-      target_tags: [subject-verb-agreement, present-perfect]
+          - format: multiple_choice
+            prompt: "Why does the author write \"what is called Success\" without an article?"
+            options: ["Because success is meant as an abstract idea in general", "Because the word is plural", "Because it names a person", "Because articles never follow \"called\""]
+            answer: "Because success is meant as an abstract idea in general"
+            explanation: "Abstract nouns used in general take no article."
+            evidence: "they are about what is called Success"
+          - format: fill_blank
+            prompt: "They are much more wild than ___ wildest romances of chivalry."
+            accepted_answers: ["the"]
+            explanation: "A superlative takes the definite article."
+            evidence: "much more wild than the wildest romances of chivalry"
+          - format: multiple_choice
+            prompt: "Which phrase uses the definite article correctly?"
+            options: ["the dullest religious tract", "the every magazine", "the success in general", "a the book"]
+            answer: "the dullest religious tract"
+            explanation: "The superlative makes the noun specific."
+            evidence: "much more dull than the dullest religious tract"
+          - format: fill_blank
+            prompt: "Moreover, ___ romances of chivalry were at least about chivalry."
+            accepted_answers: ["the"]
+            explanation: "A specific, already-mentioned group takes \"the\"."
+            evidence: "Moreover, the romances of chivalry were at least about chivalry"
+          - format: multiple_choice
+            prompt: "Why is there no article before \"every magazine\"?"
+            options: ["\"Every\" already does the work of the article", "\"Magazine\" is uncountable", "Articles cannot follow \"in\"", "It is a mistake in the passage"]
+            answer: "\"Every\" already does the work of the article"
+            explanation: "A determiner such as \"every\" replaces the article."
+            evidence: "On every bookstall, in every magazine, you may find works"
+      target_occurrences:
+          - { tag: "grammar:article-definite", quote: "the silliest ever known among men" }
+          - { tag: "grammar:article-definite", quote: "the romances of chivalry were at least about chivalry" }
+          - { tag: "grammar:article-definite", quote: "the religious tracts are about religion" }
+  - user: "Style exemplar (register only: the real request has its own subject, length and pattern; these learner errors are invented). Pattern: grammar:passive-voice. Learner errors: \"He was regard as unfit.\" → \"He was regarded as unfit.\"; \"The juror can forced to answer.\" → \"The juror can be forced to answer.\""
+    output:
+      title: "The Error of Impartiality"
+      topic: "juries and impartiality"
+      body: >-
+        What people call impartiality may simply mean indifference, and what people call partiality may
+        simply mean mental activity. It is sometimes made an objection, for instance, to a juror that he
+        has formed some primâ-facie opinion upon a case: if he can be forced under sharp questioning to
+        admit that he has formed such an opinion, he is regarded as manifestly unfit to conduct the
+        inquiry. Surely this is unsound. If his bias is one of interest, of class, or creed, or
+        notorious propaganda, then that fact certainly proves that he is not an impartial arbiter. But
+        the mere fact that he did form some temporary impression from the first facts as far as he knew
+        them—this does not prove that he is not an impartial arbiter—it only proves that he is not a
+        cold-blooded fool.
+      questions:
+          - format: fill_blank
+            prompt: "He is ___ as manifestly unfit to conduct the inquiry."
+            accepted_answers: ["regarded"]
+            explanation: "The passive needs the past participle \"regarded\"."
+            evidence: "he is regarded as manifestly unfit to conduct the inquiry"
+          - format: fill_blank
+            prompt: "If he can ___ forced under sharp questioning to admit it, he is rejected."
+            accepted_answers: ["be"]
+            explanation: "A modal passive is \"can be\" + past participle."
+            evidence: "if he can be forced under sharp questioning to admit"
+          - format: multiple_choice
+            prompt: "Which form is correct?"
+            options: ["It is sometimes made an objection", "It is sometimes make an objection", "It sometimes made an objection", "It is sometimes making an objection"]
+            answer: "It is sometimes made an objection"
+            explanation: "\"is\" + past participle forms the passive."
+            evidence: "It is sometimes made an objection, for instance"
+          - format: multiple_choice
+            prompt: "What does the author say impartiality may simply mean?"
+            options: ["Indifference", "Fairness", "Wisdom", "Patience"]
+            answer: "Indifference"
+            explanation: "He suspects impartiality of being a lack of interest."
+            evidence: "What people call impartiality may simply mean indifference"
+          - format: multiple_choice
+            prompt: "In a passive with a modal, what follows \"can\"?"
+            options: ["\"be\" + past participle", "\"been\" + past participle", "the past participle alone", "\"being\" + past participle"]
+            answer: "\"be\" + past participle"
+            explanation: "Compare \"can be forced\" in the text."
+            evidence: "if he can be forced under sharp questioning"
+      target_occurrences:
+          - { tag: "grammar:passive-voice", quote: "It is sometimes made an objection" }
+          - { tag: "grammar:passive-voice", quote: "if he can be forced under sharp questioning" }
+          - { tag: "grammar:passive-voice", quote: "he is regarded as manifestly unfit to conduct the inquiry" }
+  - user: "Style exemplar (register only: the real request has its own subject, length and pattern; these learner errors are invented). Pattern: discourse:connector. Learner errors: \"Although it was late but we continued.\" → \"Although it was late, we continued.\"; \"He was tired, however he worked.\" → \"He was tired; however, he worked.\""
+    output:
+      title: "On Running After One's Hat"
+      topic: "everyday inconveniences"
+      body: >-
+        Some consider such romantic views of flood or fire slightly lacking in reality. But really this
+        romantic view of such inconveniences is quite as practical as the other. The true optimist who
+        sees in such things an opportunity for enjoyment is quite as logical and much more sensible than
+        the ordinary “Indignant Ratepayer” who sees in them an opportunity for grumbling. Real pain, as
+        in the case of being burnt at Smithfield or having a toothache, is a positive thing; it can be
+        supported, but scarcely enjoyed. But, after all, our toothaches are the exception, and as for
+        being burnt at Smithfield, it only happens to us at the very longest intervals. And most of the
+        inconveniences that make men swear or women cry are really sentimental or imaginative
+        inconveniences—things altogether of the mind.
+      questions:
+          - format: multiple_choice
+            prompt: "What does \"But really\" introduce in the second sentence?"
+            options: ["A contrast with the view just mentioned", "An example", "A conclusion", "A time sequence"]
+            answer: "A contrast with the view just mentioned"
+            explanation: "It answers the objection in the first sentence."
+            evidence: "But really this romantic view of such inconveniences is quite as practical"
+          - format: fill_blank
+            prompt: "But, after ___, our toothaches are the exception."
+            accepted_answers: ["all"]
+            explanation: "\"After all\" introduces a point that should be remembered."
+            evidence: "But, after all, our toothaches are the exception"
+          - format: multiple_choice
+            prompt: "Which connector could replace \"But\" in \"But, after all, our toothaches are the exception\"?"
+            options: ["However", "Therefore", "Because", "For example"]
+            answer: "However"
+            explanation: "Both mark a contrast with what came before."
+            evidence: "But, after all, our toothaches are the exception"
+          - format: multiple_choice
+            prompt: "What is the function of \"as in the case of\"?"
+            options: ["To introduce examples", "To show a result", "To contrast two ideas", "To show time"]
+            answer: "To introduce examples"
+            explanation: "It introduces the cases of real pain that follow."
+            evidence: "Real pain, as in the case of being burnt at Smithfield or having a toothache"
+          - format: fill_blank
+            prompt: "Real pain can be supported, ___ scarcely enjoyed."
+            accepted_answers: ["but"]
+            explanation: "\"But\" joins two contrasting clauses without a second connector."
+            evidence: "it can be supported, but scarcely enjoyed"
+      target_occurrences:
+          - { tag: "discourse:connector", quote: "But really this romantic view of such inconveniences" }
+          - { tag: "discourse:connector", quote: "But, after all, our toothaches are the exception" }
+          - { tag: "discourse:connector", quote: "as in the case of being burnt at Smithfield" }
 constraints:
-  - Never write a listening-style passage (no dialogue-only scripts, no audio cues).
-  - The passage must model the correct form, not the learner's mistaken form.
-  - Every question must have exactly one clearly correct option among the four.
-banned_phrases: []
+  - "Never write a listicle or a catalogue of points (numbered items, \"Firstly... Secondly...\" sequences), headings or bullet points in the body."
+  - "Never write a dialogue-only script or audio cues; this is a text to read."
+  - "Never mention that the text is for learners, and never name or explain the target structures inside the text."
+  - "Copy nothing from the style exemplars (not their topic, sentences or wording); they only show register."
+  - "Quote evidence and target occurrences exactly as they appear in the text, with the same words in the same order."
+banned_phrases: ["as you may remember", "common mistake"]

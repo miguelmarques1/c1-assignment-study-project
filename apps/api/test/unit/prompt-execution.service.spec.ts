@@ -95,6 +95,37 @@ describe('PromptExecutionService', () => {
     expect(telemetry.record.mock.calls[0]?.[0].outcome).toBe('validation_failed_retried_ok');
   });
 
+  it('passes_the_appendix_and_example_selection_to_rendering', async () => {
+    registry.get.mockReturnValue(
+      makePrompt({
+        examples: [
+          { user: 'Example one.', output: { greeting: 'one' } },
+          { user: 'Example two.', output: { greeting: 'two' } },
+        ],
+      }),
+    );
+    generateContentMock.mockResolvedValueOnce(fakeResponse({ greeting: 'hi' }));
+
+    await service.execute('user-1', 'demo-prompt', { name: 'Ana' }, { appendix: 'Fix the word count.', exampleIndexes: [1] });
+
+    const contents = generateContentMock.mock.calls[0]?.[0].contents as string;
+    expect(contents).toContain('Example two.');
+    expect(contents).not.toContain('Example one.');
+    expect(contents.endsWith('Fix the word count.')).toBe(true);
+  });
+
+  it('schema_retry_keeps_the_appendix', async () => {
+    generateContentMock
+      .mockResolvedValueOnce(fakeResponse({ wrong: 'shape' }))
+      .mockResolvedValueOnce(fakeResponse({ greeting: 'fixed' }));
+
+    await service.execute('user-1', 'demo-prompt', { name: 'Ana' }, { appendix: 'Fix the word count.' });
+
+    const retry = generateContentMock.mock.calls[1]?.[0].contents as string;
+    expect(retry.indexOf('Fix the word count.')).toBeGreaterThan(0);
+    expect(retry.indexOf('Correction needed')).toBeGreaterThan(retry.indexOf('Fix the word count.'));
+  });
+
   it('hard_fails_after_a_second_invalid_response', async () => {
     generateContentMock
       .mockResolvedValueOnce(fakeResponse({ wrong: 'shape' }))

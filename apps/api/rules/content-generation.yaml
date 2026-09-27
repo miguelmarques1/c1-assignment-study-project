@@ -165,7 +165,8 @@ lexicons:
     tells, told, warned, wondered,
   ]
   connector: [
-    accordingly, admittedly, after all, although, as a result, because, besides, by contrast, consequently,
+    accordingly, admittedly, after all, although, and yet, as a result, as for, because, besides, but, by contrast,
+    consequently, for example, for instance, in the case of, to begin with,
     conversely, despite, even so, even though, furthermore, hence, however, in addition, in contrast,
     in fact, in spite of, indeed, instead, likewise, meanwhile, moreover, nevertheless, nonetheless,
     on the other hand, otherwise, similarly, since, so that, therefore, though, thus, unless, whereas,
@@ -174,7 +175,8 @@ lexicons:
   hedge: [
     apparently, appear to, appears to, approximately, arguably, conceivably, could be, generally,
     in a sense, it is possible, it seems, largely, likely, may, might, more or less, perhaps, possibly,
-    presumably, probably, relatively, roughly, seem to, seemingly, seems to, somewhat, suggest, suggests,
+    often, presumably, probably, relatively, roughly, seem to, seemingly, seems to, sometimes, somewhat, suggest,
+    suggests, usually,
     tend to, tended to, tends to, to a degree, to some extent, unlikely, would seem,
   ]
 
@@ -194,7 +196,7 @@ structure_markers:
   grammar:past-perfect:
     - "(?:\\bhad|\\bhadn't|'d)(?:\\s+(?:not|never|already|just|ever|long|since|also|finally|now|still))*\\s+(?:\\w+ed|\\w+en|{participle})\\b"
   grammar:passive-voice:
-    - "(?:\\b(?:am|is|are|was|were|be|been|being|get|gets|got|gotten|getting|isn't|aren't|wasn't|weren't)|'s|'re)(?:\\s+(?:not|never|also|often|always|still|widely|largely|rarely|already|then|now|increasingly|being|been))*\\s+(?:\\w+ed|\\w+en|{participle})\\b"
+    - "(?:\\b(?:am|is|are|was|were|be|been|being|get|gets|got|gotten|getting|isn't|aren't|wasn't|weren't)|'s|'re)(?:\\s+(?:not|never|also|often|always|still|widely|largely|rarely|already|then|now|increasingly|sometimes|usually|generally|frequently|commonly|seldom|being|been))*\\s+(?:\\w+ed|\\w+en|{participle})\\b"
   grammar:modal-verb:
     - "\\b(?:{modal})\\b"
   grammar:future-forms:
