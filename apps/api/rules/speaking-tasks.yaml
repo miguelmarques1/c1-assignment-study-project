@@ -1,0 +1,603 @@
+# Speaking tasks (F18). Read only when the API boots; an invalid file stops it.
+# Every task stores the version and fingerprint it was chosen under. Bump the
+# version with any change. Passages: 25-60 words, letters and basic
+# punctuation only - no digits, hyphenated compounds or abbreviations. Every
+# non-retired phoneme tag must be drilled by at least 2 passages; every
+# non-retired discourse and vocab tag must be targeted by at least 1 prompt.
+version: "1"
+
+read_aloud:
+  - id: ra-valley-bridges
+    text: >-
+      Nothing in the southern valley was thought through. Three weathered
+      bridges gathered the traffic of the whole district, and although everyone
+      knew the thin wooden beams would one day give way, nobody thought the
+      repairs worth the trouble until the morning the northern bridge finally
+      collapsed.
+    drills:
+      "phoneme:/θ/": [nothing, thought, three, thin]
+      "phoneme:/ð/": [the, weathered, gathered, although]
+
+  - id: ra-pilot-project
+    text: >-
+      The pilot project began badly. Every deadline was missed, and the budget
+      kept climbing until nobody could explain where the extra spending had
+      actually gone. Still, the team refused to abandon the idea, believing
+      that a better plan, built carefully and tested twice, could still
+      deliver what the client actually wanted.
+    drills:
+      "phoneme:/p/": [pilot, project, spending, plan, deliver]
+      "phoneme:/b/": [badly, budget, better, built, believing]
+      "phoneme:/t/": [team, tested, still, until, twice]
+      "phoneme:/d/": [deadline, deliver, abandon]
+      "phoneme:/k/": [climbing, could, client, kept, actually]
+
+  - id: ra-garden-fence
+    text: >-
+      Ever since the fence fell, the garden had felt forgotten. Grass grew
+      freely over the vegetable beds, and the fig tree gave more fruit than
+      anyone could gather. Still, she refused to sell the house, insisting
+      that a garden left to itself sometimes finds its own strange, generous
+      shape.
+    drills:
+      "phoneme:/g/": [garden, grew, gave, gather]
+      "phoneme:/f/": [fence, fell, felt, forgotten, fig, fruit]
+      "phoneme:/v/": [vegetable, ever, over]
+      "phoneme:/s/": [since, grass, sell, insisting, sometimes, shape]
+
+  - id: ra-museum-tour
+    text: >-
+      Museums usually seem quiet, but this one buzzed with visitors as soon as
+      the doors opened. She wished she had chosen a shorter visit, since every
+      room revealed a new treasure, and the decision to skip the pleasure of
+      the sculpture hall began to feel like an honest mistake.
+    drills:
+      "phoneme:/z/": [museums, buzzed, visitors, doors]
+      "phoneme:/ʒ/": [usually, decision, pleasure]
+      "phoneme:/ʃ/": [she, wished, shorter]
+      "phoneme:/h/": [had, hall]
+
+  - id: ra-grandfather-watch
+    text: >-
+      My grandfather kept a small watch in the kitchen drawer, and every time
+      the family gathered, someone would ask to touch it again. It had
+      survived a journey across many countries, damaged but never truly
+      broken, and my mother insisted it remembered more about our name than
+      any photograph could manage.
+    drills:
+      "phoneme:/tʃ/": [watch, kitchen, touch]
+      "phoneme:/dʒ/": [journey, damaged, manage]
+      "phoneme:/m/": [my, family, mother, name]
+      "phoneme:/n/": [kitchen, never, insisted, any]
+
+  - id: ra-mountain-path
+    text: >-
+      Walking along the ridge, we kept talking about nothing important, just
+      watching the clouds rolling slowly toward the valley below. The wind was
+      growing stronger, and every rock along the trail looked wet from the
+      morning rain, yet nobody wanted to turn around while the light was still
+      working in our favour.
+    drills:
+      "phoneme:/ŋ/": [walking, talking, nothing, growing]
+      "phoneme:/l/": [along, clouds, slowly, valley]
+      "phoneme:/ɹ/": [ridge, rock, trail, morning]
+      "phoneme:/w/": [walking, we, wind, wanted]
+
+  - id: ra-job-interview
+    text: >-
+      Before the interview, you should rehearse your opinions about the
+      company's values, not just memorise a few useful phrases. A confident
+      young candidate usually argues with genuine curiosity rather than
+      familiar excuses, and that small difference, more than any perfect
+      answer, tends to convince a skeptical committee.
+    drills:
+      "phoneme:/j/": [opinions, young, usually, curiosity]
+      "phoneme:/t/": [interview, tends, skeptical, about]
+      "phoneme:/d/": [should, candidate, difference]
+
+  - id: ra-power-persuasion
+    text: >-
+      Power rarely persuades by force alone. A brave leader often builds trust
+      before demanding obedience, offering fair reasons instead of empty
+      threats. When people feel respected, they follow willingly; when they
+      feel forced, they obey only until the pressure lifts, and then the whole
+      effort quietly falls apart.
+    drills:
+      "phoneme:/p/": [power, persuades, people, pressure]
+      "phoneme:/b/": [brave, builds, before, obey]
+      "phoneme:/f/": [force, fair, follow, falls]
+
+  - id: ra-coastal-village
+    text: >-
+      Every evening, the village grew silent as the waves settled against the
+      shore. Visitors rarely stayed past sunset, but a few families remained,
+      watching the same view for years, convinced that nowhere else offered
+      such a peaceful vision of ordinary life continuing quietly beside the
+      sea.
+    drills:
+      "phoneme:/v/": [every, evening, visitors, view]
+      "phoneme:/s/": [silent, settled, sunset, stayed]
+      "phoneme:/z/": [waves, families, years]
+
+  - id: ra-committee-debate
+    text: >-
+      She insisted the decision was rushed, and her sharp objections pushed
+      the whole committee toward a difficult judgement. He argued that
+      patience mattered more than pleasure, that a hasty conclusion damaged
+      trust, and that history usually punished those who chased an easy
+      answer instead of a hard one.
+    drills:
+      "phoneme:/ʃ/": [she, rushed, sharp, pushed]
+      "phoneme:/ʒ/": [decision, pleasure, usually]
+      "phoneme:/h/": [her, he, history, hard]
+      "phoneme:/dʒ/": [judgement, damaged]
+
+  - id: ra-long-flight
+    text: >-
+      After three sleepless hours, she began to see the city lights beneath
+      the wing, believing the journey was nearly finished. Every seat around
+      her stayed silent, and even the crew seemed relieved, though she still
+      felt a strange mixture of relief and regret as the plane began its slow
+      descent.
+    drills:
+      "phoneme:/i/": [see, seat, relieved, relief]
+      "phoneme:/ɪ/": [city, finished, still, mixture]
+      "phoneme:/eɪ/": [stayed, plane]
+      "phoneme:/ɛ/": [every, regret, felt]
+
+  - id: ra-buying-house
+    text: >-
+      Actually, the family had planned to buy a small house near the harbor,
+      hoping the calm neighborhood would suit their growing household. They
+      already knew the process could involve unexpected costs, but they also
+      hoped the whole move would open a hopeful chapter, not another
+      exhausting chore.
+    drills:
+      "phoneme:/æ/": [actually, family, had, planned]
+      "phoneme:/ɑ/": [costs, not]
+      "phoneme:/ɔ/": [small, already]
+      "phoneme:/oʊ/": [hoping, hoped, hopeful, open]
+
+  - id: ra-learning-cook
+    text: >-
+      Cooking well takes patience, not luck. You should follow a truly good
+      recipe before trying to improvise, because a single rushed step can
+      ruin the whole dish. My mother always insisted that anyone could learn
+      to cook something delicious, provided they were willing to stay in the
+      kitchen a little longer than felt comfortable.
+    drills:
+      "phoneme:/ʊ/": [cooking, should, good, could]
+      "phoneme:/u/": [you, ruin, truly]
+      "phoneme:/ʌ/": [luck, something, comfortable, mother]
+      "phoneme:/ə/": [patience, recipe, provided, single]
+
+  - id: ra-night-sky
+    text: >-
+      Under a clearer sky than usual, we found ourselves counting the
+      brightest stars while the mountain wind grew louder around the camp. My
+      brother insisted the universe was far stranger than anyone could
+      imagine; we were content just to wonder in silence.
+    drills:
+      "phoneme:/ɚ/": [under, brother, wonder, stranger]
+      "phoneme:/ɝ/": [universe, were]
+      "phoneme:/aɪ/": [sky, brightest, while, silence]
+      "phoneme:/aʊ/": [found, ourselves, around, louder]
+
+  - id: ra-difficult-choice
+    text: >-
+      Choosing between the two job offers was a difficult choice, and every
+      option seemed to involve some unavoidable risk. If she stayed here,
+      near her family, she would enjoy comfort but sacrifice ambition; if she
+      moved abroad, she could pursue a rare opportunity, though nothing there
+      felt fully secure, and no one could feel entirely sure.
+    drills:
+      "phoneme:/ɔɪ/": [enjoy, choice]
+      "phoneme:/ɛɹ/": [there, rare]
+      "phoneme:/ɪɹ/": [near, here]
+      "phoneme:/ʊɹ/": [secure, sure]
+
+  - id: ra-crossing-border
+    text: >-
+      Every year, thousands of workers travel far from home in search of a
+      better market for their skills. Before they depart, they must prepare
+      careful documents, argue their case at a crowded office, and require
+      hours of tiring, careful waiting, hoping that hard work alone will
+      eventually earn our families a fairer, more secure future.
+    drills:
+      "phoneme:/ɑɹ/": [far, market, argue, hard]
+      "phoneme:/ɔɹ/": [before, more, for]
+      "phoneme:/aɪɹ/": [require, tiring]
+      "phoneme:/aʊɹ/": [hours, our]
+
+  - id: ra-recipe-fails
+    text: >-
+      He tried to repeat the same recipe exactly, believing each measured
+      detail mattered, yet the result never tasted the way he remembered.
+      Every extra minute in the oven left the bread heavier, and no amount of
+      careful timing seemed able to explain why the effort kept ending in the
+      same tedious mistake.
+    drills:
+      "phoneme:/i/": [repeat, believing, each]
+      "phoneme:/ɪ/": [minute, timing, mistake]
+      "phoneme:/eɪ/": [same, way, explain]
+      "phoneme:/ɛ/": [every, extra, heavier, left]
+
+  - id: ra-harvest-season
+    text: >-
+      As autumn approached, the farmers gathered a final harvest before the
+      frost arrived, hoping the crop would offset a difficult season. Nothing
+      about the process was automatic; every task demanded a practical plan,
+      calm patience, and a hopeful attitude, though not everyone involved
+      shared that same optimistic outlook.
+    drills:
+      "phoneme:/æ/": [as, gathered, practical, plan]
+      "phoneme:/ɑ/": [not, calm]
+      "phoneme:/ɔ/": [autumn, automatic, offset]
+      "phoneme:/oʊ/": [approached, hoping, hopeful, outlook]
+
+  - id: ra-night-shift
+    text: >-
+      Working the night shift took some getting used to. You lose track of
+      ordinary routine, and the world outside seems to move at a duller pace
+      while everyone else sleeps. Still, I grew to enjoy the quiet, the
+      useful solitude, and a strange sense of pursuing something that nobody
+      else could truly understand.
+    drills:
+      "phoneme:/ʊ/": [took, could]
+      "phoneme:/u/": [used, you, move, truly]
+      "phoneme:/ʌ/": [some, duller, understand]
+      "phoneme:/ə/": [ordinary, routine, pursuing, solitude]
+
+  - id: ra-telescope
+    text: >-
+      My father bought an old telescope years ago, and every clear night he
+      would carefully observe the stars, quietly certain that the universe
+      deserved more patience than curiosity alone. I remember how proud he
+      seemed, how he never tired of finding a brighter light in an otherwise
+      silent sky, content simply using it for hours.
+    drills:
+      "phoneme:/ɚ/": [father, otherwise, remember]
+      "phoneme:/ɝ/": [certain, universe]
+      "phoneme:/aɪ/": [night, quietly, tired, sky]
+      "phoneme:/aʊ/": [how, proud]
+      "phoneme:/ju/": [universe, using]
+
+  - id: ra-shipwreck
+    text: >-
+      Sailors aboard the ship had every reason to worry as the storm grew
+      nearer. Some feared the rare disaster was no longer avoidable, and the
+      noise of the waves added to their choice to abandon ship. Still, others
+      felt sure and assured that fair courage would guide them safely near
+      the shore before the weather turned dangerous.
+    drills:
+      "phoneme:/ɔɪ/": [avoidable, noise, choice]
+      "phoneme:/ɛɹ/": [rare, fair]
+      "phoneme:/ɪɹ/": [nearer, near, feared]
+      "phoneme:/ʊɹ/": [sure, assured]
+
+  - id: ra-family-business
+    text: >-
+      Our family's hardware store started small, but my father argued that
+      hard work and fair prices would eventually earn more loyal customers.
+      He often said, before anything else, that acquiring a good reputation
+      takes far longer than losing one, and that hiring someone who
+      genuinely cared about our customers empowered the whole business more
+      than anything written on paper.
+    drills:
+      "phoneme:/ɑɹ/": [hardware, argued, hard, far]
+      "phoneme:/ɔɹ/": [store, more, before]
+      "phoneme:/aɪɹ/": [hiring, acquiring]
+      "phoneme:/aʊɹ/": [our, empowered]
+
+  - id: ra-music-lesson
+    text: >-
+      Learning music takes practice, not luck. A few students think a cute
+      melody is easy to master, yet even a simple tune can take weeks to
+      play correctly. My teacher always argued that anyone willing to use
+      honest effort, however clumsy at first, could eventually gain a
+      confident feel for rhythm through thorough practice.
+    drills:
+      "phoneme:/ju/": [few, cute, use, music]
+      "phoneme:/k/": [takes, luck, correctly, could]
+      "phoneme:/g/": [gain, argued]
+      "phoneme:/θ/": [think, thorough]
+
+  - id: ra-family-gathering
+    text: >-
+      Whenever the whole family gathers together, my mother insists on
+      cooking something from her mother's old recipes, though nobody quite
+      remembers the exact method anymore. Each dish carries a familiar
+      taste, and even the youngest children seem to sense that these small
+      traditions matter more than anyone openly admits.
+    drills:
+      "phoneme:/ð/": [together, though, these, "mother's"]
+      "phoneme:/tʃ/": [each, children]
+      "phoneme:/m/": [my, mother, remembers, matter]
+      "phoneme:/n/": [nobody, remembers, anymore, sense]
+
+  - id: ra-long-walk-home
+    text: >-
+      Walking home along the river, feeling the evening light slowly fading,
+      we let ourselves talk freely about nothing serious, laughing
+      occasionally at old memories. The road felt longer than usual, yet
+      neither of us really wanted the walk to end, willing to let the quiet
+      evening carry on a little longer.
+    drills:
+      "phoneme:/ŋ/": [walking, laughing, longer]
+      "phoneme:/l/": [along, slowly, freely, little]
+      "phoneme:/ɹ/": [river, road, really, carry]
+      "phoneme:/w/": [walking, we, wanted, willing]
+      "phoneme:/j/": [yet, usual]
+
+  - id: ra-city-traffic
+    text: >-
+      Traffic in the city rarely moves quickly during rush hour, and most
+      residents have simply learned to plan around it. Some drivers try
+      shortcuts through narrow streets, while others just accept the delay
+      and listen to the radio, resigned to a routine that never seems to
+      improve no matter how often it is discussed.
+    drills:
+      "phoneme:/t/": [traffic, city, quickly, most]
+      "phoneme:/s/": [simply, some, streets, accept]
+      "phoneme:/ɹ/": [rarely, residents, radio, routine]
+      "phoneme:/n/": [never, narrow, listen, no]
+
+  - id: ra-school-reunion
+    text: >-
+      Seeing old classmates again felt strange at first, since everyone
+      looked different, yet somehow familiar. Old rivalries seemed silly
+      now, and small talk quickly gave way to genuine stories about
+      children, careers, and the slow, gradual changes life had quietly
+      delivered to each of them over the years.
+    drills:
+      "phoneme:/s/": [seeing, since, somehow, small]
+      "phoneme:/d/": [old, delivered, gradual]
+      "phoneme:/l/": [felt, silly, slow, delivered]
+      "phoneme:/ɪ/": [since, silly, children]
+
+  - id: ra-storm-warning
+    text: >-
+      Weather forecasters warned that the storm would arrive within a few
+      hours, urging residents to stock water and keep their radios charged.
+      Some people took the warning seriously and quickly prepared, while
+      others waited until the wind actually started rattling windows before
+      they truly understood the risk they were taking.
+    drills:
+      "phoneme:/w/": [weather, warned, would, waited]
+      "phoneme:/ɹ/": [warned, arrive, residents, radios]
+      "phoneme:/k/": [keep, quickly, actually, risk]
+      "phoneme:/t/": [started, truly, taking, until]
+
+  - id: ra-art-exhibition
+    text: >-
+      The exhibition showcased a wide range of visual work, from cautious
+      sketches to bold, unusual sculptures that seemed to provoke every
+      visitor differently. She mentioned that the artist's vision was
+      deliberately ambitious, refusing easy conclusions and insisting that
+      genuine art should always leave a little decision unresolved, never
+      fully judged, for the viewer.
+    drills:
+      "phoneme:/ʃ/": [showcased, cautious, should]
+      "phoneme:/ʒ/": [visual, vision, decision]
+      "phoneme:/dʒ/": [genuine, judged]
+      "phoneme:/v/": [visual, visitor, vision]
+
+  - id: ra-mountain-rescue
+    text: >-
+      Every rescue mission demands calm nerves and honest communication
+      among the whole team. When a hiker goes missing near a remote ridge,
+      hours can matter more than anything else, and no member of the crew is
+      ever allowed to rely on hope alone when real preparation could make
+      the difference.
+    drills:
+      "phoneme:/h/": [hiker, hope, whole]
+      "phoneme:/m/": [mission, calm, among, member]
+      "phoneme:/n/": [nerves, near, no, anything]
+      "phoneme:/ɹ/": [rescue, ridge, remote, rely]
+
+  - id: ra-negotiation
+    text: >-
+      Before the negotiation began, both parties prepared a brief position
+      paper, hoping to persuade the other side without appearing stubborn.
+      She pushed for a bigger budget, but her opposite number pushed back
+      with genuine arguments, gradually building a compromise that gave both
+      sides something valuable to bring home.
+    drills:
+      "phoneme:/b/": [before, both, brief, building]
+      "phoneme:/p/": [parties, prepared, position, pushed]
+      "phoneme:/g/": [began, bigger, gradually, gave]
+
+  - id: ra-retirement-speech
+    text: >-
+      After forty years of faithful service, she finally felt ready to
+      retire, though leaving felt far more difficult than she had ever
+      imagined. Her colleagues gathered to celebrate her achievements,
+      praising her fairness, her vision, and the quiet influence she had on
+      everyone who ever worked beside her.
+    drills:
+      "phoneme:/f/": [after, forty, faithful, far]
+      "phoneme:/v/": [ever, achievements, vision]
+      "phoneme:/z/": [years, praising]
+      "phoneme:/ə/": [colleagues, achievements, influence, beside]
+
+open_response:
+  - id: or-office-return
+    prompt: >-
+      Your company wants everyone back in the office five days a week. What
+      would you say to your manager, and how would you make your case without
+      sounding confrontational?
+    hint: Hedge your claims and give one concrete example.
+    targets: ["discourse:hedging", "discourse:politeness"]
+
+  - id: or-neighbor-noise
+    prompt: >-
+      Your upstairs neighbor keeps you awake most nights with loud music.
+      Describe how you would knock on their door and raise the problem
+      without starting an argument you might regret later.
+    hint: Ask a clarifying question before you make any accusation.
+    targets: ["discourse:politeness", "discourse:clarification"]
+
+  - id: or-project-delay
+    prompt: >-
+      A project you are responsible for will now finish two weeks later than
+      promised. Explain the delay to the client in a way that connects the
+      causes clearly and still sounds confident about the plan going forward.
+    hint: Use clear linking words between each reason you give.
+    targets: ["discourse:connector", "discourse:cohesion"]
+
+  - id: or-interrupting-meeting
+    prompt: >-
+      During a busy team meeting, you notice one colleague never gets the
+      chance to speak because others keep interrupting. Describe how you
+      would step in, give that person space to talk, and keep the discussion
+      fair.
+    hint: Signal clearly before you take a turn or offer one to someone else.
+    targets: ["discourse:turn-taking", "discourse:politeness"]
+
+  - id: or-return-gift
+    prompt: >-
+      A close friend gives you a gift you do not like at all. Describe what
+      you would say and do in the moment, choosing your words so the gift
+      feels appreciated without any dishonesty.
+    hint: Pick natural word pairings, not awkward literal translations.
+    targets: ["vocab:collocation", "vocab:register"]
+
+  - id: or-give-up-habit
+    prompt: >-
+      Think of a habit you eventually gave up, whether a small one or a
+      serious one. Explain what made you quit, how difficult the first weeks
+      were, and what finally helped it stick.
+    hint: Notice how many phrasal verbs naturally describe quitting a habit.
+    targets: ["vocab:phrasal-verb"]
+
+  - id: or-idiom-explain
+    prompt: >-
+      Choose an idiom from your own language that has no direct English
+      equivalent. Explain its literal meaning, its real meaning, and describe
+      a situation where a native English speaker might use a similar
+      expression instead.
+    hint: Compare the image behind the idiom, not just its dictionary meaning.
+    targets: ["vocab:idiom"]
+
+  - id: or-word-choice-apology
+    prompt: >-
+      Describe a time you apologized for something and, looking back, chose
+      the wrong words for the situation. Explain what you said, what you
+      should have said instead, and why the difference mattered.
+    hint: Contrast at least two words that seem similar but are not interchangeable.
+    targets: ["vocab:word-choice"]
+
+  - id: or-noun-verb-mixup
+    prompt: >-
+      Explain a piece of advice you would give a beginner English learner who
+      often confuses a noun and its related verb, such as advice and advise.
+      Use your own example throughout the explanation.
+    hint: Keep the same root word but shift its part of speech.
+    targets: ["vocab:word-form"]
+
+  - id: or-false-friend-story
+    prompt: >-
+      Describe a moment when a word that looked familiar from your own
+      language completely misled you in English. Explain what you assumed it
+      meant, what it actually meant, and how you eventually noticed the
+      mistake.
+    hint: Focus on the surprise of discovering the real meaning.
+    targets: ["vocab:false-friend"]
+
+  - id: or-formal-email
+    prompt: >-
+      You need to ask your professor for an extension on an assignment.
+      Describe exactly what you would say, keeping the tone formal and
+      respectful throughout, without becoming either too casual or overly
+      dramatic.
+    hint: Match your vocabulary to a formal, respectful situation.
+    targets: ["vocab:register", "discourse:politeness"]
+
+  - id: or-industry-jargon
+    prompt: >-
+      Pick a subject you know well, whether from your job, your studies, or a
+      hobby, and explain one process from it as if teaching a complete
+      beginner, defining any technical term the moment you first use it.
+    hint: Define each specialised term the first time you say it.
+    targets: ["vocab:domain-term"]
+
+  - id: or-disagree-boss
+    prompt: >-
+      Your manager proposes an idea you think is a mistake. Explain how you
+      would raise your concerns in the next meeting without sounding
+      disrespectful or shutting the conversation down completely.
+    hint: Soften your disagreement before stating your actual concern.
+    targets: ["discourse:hedging", "discourse:politeness"]
+
+  - id: or-recommend-restaurant
+    prompt: >-
+      A visiting colleague asks you to recommend a restaurant in your city and
+      explain what makes it worth the trip. Connect your reasons clearly,
+      from the food itself to the atmosphere and the service.
+    hint: Link each new reason back to the one before it.
+    targets: ["discourse:connector", "vocab:collocation"]
+
+  - id: or-lost-luggage
+    prompt: >-
+      Your luggage has not arrived after a long flight, and you must explain
+      the situation to an airline representative who keeps misunderstanding
+      the details. Describe how you would clarify calmly and keep the
+      conversation moving.
+    hint: Restate the key fact whenever you sense confusion.
+    targets: ["discourse:clarification"]
+
+  - id: or-team-credit
+    prompt: >-
+      A colleague takes full credit for a project that was actually a team
+      effort. Describe how you would address this directly with them,
+      staying professional while still making your point clearly.
+    hint: State the fact gently before naming the problem directly.
+    targets: ["discourse:politeness", "discourse:hedging"]
+
+  - id: or-childhood-change
+    prompt: >-
+      Describe how your neighborhood has changed since your childhood.
+      Organize your answer so each change connects naturally to the next,
+      from the streets themselves to the people who live there now.
+    hint: Let each sentence pick up a thread from the one before it.
+    targets: ["discourse:cohesion", "vocab:word-form"]
+
+  - id: or-phrasal-travel
+    prompt: >-
+      Describe your worst travel experience, from setting off to finally
+      getting back home. Use natural expressions for the small disasters
+      along the way, not just simple verbs.
+    hint: Reach for a phrasal verb before a single formal word.
+    targets: ["vocab:phrasal-verb", "vocab:idiom"]
+
+  - id: or-cultural-misunderstanding
+    prompt: >-
+      Describe a misunderstanding you witnessed or experienced because of a
+      word borrowed between two languages that does not mean the same thing
+      in both. Explain how the confusion was eventually resolved.
+    hint: Name the word and both of its meanings clearly.
+    targets: ["vocab:false-friend"]
+
+  - id: or-difficult-feedback
+    prompt: >-
+      You must give a friend honest feedback about a decision you think is
+      unwise. Describe how you would raise your doubts while checking that
+      you actually understand their reasons first.
+    hint: Ask what you might be missing before you give your opinion.
+    targets: ["discourse:hedging", "discourse:clarification"]
+
+  - id: or-negotiating-price
+    prompt: >-
+      You are negotiating the price of an item at a market where haggling is
+      expected. Describe the exchange from your opening offer to the final
+      agreed price, keeping the tone friendly rather than aggressive.
+    hint: Choose phrases that sound natural in an informal negotiation.
+    targets: ["vocab:register", "vocab:collocation"]
+
+  - id: or-technical-support
+    prompt: >-
+      Explain to a relative with little technical knowledge why their
+      internet connection keeps failing and what they should try first.
+      Define any technical term before relying on it again.
+    hint: Check that your explanation actually landed before moving on.
+    targets: ["vocab:domain-term", "discourse:clarification"]

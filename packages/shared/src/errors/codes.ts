@@ -65,6 +65,24 @@ export const ERROR_CODES = {
   PLAN_ACTIVITY_NOT_IN_CURRENT_PLAN: 'PLAN004',
   /** At least one infrastructure dependency is unreachable. */
   HEALTH_DEPENDENCY_DOWN: 'HEALTH001',
+  /** No speaking or pronunciation activity for the caller, anywhere in its carry-over lineage. */
+  SPEAKING_ACTIVITY_NOT_FOUND: 'SPEAK001',
+  /** 3 attempts are already scored for this activity's task. */
+  SPEAKING_ATTEMPT_LIMIT: 'SPEAK002',
+  /** Not a 16 kHz mono 16-bit PCM WAV. */
+  SPEAKING_AUDIO_INVALID: 'SPEAK003',
+  /** Longer than 2 minutes, or larger than the upload cap. */
+  SPEAKING_AUDIO_TOO_LONG: 'SPEAK004',
+  /** No such recording for the caller, or a discarded attempt with no audio. */
+  SPEAKING_ATTEMPT_NOT_FOUND: 'SPEAK005',
+  /** Not `failed` with a re-scorable code, or its audio is gone. */
+  SPEAKING_NOT_RESCORABLE: 'SPEAK006',
+  /** Another attempt for this activity's task is still being scored. */
+  SPEAKING_SCORING_IN_FLIGHT: 'SPEAK007',
+  /** The recording could not be stored; not counted against the limit. */
+  SPEAKING_UPLOAD_FAILED: 'SPEAK008',
+  /** The activity was skipped, so it takes no new recordings. */
+  SPEAKING_ACTIVITY_SKIPPED: 'SPEAK009',
   /** Unhandled server-side failure. */
   INTERNAL_ERROR: 'ERR500',
 } as const;
@@ -104,6 +122,15 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   [ERROR_CODES.PLAN_ACTIVITY_NOT_FOUND]: 404,
   [ERROR_CODES.PLAN_ACTIVITY_NOT_IN_CURRENT_PLAN]: 409,
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 503,
+  [ERROR_CODES.SPEAKING_ACTIVITY_NOT_FOUND]: 404,
+  [ERROR_CODES.SPEAKING_ATTEMPT_LIMIT]: 409,
+  [ERROR_CODES.SPEAKING_AUDIO_INVALID]: 400,
+  [ERROR_CODES.SPEAKING_AUDIO_TOO_LONG]: 413,
+  [ERROR_CODES.SPEAKING_ATTEMPT_NOT_FOUND]: 404,
+  [ERROR_CODES.SPEAKING_NOT_RESCORABLE]: 409,
+  [ERROR_CODES.SPEAKING_SCORING_IN_FLIGHT]: 409,
+  [ERROR_CODES.SPEAKING_UPLOAD_FAILED]: 503,
+  [ERROR_CODES.SPEAKING_ACTIVITY_SKIPPED]: 409,
   [ERROR_CODES.INTERNAL_ERROR]: 500,
 };
 
@@ -148,5 +175,14 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ERROR_CODES.PLAN_ACTIVITY_NOT_FOUND]: 'This activity could not be found.',
   [ERROR_CODES.PLAN_ACTIVITY_NOT_IN_CURRENT_PLAN]: 'This activity is no longer in your current plan.',
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 'One or more dependencies are unavailable.',
+  [ERROR_CODES.SPEAKING_ACTIVITY_NOT_FOUND]: 'This speaking activity could not be found.',
+  [ERROR_CODES.SPEAKING_ATTEMPT_LIMIT]: 'You have used all 3 attempts for this activity.',
+  [ERROR_CODES.SPEAKING_AUDIO_INVALID]: 'This recording is not a 16 kHz mono 16-bit WAV file.',
+  [ERROR_CODES.SPEAKING_AUDIO_TOO_LONG]: 'This recording is longer than 2 minutes.',
+  [ERROR_CODES.SPEAKING_ATTEMPT_NOT_FOUND]: 'This recording could not be found.',
+  [ERROR_CODES.SPEAKING_NOT_RESCORABLE]: 'This recording cannot be re-scored.',
+  [ERROR_CODES.SPEAKING_SCORING_IN_FLIGHT]: 'Another recording for this activity is still being scored.',
+  [ERROR_CODES.SPEAKING_UPLOAD_FAILED]: 'Your recording could not be uploaded. Retry?',
+  [ERROR_CODES.SPEAKING_ACTIVITY_SKIPPED]: 'This activity was skipped, so it takes no new recordings.',
   [ERROR_CODES.INTERNAL_ERROR]: 'Something went wrong on our side.',
 };

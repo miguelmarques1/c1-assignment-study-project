@@ -50,6 +50,8 @@ model User {
   studyPlans           StudyPlan[]
   studyPlanActivities  StudyPlanActivity[]
   studyPlanRequests    StudyPlanRequest[]
+  speakingTasks        SpeakingTask[]
+  speakingAttempts     SpeakingAttempt[]
 
   @@map("users")
 }
@@ -1200,10 +1202,95 @@ model StudyPlanActivity {
   contentItem ContentItem?        @relation(fields: [contentItemId], references: [id], onDelete: NoAction)
   carriedFrom StudyPlanActivity?  @relation("StudyPlanActivityCarry", fields: [carriedFromActivityId], references: [id], onDelete: SetNull)
   carriedTo   StudyPlanActivity[] @relation("StudyPlanActivityCarry")
+  speakingTask     SpeakingTask?    @relation("SpeakingTaskRoot")
+  speakingAttempts SpeakingAttempt[] @relation("SpeakingAttemptActivity")
 
   @@unique([planId, day, position], map: "ux_plan_activities_plan_slot")
   @@index([userId, completedAt(sort: Desc)], map: "ix_plan_activities_user_completed")
   @@map("study_plan_activities")
+}
+
+/// F18: a speaking plan activity's task, chosen once from the versioned
+/// corpus and kept for its whole carry-over lineage. `rootActivityId` is the
+/// oldest id in that lineage, so a carried activity resolves to the same row.
+model SpeakingTask {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId            String   @map("user_id") @db.Uuid
+  rootActivityId    String   @unique(map: "ux_speaking_tasks_root_activity") @map("root_activity_id") @db.Uuid
+  /// One of read_aloud, open_response.
+  shape             String   @db.VarChar(16)
+  corpusEntryId     String   @map("corpus_entry_id") @db.VarChar(64)
+  corpusVersion     String   @map("corpus_version") @db.VarChar(16)
+  corpusFingerprint String   @map("corpus_fingerprint") @db.Char(64)
+  /// Set exactly for read_aloud — a snapshot of the passage.
+  referenceText     String?  @map("reference_text")
+  /// Set exactly for open_response.
+  promptText        String?  @map("prompt_text")
+  hint              String?  @db.VarChar(200)
+  targetTags        String[] @default([]) @map("target_tags")
+  focusTags         String[] @default([]) @map("focus_tags")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rootActivity StudyPlanActivity @relation("SpeakingTaskRoot", fields: [rootActivityId], references: [id], onDelete: Cascade)
+  attempts     SpeakingAttempt[]
+
+  @@index([userId, corpusEntryId, createdAt(sort: Desc)], map: "ix_speaking_tasks_user_entry")
+  @@map("speaking_tasks")
+}
+
+/// F18: one uploaded recording against a speaking task. Every attempt is
+/// retained; only `scored` ones count toward the limit of 3 and carry an
+/// `ordinal`. A per-task row lock plus the two partial unique indexes below
+/// enforce "at most 3 scored, one in flight" across devices.
+model SpeakingAttempt {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  taskId              String    @map("task_id") @db.Uuid
+  userId              String    @map("user_id") @db.Uuid
+  activityId          String    @map("activity_id") @db.Uuid
+  clientAttemptId     String    @map("client_attempt_id") @db.Uuid
+  /// One of scoring, scored, discarded, failed.
+  state               String    @db.VarChar(16)
+  /// 1-3, set exactly when scored.
+  ordinal             Int?      @db.SmallInt
+  /// Null exactly when discarded.
+  audioObjectKey      String?   @map("audio_object_key") @db.VarChar(255)
+  audioBytes          Int       @map("audio_bytes")
+  durationMs          Int       @map("duration_ms")
+  /// Lease start while scoring.
+  scoringStartedAt    DateTime? @map("scoring_started_at") @db.Timestamptz(6)
+  scoredAt            DateTime? @map("scored_at") @db.Timestamptz(6)
+  /// Set exactly when failed or discarded. A SpeakingFailureCode value.
+  failureCode         String?   @map("failure_code") @db.VarChar(32)
+  failureReason       String?   @map("failure_reason") @db.VarChar(200)
+  rescoreCount        Int       @default(0) @map("rescore_count") @db.SmallInt
+  pronunciation       Float?    @db.Real
+  accuracy            Float?    @db.Real
+  fluency             Float?    @db.Real
+  /// Null where the assessment locale does not report it.
+  prosody             Float?    @db.Real
+  completeness        Float?    @db.Real
+  recognizedWordCount Int?      @map("recognized_word_count") @db.SmallInt
+  /// The open response's own transcript, when one was made.
+  transcriptText      String?   @map("transcript_text")
+  /// Display tokens with accuracy, error types, recording offsets and phonemes.
+  words               Json?
+  failingPhonemes     Json?     @map("failing_phonemes")
+  /// For the curator: per-segment reference, scores and latency.
+  segments            Json?
+  locale              String?   @db.VarChar(16)
+  /// Sum over every provider call this attempt made.
+  latencyMs           Int?      @map("latency_ms")
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  task     SpeakingTask      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user     User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activity StudyPlanActivity @relation("SpeakingAttemptActivity", fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, clientAttemptId], map: "ux_speaking_attempts_client")
+  @@index([taskId, createdAt], map: "ix_speaking_attempts_task_created")
+  @@map("speaking_attempts")
 }
 
 /// The fallback (F07's `StudyPlanFallbackPort`) and interim-plan (analysis
