@@ -118,6 +118,7 @@ describe('plan composition modes (F15)', () => {
     const branchId = lesson.branches.get(ana.id)!;
 
     let capturedVariables: Record<string, string> | null = null;
+    let capturedUserId: string | null = null;
     const original = PromptExecutionService.prototype.execute;
     vi.spyOn(PromptExecutionService.prototype, 'execute').mockImplementation(function (
       this: PromptExecutionService,
@@ -130,6 +131,7 @@ describe('plan composition modes (F15)', () => {
         return original.call(this, userId, promptId, variables, options as never);
       }
       capturedVariables = variables;
+      capturedUserId = userId;
       const alias = firstOfferedAlias(variables);
       const result: PromptExecutionResult = {
         data: { selections: [{ ref: alias, rationale: 'A model rationale long enough to pass the acceptance check here.' }, { ref: 'zz99', rationale: 'Unknown.' }] },
@@ -147,6 +149,8 @@ describe('plan composition modes (F15)', () => {
     await startProfileUpdate(pipeline, branchId);
     await waitForStage(pipeline.ctx, branchId, 'plan_generation', ['completed']);
     expect(capturedVariables).not.toBeNull();
+    // The composer called the prompt library with Ana's own id, never another participant's.
+    expect(capturedUserId).toBe(ana.id);
 
     const plan = await pipeline.ctx.prisma.studyPlan.findUniqueOrThrow({
       where: { userId_lessonId_origin: { userId: ana.id, lessonId: lesson.lessonId, origin: 'lesson' } },
@@ -155,6 +159,9 @@ describe('plan composition modes (F15)', () => {
     expect(plan.composition).toBe('model');
     const stats = plan.modelSelectionStats as { rejected: { unknown: number } };
     expect(stats.rejected.unknown).toBe(1);
+    // Prompt execution (F04) stamps its id and version onto the artifact it produced.
+    expect(plan.promptId).toBe('study-plan-compose');
+    expect(plan.promptVersion).toBe('2');
   }, 60_000);
 
   it('more_than_half_invalid_discards_the_models_output', async () => {
