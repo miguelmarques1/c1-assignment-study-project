@@ -88,7 +88,11 @@ describe('profile update pipeline', () => {
     const queuedNext = await pipeline.ctx.prisma.lessonPipelineStage.findUniqueOrThrow({
       where: { branchId_stage: { branchId, stage: 'plan_generation' } },
     });
-    expect(queuedNext).toMatchObject({ status: 'queued', run: 1 });
+    // Not asserting `status: 'queued'` here: F15 registers a handler, so the
+    // job can already be running (or, under load, even completed) by the
+    // time this read happens — `run: 1` is the only part of this that's
+    // stable regardless of how fast the worker picks it up.
+    expect(queuedNext).toMatchObject({ run: 1 });
     // F15 registers a handler, so profile_update's completion enqueues it automatically.
     expect(await queue().getJob(pipelineJobId('plan_generation', branchId, 1))).toBeDefined();
 
