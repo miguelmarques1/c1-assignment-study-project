@@ -42,17 +42,25 @@
 **Validation:** typecheck ✅ · lint ✅ (`eslint src/speaking test/unit/speaking-*.spec.ts`) · full unit suite ✅ — `pnpm --filter @english-quest/api exec vitest run test/unit`: 683/684 passing, the one failure being `openapi.spec.ts`'s committed-snapshot check, expected to go red until stage 4 adds the actual routes and regenerates `docs/api/openapi.json` (the new `SPEAK00x` error codes already changed the schema's enum). New speaking-only suites: `speaking-wav-header` 11/11, `speaking-audio-body` 8/8, `speaking-token-alignment` 8/8, `speaking-segment-planner` 8/8, `speaking-attempt-result` 10/10, `speaking-attempt-policy` 13/13, `speaking-outcome` 7/7, `speaking-task-selector` 9/9.
 **Commit:** _(pending — see end of stage)_
 
-## Stage 3: Scoring Service and Attempt Flow — ⬜ pending
+## Stage 3: Scoring Service and Attempt Flow — ✅ done
 
-- [ ] **9. Scorer Service**
-- [ ] **10. Task Materialization and the Activity View**
-- [ ] **11. Upload Flow**
-- [ ] **12. Re-score, Lease and Audio**
+- [x] **9. Scorer Service**
+- [x] **10. Task Materialization and the Activity View**
+- [x] **11. Upload Flow**
+- [x] **12. Re-score, Lease and Audio**
 
-**Observations:** _(none yet)_
+**Observations:**
+- `SpeakingScorerService.score()` branches on `shape === 'read_aloud' && durationMs <= SEGMENT_MAX_MS` for the direct-assessment path (no transcription); everything else (open response, or a long read-aloud) transcribes first. A direct read-aloud's `SpeechNoRecognitionError` (Azure's `NoMatch`) is translated to `discarded`/`not_enough_speech` specifically for that path, matching the spec's `no_match_discards_a_direct_read_aloud` test intent — a segmented path's persistent `NoMatch` instead fails the whole attempt (`service_error`), since A7 allows no partial attempt.
+- `latencyMs` is measured with `Date.now()` around each provider call rather than trusted from the provider's own reported figure: `SpeechToTextService.transcribeClip` doesn't expose a `latencyMs` field (only the fuller `transcribeFile`/`SpeechTranscription` does), so wall-clock timing is the simplest self-contained option and needed no F08 change.
+- `speaking_attempts.words` stores the *raw* merged evidence (`MergedWord[]`, phonemes included, matching the DB column's own comment) rather than the pre-rendered client-facing display words. `SpeakingViewMapper` re-derives `displayWords()` on every read from that raw evidence plus the task's reference text (or the attempt's own transcript for an open response) — a single source of truth, so the view can never drift from what was actually measured. `failing_phonemes` similarly stores every grouped instance (not just the worst), and the mapper picks the view's single example and taxonomy label at read time.
+- `SpeakingViewMapper.toAttemptView` independently re-derives "is this `scoring` row actually stale" via `isStale(..., now)` on every read (not just inside a mutating transaction), so a `GET` immediately after a crash reports `failed`/`interrupted` even before any upload or re-score has run `markInterrupted` to fix the DB row itself.
+- `SpeakingTaskRepository.insertIfAbsent` doesn't require an explicit `$transaction` — it already handles the `root_activity_id` race with a P2002 catch-and-read-back (mirroring `generation-run.repository.ts`'s `isUniqueViolation` precedent), so `SpeakingActivityService.materializeTask` calls it directly against `PrismaService`.
+- **Validated the DI wiring for real, not just by inspection.** Two dead ends first: (1) `npx tsx` (esbuild) does not emit `design:paramtypes` decorator metadata reliably — Nest's error messages from a `tsx`-run script were red herrings, not real bugs; (2) testing `SpeakingModule` in isolation (even with the other `@Global()` modules added) hits unrelated pre-existing gaps (`GenerationModule`'s transitive `PromptExecutionService`, BullMQ worker teardown) that only exist because a partial module list omits modules `AppModule` already wires up in production. The reliable check was adding `SpeakingModule` to the real `src/app.module.ts` (needed for stage 4 anyway) and compiling the **whole** `AppModule` through `vitest`'s SWC-based transform (the same transform the real test suite uses, and the one `vitest.config.ts` explicitly notes esbuild can't substitute for). That resolved and instantiated `SpeakingAttemptService`, `SpeakingActivityService` and `SpeakingScorerService` cleanly. `app.module.ts`'s `SpeakingModule` import is therefore already in place, ahead of stage 4's own routes/controller.
+- Also verified against the real local Postgres (started for stage 1): reran `prisma migrate deploy` / `prisma generate` unaffected by this stage's service-layer-only changes.
+- No Testcontainers integration test files were written yet for the attempt/activity/re-score flows (`speaking-activity-routes.spec.ts`, `speaking-attempts.spec.ts`, `speaking-rescore.spec.ts`) — they exercise HTTP routes that don't exist until stage 4's controller lands, so they are deferred to close out alongside it rather than written against a route that isn't there yet.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** typecheck ✅ (whole `apps/api` package) · lint ✅ (`eslint src test`, whole package) · full unit suite ✅ — 683/684 (same pre-existing `openapi.spec.ts` staleness expected until stage 4 regenerates the snapshot) · DI graph ✅ (`AppModule` compiles and resolves every new speaking provider via vitest/SWC) · migration re-verified against local Postgres. Soft-fail: no Docker in this container, so the Testcontainers-based integration suites for this stage's services are deferred to stage 4 (see above) and will still only be soft-fail-executable here even once written.
+**Commit:** _(pending — see end of stage)_
 
 ## Stage 4: HTTP Surface — ⬜ pending
 

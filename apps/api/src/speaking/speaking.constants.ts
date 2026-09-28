@@ -1,4 +1,8 @@
 import { join } from 'node:path';
+import type { PlanActivityKind } from '@english-quest/shared';
+
+/** F15's two speaking kinds (PRD; A1). A plan activity of any other kind is `SPEAK001`. */
+export const SPEAKING_ACTIVITY_KINDS = new Set<PlanActivityKind>(['pronunciation', 'speaking']);
 
 /** At most this many scored attempts per task (PRD, A10). */
 export const SPEAKING_MAX_ATTEMPTS = 3;
