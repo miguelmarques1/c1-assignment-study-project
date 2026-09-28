@@ -9,16 +9,25 @@ import 'package:mobile/core/session/session_user.dart';
 import 'package:mobile/features/auth/auth_module.dart';
 import 'package:mobile/features/shell/shell_module.dart';
 
+import '../helpers/scripted_dio.dart';
+
 SessionController _sessionWith(SessionState state) {
   final controller = SessionController(Dio(), SessionStore());
   controller.state.value = state;
   return controller;
 }
 
+/// The Today and Plan tabs fetch `/plans/current` as soon as they mount, so
+/// every shell test needs a working `Dio` in scope, not just a session — an
+/// empty plan is enough since these tests are about the shell, not content.
 Module _testModule(SessionController controller) {
+  final (dio, _) = scriptedDio({
+    'GET /plans/current': ok({'serverTime': '2026-09-25T14:00:00.000Z', 'plan': null, 'preparing': null, 'failure': null}),
+  });
   return createModule(
     register: (c) => c
       ..addInstance<SessionController>(controller)
+      ..addInstance<Dio>(dio)
       ..module(authModule)
       ..module(shellModule),
   );

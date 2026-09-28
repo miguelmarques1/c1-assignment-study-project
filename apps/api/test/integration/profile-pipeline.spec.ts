@@ -68,7 +68,7 @@ beforeEach(async () => {
 });
 
 describe('profile update pipeline', () => {
-  it('the_stage_ingests_the_lesson_and_waits_at_plan_generation', async () => {
+  it('the_stage_ingests_the_lesson_and_queues_plan_generation_which_completes_the_branch', async () => {
     const ana = await seedSpeaker(pipeline.ctx, 'Ana');
     const lesson = await makeProfileUpdateReadyLesson(pipeline, [
       {
@@ -85,14 +85,26 @@ describe('profile update pipeline', () => {
 
     expect(row).toMatchObject({ attempts: 1, reasonCode: null, progressTotal: null });
     expect(await sourceKinds(ana.id)).toEqual(['lesson_analysis', 'lesson_pronunciation']);
-    const branch = await pipeline.ctx.prisma.lessonPipelineBranch.findUniqueOrThrow({ where: { id: branchId } });
-    expect(branch).toMatchObject({ stage: 'plan_generation', status: 'queued' });
-    const next = await pipeline.ctx.prisma.lessonPipelineStage.findUniqueOrThrow({
+    const queuedNext = await pipeline.ctx.prisma.lessonPipelineStage.findUniqueOrThrow({
       where: { branchId_stage: { branchId, stage: 'plan_generation' } },
     });
-    expect(next).toMatchObject({ status: 'queued', run: 1 });
-    // No handler for plan_generation until F15, so nothing was queued for it.
-    expect(await queue().getJob(pipelineJobId('plan_generation', branchId, 1))).toBeUndefined();
+    // Not asserting `status: 'queued'` here: F15 registers a handler, so the
+    // job can already be running (or, under load, even completed) by the
+    // time this read happens — `run: 1` is the only part of this that's
+    // stable regardless of how fast the worker picks it up.
+    expect(queuedNext).toMatchObject({ run: 1 });
+    // F15 registers a handler, so profile_update's completion enqueues it automatically.
+    expect(await queue().getJob(pipelineJobId('plan_generation', branchId, 1))).toBeDefined();
+
+    // No Gemini key: F15 composes deterministically and the pipeline's last
+    // stage completes, which is also the branch's terminal status (F15).
+    await waitForStage(pipeline.ctx, branchId, 'plan_generation', ['completed']);
+    const branch = await pipeline.ctx.prisma.lessonPipelineBranch.findUniqueOrThrow({ where: { id: branchId } });
+    expect(branch).toMatchObject({ stage: 'plan_generation', status: 'completed' });
+    const plan = await pipeline.ctx.prisma.studyPlan.findUniqueOrThrow({
+      where: { userId_lessonId_origin: { userId: ana.id, lessonId: lesson.lessonId, origin: 'lesson' } },
+    });
+    expect(plan).toMatchObject({ status: 'active', composition: 'deterministic', deterministicReason: 'gemini_key_missing' });
   }, 60_000);
 
   it('lesson_scores_update_the_six_competencies_from_their_own_sources', async () => {

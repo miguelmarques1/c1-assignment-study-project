@@ -15,9 +15,11 @@ export const PIPELINE_QUEUE = 'lesson-pipeline';
  * somewhere to leave the branch: F09 added `pronunciation_assessment`,
  * where a selected branch waits for F10's handler, F10 added
  * `lesson_analysis`, where an assessed branch waits for F11's, F11 added
- * `profile_update`, where an analysed branch waits for F12's, and F12 adds
- * `plan_generation`, where a profiled branch waits for F15's (which also
- * adds the pipeline's terminal status).
+ * `profile_update`, where an analysed branch waits for F12's, and F12 added
+ * `plan_generation`, where a profiled branch waits for F15's handler.
+ * `plan_generation` is the pipeline's last stage: once F15's handler
+ * completes it, `PipelineStateService.complete` has no next stage to queue
+ * and moves the branch pointer to the terminal status `completed` instead.
  */
 export const PIPELINE_STAGE_ORDER: readonly PipelineStage[] = [
   'recording',

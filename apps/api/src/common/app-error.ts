@@ -126,4 +126,22 @@ export class AppError extends Error {
   static contentSlugConflict(slug: string, existingType: string, existingProvenance: string): AppError {
     return new AppError(ERROR_CODES.CONTENT_SLUG_CONFLICT, { slug, existingType, existingProvenance });
   }
+
+  /** An unknown plan id and another user's are the same answer, so existence never leaks. */
+  static studyPlanNotFound(): AppError {
+    return new AppError(ERROR_CODES.STUDY_PLAN_NOT_FOUND);
+  }
+
+  static planNothingToRetry(): AppError {
+    return new AppError(ERROR_CODES.PLAN_NOTHING_TO_RETRY);
+  }
+
+  /** An unknown activity id and another user's are the same answer, so existence never leaks. */
+  static planActivityNotFound(activityId: string): AppError {
+    return new AppError(ERROR_CODES.PLAN_ACTIVITY_NOT_FOUND, { activityId });
+  }
+
+  static planActivityNotInCurrentPlan(activityId: string): AppError {
+    return new AppError(ERROR_CODES.PLAN_ACTIVITY_NOT_IN_CURRENT_PLAN, { activityId });
+  }
 }

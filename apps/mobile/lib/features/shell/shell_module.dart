@@ -3,7 +3,7 @@ import 'package:flutter_modular/flutter_modular.dart';
 import '../../core/session/session_controller.dart';
 import '../../core/session/session_state.dart';
 import '../lessons/lessons_module.dart';
-import '../plan/plan_page.dart';
+import '../plan/plan_module.dart';
 import '../profile/profile_page.dart';
 import '../settings/settings_module.dart';
 import '../today/today_page.dart';
@@ -24,9 +24,9 @@ final shellModule = createModule(
       children: (sub) {
         sub
           ..route('/today', child: (ctx, state) => const TodayPage())
-          ..route('/plan', child: (ctx, state) => const PlanPage())
           ..route('/profile', child: (ctx, state) => const ProfilePage())
           ..module(lessonsModule)
+          ..module(planModule)
           ..module(settingsModule);
       },
     );

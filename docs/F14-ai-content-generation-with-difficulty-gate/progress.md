@@ -179,3 +179,6 @@
 3. **F16:** generated items carry only `multiple_choice` and `fill_blank` questions. A difficulty rating is stored against the payload's `promptVersion`.
 4. The pre-existing design-tokens CRLF drift is still open. A `.gitattributes` `eol=lf` rule for the generated files would fix it.
 5. The shared dev database gains migration `0014` the next time its API boots with this code merged.
+
+**Follow-up added by F15 (2026-09-27), appended — earlier notes above are unchanged:**
+- **F15 is wired as `generateForPlan`'s consumer.** `PlanComposerService.compose` calls it once per plan build with `runKey: lesson:<lessonId>` (or `fallback:<lessonId>` for a request build), wires `onProgress` to the stage's `context.reportProgress`, and draws on both the run's `generated` and `fallback` ids alongside curated bank candidates to fill the plan's quotas. A dropped slot is filled from the bank and surfaced as a plan note (`missing_listening` / `missing_reading`); F14's own quota and quality notes pass through unchanged. `recordServed` is called once per bank item placed, inside the same transaction that activates the plan.

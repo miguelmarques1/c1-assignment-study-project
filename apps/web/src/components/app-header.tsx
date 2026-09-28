@@ -11,6 +11,7 @@ import { Avatar, Logo, NavPill, ThemeToggle, type NavDestination } from '@/compo
  */
 const DESTINATIONS: NavDestination[] = [
   { href: '/dashboard', label: 'Dashboard' },
+  { href: '/plan', label: 'Plan', matchPrefix: true },
   { href: '/profile', label: 'Profile' },
   { href: '/lessons', label: 'Lessons', matchPrefix: true },
   { href: '/settings', label: 'Settings' },

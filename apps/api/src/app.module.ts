@@ -14,6 +14,8 @@ import { ExcerptSelectionModule } from './excerpts/excerpt-selection.module';
 import { GenerationModule } from './generation/generation.module';
 import { HealthModule } from './health/health.module';
 import { LessonsModule } from './lessons/lessons.module';
+import { PlanGenerationModule } from './plan-generation/plan-generation.module';
+import { PlansModule } from './plans/plans.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { ProfileUpdateModule } from './profile-update/profile-update.module';
 import { PromptsModule } from './prompts/prompts.module';
@@ -50,6 +52,8 @@ import { TranscriptionModule } from './transcription/transcription.module';
     ProfileUpdateModule,
     ContentModule,
     GenerationModule,
+    PlansModule,
+    PlanGenerationModule,
   ],
   providers: [
     // Authentication is global: a route is protected unless it opts out with

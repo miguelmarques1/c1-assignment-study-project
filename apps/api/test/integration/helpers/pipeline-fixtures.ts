@@ -41,6 +41,9 @@ const passwords = new PasswordService();
 /** Three short retries instead of 30 s, 2 min and 8 min; the production values are pinned by a unit test. */
 export const FAST_RETRY_POLICY = { attempts: 4, delaysMs: [40, 40, 40] };
 
+/** Two short retries instead of 60 s and 300 s (F15's `plan_generation`). */
+export const FAST_PLAN_GENERATION_RETRY_POLICY = { attempts: 3, delaysMs: [40, 40] };
+
 /** Excerpt selection's two retries (5 s and 30 s in production), shortened the same way. */
 export const FAST_SELECTION_RETRY_POLICY = { attempts: 3, delaysMs: [40, 40] };
 
@@ -126,6 +129,7 @@ export async function createPipelineTestContext(
           pronunciation_assessment: FAST_PRONUNCIATION_RETRY_POLICY,
           lesson_analysis: FAST_ANALYSIS_RETRY_POLICY,
           profile_update: FAST_PROFILE_UPDATE_RETRY_POLICY,
+          plan_generation: FAST_PLAN_GENERATION_RETRY_POLICY,
         },
       },
       ...(typeof extra.overrides === 'function' ? extra.overrides() : (extra.overrides ?? [])),
@@ -734,6 +738,10 @@ export async function makeAnalysisReadyLesson(
 /** Adds the profile update job for a branch waiting at `profile_update`, as F11's completion does. */
 export async function startProfileUpdate(pipeline: PipelineTestContext, branchId: string, run = 1): Promise<void> {
   await pipeline.ctx.app.get(PipelineQueueService).enqueue(branchId, 'profile_update', run);
+}
+
+export async function startPlanGeneration(pipeline: PipelineTestContext, branchId: string, run = 1): Promise<void> {
+  await pipeline.ctx.app.get(PipelineQueueService).enqueue(branchId, 'plan_generation', run);
 }
 
 export interface SeededAnalysis {

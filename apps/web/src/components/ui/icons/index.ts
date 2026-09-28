@@ -29,4 +29,7 @@ export { CloseIcon } from './close-icon';
 export { UsersIcon } from './users-icon';
 export { ChartIcon } from './chart-icon';
 export { CloudCheckIcon } from './cloud-check-icon';
+export { PencilIcon } from './pencil-icon';
+export { TextIcon } from './text-icon';
+export { PuzzleIcon } from './puzzle-icon';
 export type { IconProps } from './icon-props';

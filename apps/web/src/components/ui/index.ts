@@ -48,6 +48,9 @@ export {
   UsersIcon,
   ChartIcon,
   CloudCheckIcon,
+  PencilIcon,
+  TextIcon,
+  PuzzleIcon,
   type IconProps,
 } from './icons';
 export { cn } from './cn';

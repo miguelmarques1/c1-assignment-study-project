@@ -177,7 +177,13 @@ export class PipelineStateService {
         await write(tx);
 
         const next = nextStageAfter(row.stage as QueuedPipelineStage);
-        return next ? this.queueStage(row.branchId, next, now, tx) : null;
+        if (next) {
+          return this.queueStage(row.branchId, next, now, tx);
+        }
+        // No next stage: this was the pipeline's last (plan_generation, F15).
+        // The branch pointer has nowhere else to go, so it settles here.
+        await this.movePointer(tx, row.branchId, row.stage, 'completed');
+        return null;
       },
       { timeout: COMPLETE_TRANSACTION_TIMEOUT_MS },
     );
@@ -300,7 +306,7 @@ export class PipelineStateService {
     client: Prisma.TransactionClient | PrismaService,
     branchId: string,
     stage: string,
-    status: 'queued' | 'running' | 'retrying' | 'blocked_missing_key' | 'failed',
+    status: 'queued' | 'running' | 'retrying' | 'blocked_missing_key' | 'failed' | 'completed',
     failure: { failureCode: string | null; failureReason: string | null } = {
       failureCode: null,
       failureReason: null,

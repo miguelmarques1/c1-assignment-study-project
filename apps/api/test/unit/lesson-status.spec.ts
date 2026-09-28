@@ -138,6 +138,21 @@ describe('deriveLessonStatus', () => {
     });
   });
 
+  it('a_completed_branch_reads_ready', () => {
+    const finished = branch('plan_generation', 'completed', [
+      ...UPSTREAM_DONE,
+      row('lesson_analysis', 'completed'),
+      row('profile_update', 'completed'),
+      row('plan_generation', 'completed'),
+    ]);
+    expect(deriveLessonStatus(lesson(), finished, 'ready')).toEqual({
+      status: 'ready',
+      flags: [],
+      activeStage: null,
+      statusReason: null,
+    });
+  });
+
   it('anything_else_is_processing_at_the_pointer_stage', () => {
     const cases: Array<[string, string]> = [
       ['recording', 'verifying'],

@@ -55,6 +55,14 @@ export const ERROR_CODES = {
   CONTENT_ITEM_NOT_FOUND: 'CONTENT001',
   /** The slug belongs to an item of another type or provenance, so it is refused rather than overwritten. */
   CONTENT_SLUG_CONFLICT: 'CONTENT002',
+  /** No such plan for the caller — including another user's plan id, so existence never leaks. */
+  STUDY_PLAN_NOT_FOUND: 'PLAN001',
+  /** `POST /plans/retry` with no failed build to retry. */
+  PLAN_NOTHING_TO_RETRY: 'PLAN002',
+  /** No such activity for the caller, anywhere in its carry-over lineage. */
+  PLAN_ACTIVITY_NOT_FOUND: 'PLAN003',
+  /** The activity's plan was replaced and it was not carried into the new one. */
+  PLAN_ACTIVITY_NOT_IN_CURRENT_PLAN: 'PLAN004',
   /** At least one infrastructure dependency is unreachable. */
   HEALTH_DEPENDENCY_DOWN: 'HEALTH001',
   /** Unhandled server-side failure. */
@@ -91,6 +99,10 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   [ERROR_CODES.PROFILE_LEDGER_ENTRY_NOT_FOUND]: 404,
   [ERROR_CODES.CONTENT_ITEM_NOT_FOUND]: 404,
   [ERROR_CODES.CONTENT_SLUG_CONFLICT]: 409,
+  [ERROR_CODES.STUDY_PLAN_NOT_FOUND]: 404,
+  [ERROR_CODES.PLAN_NOTHING_TO_RETRY]: 409,
+  [ERROR_CODES.PLAN_ACTIVITY_NOT_FOUND]: 404,
+  [ERROR_CODES.PLAN_ACTIVITY_NOT_IN_CURRENT_PLAN]: 409,
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 503,
   [ERROR_CODES.INTERNAL_ERROR]: 500,
 };
@@ -131,6 +143,10 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ERROR_CODES.PROFILE_LEDGER_ENTRY_NOT_FOUND]: 'This error record could not be found.',
   [ERROR_CODES.CONTENT_ITEM_NOT_FOUND]: 'Content item not found.',
   [ERROR_CODES.CONTENT_SLUG_CONFLICT]: 'This slug is already used by another content item.',
+  [ERROR_CODES.STUDY_PLAN_NOT_FOUND]: 'This study plan could not be found.',
+  [ERROR_CODES.PLAN_NOTHING_TO_RETRY]: 'There is no failed plan to retry.',
+  [ERROR_CODES.PLAN_ACTIVITY_NOT_FOUND]: 'This activity could not be found.',
+  [ERROR_CODES.PLAN_ACTIVITY_NOT_IN_CURRENT_PLAN]: 'This activity is no longer in your current plan.',
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 'One or more dependencies are unavailable.',
   [ERROR_CODES.INTERNAL_ERROR]: 'Something went wrong on our side.',
 };

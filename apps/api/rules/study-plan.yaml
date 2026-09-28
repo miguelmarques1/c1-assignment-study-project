@@ -1,0 +1,54 @@
+# Study plan rules (F15). Read only when the API boots.
+# Every plan stores the version it was composed under. Bump it with any change.
+version: "1"
+
+sessions:
+  count: 7
+  activities: { min: 2, max: 4 }
+  minutes: { min: 15, max: 20 }
+
+estimates:
+  words_per_minute: 180
+  question_minutes: 3
+  listening_passes: 2
+  fallback_minutes: { listening: 9, reading: 7 }
+  fixed_minutes:
+    vocabulary: 6
+    grammar: 6
+    error_review: 6
+    writing: 15
+    speaking: 5
+    pronunciation: 4
+
+quotas:
+  minimum: { listening: 1, reading: 1 }
+  review_max_share: 0.3
+
+tasks:
+  writing: { count: 2, days: [2, 5], tags: { min: 1, max: 2 } }
+  pronunciation: { count: 2, days: [1, 4], tags: { min: 1, max: 3 } }
+  speaking: { count: 1, days: [6], tags: { min: 1, max: 2 } }
+  speaking_without_pronunciation: { count: 3, days: [1, 4, 6] }
+  filler: [speaking, pronunciation]
+
+carry_over:
+  max: 5
+
+candidates:
+  cefr_levels: [C1, C2, B2]
+  offered_per_type:
+    listening: 6
+    reading: 6
+    vocabulary: 6
+    grammar: 6
+    error_review: 4
+  offered_max: 40
+  max_per_primary_tag: 3
+
+model:
+  selections: { min: 8, max: 18 }
+  invalid_share_to_discard: 0.5
+  rationale_chars: { min: 12, max: 200 }
+
+generation:
+  max_items: 12

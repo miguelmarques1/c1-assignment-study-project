@@ -122,3 +122,9 @@
 - `LoadedErrorTaxonomy` gained `familyOf`, and `TaxonomyFamily` a `format` (`slug` or `ipa`). `helpers/content-fixtures.ts` builds the loaded taxonomy by hand, so it now supplies both. `fixtureTaxonomyWith` gives an IPA-shaped extra tag an `ipa` family. The loader itself accepts `phoneme:/θ/` now, so the comment about the parser predating that spelling was updated.
 - `content-bank.service.spec.ts > save_generated_rejects_invalid_input_with_val001` expected the message `(v1)` verbatim. It now reads the version in force from `ErrorTaxonomyService`, so the next taxonomy bump doesn't break it again.
 
+
+## F15 follow-up (2026-09-27)
+
+- **`ContentBankService.candidatesFor(ids)` is now called.** F15's plan composer uses it to look up metadata for the content ids a fresh F14 run just produced, which by construction were never served to anyone before — so this method deliberately carries no served-window exclusion and no body fields, exactly as F13 built it for this purpose.
+- **`recordServed` is now called** inside F15's `PlanActivationService.activate`, once per bank item placed in the new plan, in the same transaction that inserts the plan and its activities — so a failed activation rolls the servings back along with everything else.
+- F13's own service, schema and CLI are unchanged.
