@@ -13,6 +13,7 @@ import { loadPrompts } from './boot/load-prompts';
 import { verifyAnalysisPrompt } from './boot/verify-analysis-prompt';
 import { verifyGenerationPrompts } from './boot/verify-generation-prompts';
 import { verifyPlanPrompt } from './boot/verify-plan-prompt';
+import { verifyWritingPrompt } from './boot/verify-writing-prompt';
 import { GenerationRulesService } from './generation/generation-rules.service';
 import { HttpExceptionFilter } from './common/http-exception.filter';
 import { loadEnv } from './config/env';
@@ -104,6 +105,14 @@ async function bootstrap(): Promise<void> {
   // F15's composition prompt must declare exactly the variables the
   // composer renders and expose the ref/rationale shape the guardrails read.
   verifyPlanPrompt({ registry: app.get(PromptRegistryService) });
+
+  // F17's correction prompt must declare exactly the variables its builder
+  // renders, and its errors[].tag enum and scores keys must match the
+  // taxonomy and the correction builder exactly.
+  verifyWritingPrompt({
+    registry: app.get(PromptRegistryService),
+    taxonomy: app.get(ErrorTaxonomyService),
+  });
 
   // Readiness line: one probe per dependency with its latency, so a slow or
   // missing service is visible at startup rather than at first use.

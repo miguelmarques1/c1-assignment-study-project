@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { Prisma, WritingCorrection, WritingCorrectionError, WritingTask } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { WRITING_LIMIT_LOCK_NAMESPACE } from './writing.constants';
 
 export type TxClient = Prisma.TransactionClient;
 
@@ -174,6 +175,11 @@ export class WritingRepository {
 
   async setFailureStatus(tx: TxClient, taskId: string, status: 'uncorrected' | 'correction_failed'): Promise<void> {
     await tx.writingTask.update({ where: { id: taskId }, data: { status } });
+  }
+
+  /** Locks this user's writing submissions for the rest of the current transaction, so two devices can never both take the last slot (A14). */
+  async lockUserLimit(tx: TxClient, userId: string): Promise<void> {
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${WRITING_LIMIT_LOCK_NAMESPACE + userId}, 0))`;
   }
 
   // --- Corrections ---

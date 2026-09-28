@@ -44,17 +44,30 @@
 **Soft-fails:** No runtime/integration exercise of `open`/`read`/`saveDraft` yet — no controller exists until Stage 4, and Docker is unavailable in this sandbox for Testcontainers regardless.
 **Commit:** _(pending — recorded after this stage's commit lands)_
 
-## Stage 3: Correction — ⬜ pending
+## Stage 3: Correction — ✅ done
 
-- [ ] **8. Correction Prompt, Version 2**
-- [ ] **9. Correction Output Rules**
-- [ ] **10. Submission**
-- [ ] **11. Correction Runner and Recovery Sweep**
+- [x] **8. Correction Prompt, Version 2**
+- [x] **9. Correction Output Rules**
+- [x] **10. Submission**
+- [x] **11. Correction Runner and Recovery Sweep**
 
-**Observations:** _(none yet)_
+**Observations:**
+- Stage 2's commit SHA: `ffe71a1`.
+- `writing-correct.yaml` v2 written with 2 examples (a targeted third-conditional letter, and a general-task proposal), both validating against the response schema at load time (`prompt-file-loader.ts` checks this automatically). `verify-writing-prompt.ts` mirrors `verify-plan-prompt.ts`/`verify-analysis-prompt.ts`: pins the four variables, the `errors[].tag` enum against the taxonomy's 36 analysis tags, `scores`' four required keys, the absence of `maxItems` on `errors[]`, and at least one example.
+- `output/quote-locator.ts` and `output/writing-output.ts` (`processCorrectionOutput`) landed here as originally planned (Stage 2's progress note already explains why the other three `output/*` files and `writing-limit.ts` moved earlier).
+- **Design finding, logged as a deviation from a literal reading of A17's "duplicates... are dropped":** no separate de-duplication step was needed. `locateQuote`'s `claimed` set (already required for "prefers an unclaimed occurrence of a repeated quote") already makes two accepted errors sharing the same span impossible by construction — a second candidate for an already-claimed span either finds a genuinely different, legitimate occurrence of the same mistake (correctly accepted as a second, distinct error) or finds none and is discarded as unlocated. `discardedErrorCount`'s comment in the data model ("unlocated, overlong or duplicate errors") is satisfied without a third code path.
+- `classifyCorrectionError` follows F14's `classifyGenerationError` almost exactly, but every outcome that F14 would abandon a whole run over (quota, provider 5xx, other 4xx) is `retryable` here instead, per A11's explicit "one retry covers timeouts, empty responses, provider and network errors, quota errors and other 4xx rejections."
+- `correction-outcome.ts`'s `toActivityOutcome` is a thin, directly-testable mapper; its output is asserted against F12's own `activityOutcomeSchema` in `writing-correction-outcome.spec.ts` so the contract can never silently drift.
+- `WritingCorrectionRunner`: prior ledger counts (A18) are read via `ErrorLedgerReader.entriesFor` against the plain `PrismaService` *before* opening the settling transaction, because `ErrorLedgerReader` has no transaction-client parameter anywhere in the codebase (confirmed — `plan-composer.service.ts` reads it the same way, outside any transaction, before its own later transactional writes). This is an established convention here, not a new gap: nothing else concurrently writes occurrences for the same user and tags in a way this feature needs to guard against.
+- The runner's settling failure path re-reads the task's status *inside* the failure transaction and only flips it to `uncorrected`/`correction_failed` when it is still `correcting` (A12) — defence in depth per spec §5 point 6, even though the partial unique index `ux_writing_corrections_task_running` already makes the specific stale-failure race this guards against essentially unreachable in practice.
+- `WritingSubmissionService.submit` delegates its whole response — both the idempotent-replay case and the normal success case — to `WritingActivityService.read()` rather than building a `WritingActivityView` a second, divergent way. This also means the submit route's `WRIT001`/`PLAN003` behavior is identical to the read route's by construction.
+- `WritingCorrectionJob` follows `PlanRequestJob`'s exact `@Interval('name', ms) run(now: Date = new Date())` shape, so the same "call `job.run(now)` directly in tests, with the interval either not yet firing or irrelevant to a short unit run" convention applies.
+- Not yet wired into `AppModule`: per plan.md, `writing.module.ts` is created together with the controller in Stage 4 ("register the module"). Until then, `WritingTaskRulesService.onModuleInit` never actually runs in the booted app (nothing instantiates it), so the rules file is not yet enforced at real boot — this closes automatically once Stage 4 registers the module, which Nest then instantiates as part of normal provider bootstrapping.
+- **Soft-fail, carried forward and made explicit here:** the integration suites this stage's behavior most needs (`writing-correction.spec.ts`, `writing-correction-failures.spec.ts`, `writing-limit.spec.ts` integration) were **not written** in this run. Two reasons compound: (1) Docker/Testcontainers is unavailable in this sandbox, so they could not be executed or debugged here regardless of effort spent; (2) they need substantial new fixture infrastructure (a `writing` call kind and per-key `writingScripts` queue in `helpers/fake-gemini.ts`, and a new `helpers/writing-fixtures.ts` seeding a plan/ledger for a writing activity) that would itself be unverified code layered on unverified code. Writing them without any way to confirm they pass risks shipping silently-broken tests, which is worse than an honest gap. This is flagged as a follow-up for a Docker-enabled environment rather than treated as done. The pure-logic half of every one of these suites (composition, output processing, classification, outcome mapping, the prompt boot check) **is** written and passing — see Validation.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** typecheck ✅ (`pnpm -r typecheck`) · lint ✅ (`pnpm lint`, zero warnings) · unit tests ✅ (82 files / 666 tests total; new this stage: `writing-prompt.spec.ts` 7/7, `writing-quote-locator.spec.ts` 6/6, `writing-output.spec.ts` grew to 12/12 with `processCorrectionOutput`, `writing-correction-error.spec.ts` 7/7, `writing-correction-outcome.spec.ts` 5/5)
+**Soft-fails:** No integration coverage yet for submission, the correction runner, retries/failures, or the daily limit — needs Docker (Testcontainers) plus new fake-Gemini and fixture helpers; deferred as a follow-up rather than written unverified. `WritingTaskRulesService` is not yet instantiated by the real app (module registration is Stage 4).
+**Commit:** _(pending — recorded after this stage's commit lands)_
 
 ## Stage 4: HTTP Surface — ⬜ pending
 

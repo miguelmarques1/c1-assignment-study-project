@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { PlanActivityKind, WritingActivityView } from '@english-quest/shared';
+import type { WritingActivityView } from '@english-quest/shared';
 import type { WritingTask } from '@prisma/client';
 
 import { AppError } from '../common/app-error';
@@ -11,12 +11,11 @@ import { ErrorLedgerReader } from '../profile/error-ledger.reader';
 import { ErrorTaxonomyService } from '../taxonomy/error-taxonomy.service';
 import { composeTask } from './composition/task-composer';
 import { limitState, limitWindowStart } from './writing-limit';
+import { resolveWritingActivity } from './writing-resolve';
 import { WritingTaskRulesService } from './writing-task-rules.service';
 import { WritingViewBuilder } from './writing-view.builder';
 import { WritingRepository, type TxClient } from './writing.repository';
 import { WRITING_ANALYSIS_FAMILIES } from './writing.constants';
-
-const WRITING_KIND: PlanActivityKind = 'writing';
 
 /**
  * Route logic for opening and reading a writing activity, and for saving
@@ -46,7 +45,7 @@ export class WritingActivityService {
    */
   async open(userId: string, activityId: string, now: Date): Promise<WritingActivityView> {
     return this.prisma.$transaction(async (tx) => {
-      const resolved = await this.resolveWriting(userId, activityId, tx);
+      const resolved = await resolveWritingActivity(this.plans, userId, activityId, tx);
 
       await this.repository.lockActivity(tx, resolved.activityId);
       let task = await this.repository.findTaskByLineage(tx, resolved.lineage);
@@ -69,7 +68,7 @@ export class WritingActivityService {
 
   /** Read-only, with no state change — what both clients poll while `correcting` (spec §5). */
   async read(userId: string, activityId: string, now: Date): Promise<WritingActivityView> {
-    const resolved = await this.resolveWriting(userId, activityId, this.prisma);
+    const resolved = await resolveWritingActivity(this.plans, userId, activityId, this.prisma);
     const task = await this.repository.findTaskByLineage(this.prisma, resolved.lineage);
     if (!task) {
       throw AppError.writingTaskNotStarted();
@@ -94,7 +93,7 @@ export class WritingActivityService {
     now: Date,
   ): Promise<{ revision: number; savedAt: string; status: 'draft' }> {
     return this.prisma.$transaction(async (tx) => {
-      const resolved = await this.resolveWriting(userId, activityId, tx);
+      const resolved = await resolveWritingActivity(this.plans, userId, activityId, tx);
       const lookedUp = await this.repository.findTaskByLineage(tx, resolved.lineage);
       if (!lookedUp) {
         throw AppError.writingTaskNotStarted();
@@ -136,15 +135,6 @@ export class WritingActivityService {
       });
       return { revision, savedAt: now.toISOString(), status: 'draft' };
     });
-  }
-
-  /** `PLAN003`: an unknown activity, another user's, or one that is not `writing` are indistinguishable (A22). */
-  private async resolveWriting(userId: string, activityId: string, client: TxClient | PrismaService): Promise<ResolvedActivity> {
-    const resolved = await this.plans.resolveForOwner(userId, activityId, client);
-    if (resolved.kind !== WRITING_KIND) {
-      throw AppError.planActivityNotFound(activityId);
-    }
-    return resolved;
   }
 
   private async activityTitle(client: TxClient | PrismaService, activityId: string): Promise<string> {

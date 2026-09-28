@@ -1,33 +1,56 @@
 id: writing-correct
-version: "1"
+version: "2"
 model: gemini-3.6-flash
 temperature: 0.3
-max_output_tokens: 2500
+max_output_tokens: 8192
 system: |
-  You are a CEFR-C1 writing assessor. You correct one learner's submission
-  against the task they were given, scoring it on four dimensions and
-  producing a fully revised version. Every error you list must quote the
-  submission verbatim.
+  You are a CEFR C1 writing assessor. You correct one learner's submission
+  against the task they were given, scoring it on four dimensions, listing
+  every notable error, and producing a fully revised version.
+
+  Score each dimension 0 to 100, anchored to CEFR: 90 or above is precise
+  C1/C2 control; 70 to 89 is C1 with occasional slips; 50 to 69 is B2; below
+  50 is below B2. Coherence covers organisation, paragraphing and cohesive
+  devices. Task Achievement covers whether every part of the task is
+  answered, whether the required structures are used, genre and register,
+  and length.
+
+  Every error's quote is the shortest contiguous span copied character for
+  character from the submission, with no ellipsis, and one error per entry.
+  Tags come only from the taxonomy listing given to you. The overall comment
+  is one to three sentences, in the second person, in plain English, and
+  does not repeat the scores. The revised text keeps the learner's own
+  ideas, voice and paragraphs, fixing the errors rather than rewriting the
+  whole text. Everything you write is in English.
 user_template: |
   Task given to the learner:
   ---
-  {{task_prompt}}
+  {{task_statement}}
   ---
+
+  Target structures this task asked for:
+  {{target_structures}}
 
   Learner's submission:
   ---
   {{submission}}
   ---
 
-  Score task_achievement, coherence_cohesion, vocabulary_range and
-  grammar_accuracy, each 1 to 5. Write one overall comment. List every
-  notable error with a verbatim quote, a correction and a plain-language
-  explanation. Finish with a fully revised version of the submission that
-  preserves the learner's ideas and voice while fixing the errors.
+  Error taxonomy (use only these tags):
+  {{taxonomy}}
+
+  Score grammar, vocabulary, coherence and task_achievement, each 0 to 100.
+  Write one overall comment. List every notable error with a verbatim
+  quote, a taxonomy tag, a correction and a plain-language explanation.
+  Finish with a fully revised version of the submission.
 variables:
-  - name: task_prompt
+  - name: task_statement
+    required: true
+  - name: target_structures
     required: true
   - name: submission
+    required: true
+  - name: taxonomy
     required: true
 response_schema:
   type: object
@@ -35,20 +58,25 @@ response_schema:
     overall_comment:
       type: string
     scores:
-      type: array
-      minItems: 4
-      maxItems: 4
-      items:
-        type: object
-        properties:
-          name:
-            type: string
-            enum: [task_achievement, coherence_cohesion, vocabulary_range, grammar_accuracy]
-          score:
-            type: integer
-            minimum: 1
-            maximum: 5
-        required: [name, score]
+      type: object
+      properties:
+        grammar:
+          type: integer
+          minimum: 0
+          maximum: 100
+        vocabulary:
+          type: integer
+          minimum: 0
+          maximum: 100
+        coherence:
+          type: integer
+          minimum: 0
+          maximum: 100
+        task_achievement:
+          type: integer
+          minimum: 0
+          maximum: 100
+      required: [grammar, vocabulary, coherence, task_achievement]
     errors:
       type: array
       items:
@@ -56,38 +84,138 @@ response_schema:
         properties:
           quote:
             type: string
+          tag:
+            type: string
+            enum:
+              - grammar:subject-verb-agreement
+              - grammar:present-simple-continuous
+              - grammar:present-perfect
+              - grammar:past-simple
+              - grammar:past-perfect
+              - grammar:future-forms
+              - grammar:conditional-2
+              - grammar:conditional-3
+              - grammar:conditional-mixed
+              - grammar:modal-verb
+              - grammar:passive-voice
+              - grammar:reported-speech
+              - grammar:relative-clause
+              - grammar:article-definite
+              - grammar:article-indefinite
+              - grammar:preposition
+              - grammar:word-order
+              - grammar:question-form
+              - grammar:gerund-infinitive
+              - grammar:countable-uncountable
+              - grammar:comparison
+              - grammar:pronoun
+              - vocab:collocation
+              - vocab:phrasal-verb
+              - vocab:idiom
+              - vocab:word-choice
+              - vocab:word-form
+              - vocab:false-friend
+              - vocab:register
+              - vocab:domain-term
+              - discourse:connector
+              - discourse:cohesion
+              - discourse:turn-taking
+              - discourse:hedging
+              - discourse:clarification
+              - discourse:politeness
           correction:
             type: string
           explanation:
             type: string
-        required: [quote, correction, explanation]
-    revised_version:
+        required: [quote, tag, correction, explanation]
+    revised_text:
       type: string
-  required: [overall_comment, scores, errors, revised_version]
+  required: [overall_comment, scores, errors, revised_text]
 examples:
   - user: |
-      Task: Describe a change you would make to your city.
-      Submission: "I think my city need more green spaces because it help people to relax and reduces the pollution."
+      Task given to the learner:
+      ---
+      Your city council has just announced that a riverside park, promised to
+      residents ten years ago, will be replaced by a car park. Write a letter
+      to the editor giving your view of the decision.
+      ---
+
+      Target structures this task asked for:
+      - grammar:conditional-3 (Third conditional)
+
+      Learner's submission:
+      ---
+      Dear Editor, I am writing about the riverside park. If the council would have listened to residents, the park would have been finished years ago. Instead they choosed a car park, which nobody asked. I think this is a bad decision for the city.
+      ---
+
+      Error taxonomy (use only these tags):
+      grammar:conditional-3 — Third conditional: Malformed or misused hypothetical past conditional.
+      grammar:past-simple — Past simple: Incorrect past simple form, or used where another past tense was needed.
+      vocab:word-choice — Word choice: A word exists but is the wrong one for the intended meaning.
+
+      Score grammar, vocabulary, coherence and task_achievement, each 0 to 100.
+      Write one overall comment. List every notable error with a verbatim
+      quote, a taxonomy tag, a correction and a plain-language explanation.
+      Finish with a fully revised version of the submission.
     output:
-      overall_comment: "Clear, well-motivated idea, undermined by a couple of recurring subject-verb agreement slips."
+      overall_comment: "You make your view clear, but the hypothetical past attempt breaks down and one irregular past form slips through."
       scores:
-        - name: task_achievement
-          score: 4
-        - name: coherence_cohesion
-          score: 3
-        - name: vocabulary_range
-          score: 3
-        - name: grammar_accuracy
-          score: 2
+        grammar: 58
+        vocabulary: 66
+        coherence: 70
+        task_achievement: 62
       errors:
-        - quote: "my city need more green spaces"
-          correction: "my city needs more green spaces"
-          explanation: "Third-person singular subjects take '-s' on the present simple verb."
-        - quote: "it help people to relax"
-          correction: "it helps people to relax"
-          explanation: "Same subject-verb agreement pattern as above."
-      revised_version: "I think my city needs more green spaces because it helps people to relax and reduces pollution."
+        - quote: "If the council would have listened to residents"
+          tag: grammar:conditional-3
+          correction: "If the council had listened to residents"
+          explanation: "The if-clause of a third conditional takes the past perfect (had + past participle), not 'would have'."
+        - quote: "they choosed a car park"
+          tag: grammar:past-simple
+          correction: "they chose a car park"
+          explanation: "'Choose' is irregular in the past simple: chose, not choosed."
+      revised_text: "Dear Editor, I am writing about the riverside park. If the council had listened to residents, the park would have been finished years ago. Instead they chose a car park, which nobody asked for. I think this is a bad decision for the city."
+  - user: |
+      Task given to the learner:
+      ---
+      An unused plot of land behind your local library has been empty for
+      years. Write a proposal suggesting a community garden there.
+      ---
+
+      Target structures this task asked for:
+      None: this is a general writing task.
+
+      Learner's submission:
+      ---
+      I propose that the empty plot behind the library becomes a community garden. This would give residents a place to grow vegetables and meet neighbours. It would also make the area more nice to look at. The library could organise workshops there for kids and adults, and the garden would need very low money to maintain once it is built.
+      ---
+
+      Error taxonomy (use only these tags):
+      vocab:word-form — Word form: Wrong part of speech from the same root (noun for adjective, etc.).
+      vocab:collocation — Collocation: Words that do not naturally combine, even though each is correct alone.
+
+      Score grammar, vocabulary, coherence and task_achievement, each 0 to 100.
+      Write one overall comment. List every notable error with a verbatim
+      quote, a taxonomy tag, a correction and a plain-language explanation.
+      Finish with a fully revised version of the submission.
+    output:
+      overall_comment: "A well-organised, persuasive proposal with two small word-choice slips that are easy to fix."
+      scores:
+        grammar: 88
+        vocabulary: 74
+        coherence: 84
+        task_achievement: 90
+      errors:
+        - quote: "more nice to look at"
+          tag: vocab:word-form
+          correction: "more attractive to look at"
+          explanation: "'Nice' does not take 'more' naturally in this context; use a comparative adjective like 'attractive'."
+        - quote: "very low money to maintain"
+          tag: vocab:collocation
+          correction: "very little money to maintain"
+          explanation: "'Money' collocates with 'little'/'much', not 'low', when talking about small amounts."
+      revised_text: "I propose that the empty plot behind the library becomes a community garden. This would give residents a place to grow vegetables and meet neighbours. It would also make the area more attractive to look at. The library could organise workshops there for kids and adults, and the garden would need very little money to maintain once it is built."
 constraints:
-  - Every error must quote the submission verbatim.
-  - The revised version must preserve the learner's own ideas, not replace them.
+  - Every error's quote must be copied character for character from the submission.
+  - Tags come only from the taxonomy listing given in the prompt.
+  - The revised text must preserve the learner's own ideas, not replace them.
 banned_phrases: []
