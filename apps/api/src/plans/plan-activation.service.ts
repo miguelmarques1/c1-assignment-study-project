@@ -99,6 +99,16 @@ export class PlanActivationService {
       composed.rationaleCtx,
     );
 
+    // Archiving the previous active plan before inserting the new one
+    // matters, not just for tidiness: `ux_study_plans_user_active` is a
+    // plain (non-deferrable) unique index on `user_id` where `status =
+    // 'active'`, checked immediately on each write. Inserting the new
+    // active row first — even inside the same transaction — would violate
+    // it while the old row is still active.
+    if (active) {
+      await this.repository.archive(tx, active.id, now);
+    }
+
     const sessions = packSessions(carried, composed.selection, composed.rules);
     const planId = await this.repository.insertPlan(tx, {
       userId,
@@ -150,10 +160,6 @@ export class PlanActivationService {
       ),
     );
     await this.repository.insertActivities(tx, planId, activityRows);
-
-    if (active) {
-      await this.repository.archive(tx, active.id, now);
-    }
 
     const servedItemIds = [...new Set(activityRows.flatMap((row) => (row.contentItemId ? [row.contentItemId] : [])))];
     await this.content.recordServed(userId, servedItemIds, tx);
