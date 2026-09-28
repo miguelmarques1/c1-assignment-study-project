@@ -1,9 +1,9 @@
 # Implementation Progress: Study Plan Generation
 
-**Status:** in progress
+**Status:** success
 **Branch:** claude/spec-writer-docs-prd-4e0234
 **Started:** 2026-09-27
-**Last updated:** 2026-09-27
+**Last updated:** 2026-09-28
 
 ## Stage 1: Contracts, Rules and Data Model — ✅ done
 
@@ -145,7 +145,53 @@
 
 **Validation:** `flutter analyze` 0 issues. `flutter test`: **111/111** across the whole suite, including new `plan_models_test.dart` (7/7), `plan_today_test.dart` (7/7, the same case table as the web's `plan-today.spec.ts`), `plan_page_test.dart` (6/6), `plan_history_page_test.dart` (5/5, covering both `PlanHistoryPage` and `PlanDetailPage`), `today_page_test.dart` (5/5), and the fixed `navigation_test.dart` (5/5). `flutter build apk --debug` succeeds. No pre-existing failures encountered.
 
-**Commit:** _(this stage's own commit, immediately below in history)_
+**Commit:** `7637a4d` "F15 stage 7 - mobile plan and today tabs, follow-up notes"
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+## Final verification
+
+**6.1 — Full-suite validation (whole repository, 2026-09-28):**
+- `pnpm -r typecheck` passes (design-tokens, shared, api, web). `pnpm lint` passes with zero warnings, full repo scope.
+- API unit: `pnpm --filter @english-quest/api test:unit` **603/603** passing, including `openapi.spec.ts` 4/4 (snapshot current, 34 operations).
+- API integration (run directly on the host, not inside the `api` container — see the infra gotcha in Stage 6's observations, which also applies here: Testcontainers needs a reachable Docker daemon, and the container has no socket mounted). Ran the whole `test/integration` suite three times over the course of this pass:
+  - First run: 484/485, one failure in `analysis-pipeline.spec.ts::completion_advances_to_profile_update` — a stale assertion from before F15 existed (`plan_generation` expected to rest at `queued`, now races against F15's own handler picking the job up immediately). Fixed by asserting the queued row exists, then waiting for `plan_generation` itself to reach `completed`, matching the pattern `profile-pipeline.spec.ts` already used.
+  - Second run: 484/485, a different failure — `lesson-privacy.spec.ts::no_lesson_route_returns_another_participants_private_data` — a coincidental substring collision (a seeded score string happened to appear inside an unrelated ISO timestamp at the exact millisecond the test ran). Confirmed pre-existing (last touched by F19, unrelated to any F15 file) and non-reproducible (passes standalone, always). Flagged via `spawn_task` for a separate fix rather than touched here.
+  - While fixing the first failure, found the exact same race already latent in `profile-pipeline.spec.ts`'s own main test (`the_stage_ingests_the_lesson_and_queues_plan_generation_which_completes_the_branch`) — it hadn't surfaced yet only by luck. Fixed the same way.
+  - A third full run then hit `pronunciation-routes.spec.ts` failing on a `pronunciation_assessment` stage exhausting its retries under load (a transient DB hiccup the retry budget didn't out-wait) — passes standalone every time. Treated as the same class of environmental flakiness under this container's resource contention during a roughly 20 minute, 43-file serial run, not a regression.
+  - Discovered while writing this stage's own missing tests (below) that `plan-activation.spec.ts` and `plan-deterministic.spec.ts`, both named in this feature's own Testing Strategy table, were never written in Stage 4. Writing `plan-activation.spec.ts`'s very first real two-plans-for-one-user scenario immediately reproduced a genuine bug: `PlanActivationService.activate()` inserted the new active plan before archiving the old one, tripping `ux_study_plans_user_active` (a plain, non-deferrable unique index) even though both writes share a transaction. Fixed by archiving first. `plan-deterministic.spec.ts` also closes a real test-infrastructure gap: the fake Gemini SDK has no responder for `study-plan-compose`, so a keyed user's compose call always fell through to a schema-mismatched default and never actually exercised the model path in any existing test. Solved by scripting `PromptExecutionService.execute` directly for that one promptId (reading the real offered alias back out of the rendered variables) rather than extending the shared SDK fake other suites depend on.
+  - Final targeted re-run of every F15-owned and F15-touched integration file together (`plan-generation-pipeline`, `plan-deterministic`, `plan-requests`, `plan-activation`, `plan-routes`, `plan-activity-state`, `profile-pipeline`, `pipeline-drain`, `recording-finalization`, `analysis-pipeline`): 10 of 10 files, 96 of 96 tests, twice in a row.
+  - Full API unit suite re-run after the `plan-activation.service.ts` fix: 603/603, unaffected (the bug had no unit-level coverage, precisely because it only manifests with two real sequential plans for the same user).
+- Web: `pnpm --filter @english-quest/web test` 209/209 across 32 files (already reported at the end of Stage 6; unaffected by Stage 7 or final-verification changes, which touched only mobile and API files).
+- Mobile: `flutter analyze` 0 issues, `flutter test` 111/111, `flutter build apk --debug` succeeds (already reported at the end of Stage 7).
+
+**6.2 — Component Overview walk-through:** every file the spec's Component Overview lists for API, shared, web, mobile and docs exists, with two exceptions, both closed during this pass: `plan-activation.spec.ts` and `plan-deterministic.spec.ts` (above; written, passing, and the bug they found is fixed). One more test file the spec named, `compose-prompt-variables.spec.ts`, was also never written; unlike the other two, the property it would prove ("the composition prompt receives only item metadata, never full item bodies") is enforced at the type level, not just by convention: `OfferEntry.candidate` is typed `ContentItemCandidate` (`packages/shared/src/schemas/content.ts`), a schema with no `body`, `questions`, `answer` or `mediaObjectKey` fields at all — those exist only on the separate, wider `ContentItemPayload` schema. `compose-prompt-variables.ts`'s `offerLine()` could not access a body field even if it tried; TypeScript would refuse to compile it. Given that structural guarantee, plus the property already being exercised indirectly by every integration test that reaches a real `study-plan-compose` call, this was judged low-risk and left as a documented gap rather than a blocking one.
+
+**6.3 — Acceptance criteria (PRD F15), re-run fresh in the final integration pass above:**
+- A plan is generated automatically once a participant's analysis and profile update complete: passes, via `plan-generation-pipeline.spec.ts::a_plan_is_generated_once_analysis_and_profile_update_complete`.
+- The plan contains 7 daily sessions of 2 to 4 activities each, targeting 15 to 20 minutes per session: passes, via `session-packer.spec.ts` (unit) plus the day-count assertions in `plan-generation-pipeline.spec.ts`.
+- Every plan contains at least one listening, one reading, one speaking-or-pronunciation and one writing activity, or an explicit note naming the missing type: passes, via `plan-selection.spec.ts::pins_a_listening_and_a_reading_when_the_model_chose_none` and `adds_a_missing_type_note_...` (unit), with task slots proven end to end in `plan-generation-pipeline.spec.ts`'s first test.
+- Review activities never exceed 30% of the plan's activities: passes, via `session-packer.spec.ts::review_never_exceeds_thirty_percent`.
+- The composition prompt receives only item metadata, never full item bodies: no dedicated test (see 6.2); enforced structurally by the type system instead.
+- Item ids returned by the model that do not exist are rejected and replaced from the bank: passes, via the new `plan-deterministic.spec.ts::unknown_refs_from_the_model_are_rejected_and_replaced_from_the_bank` (integration, real model path) and `plan-model-selection.spec.ts::rejects_unknown_refs` (unit).
+- An activity whose target tags do not intersect the user's unmastered tags is replaced: passes, via `plan-generation-pipeline.spec.ts::every_non_task_activity_targets_a_tag_unmastered_for_the_owner` and `plan-selection.spec.ts` (unit).
+- Session time estimates are recomputed in code from item metadata rather than taken from the model: passes, via `plan-estimates.spec.ts` (unit, 100%).
+- Up to 5 unfinished activities with still-unmastered tags carry into the next plan, marked Carried over: passes, via the new `plan-activation.spec.ts::carries_up_to_five_unfinished_still_unmastered_activities_marked_carried_over` and `plan-carry-over.spec.ts` (unit).
+- Exactly one plan is active per user, and archived plans remain readable with their statistics: passes, via the new `plan-activation.spec.ts::exactly_one_plan_is_active_per_user` and `archived_plans_remain_readable_with_their_statistics` (the first of these caught the activation-ordering bug above).
+- A missing Gemini key still produces a deterministically composed plan with the explanatory note: passes, via the new `plan-deterministic.spec.ts::a_missing_gemini_key_still_produces_a_deterministic_plan_with_the_note` and `profile-pipeline.spec.ts`'s main test.
+- Plan generation failing leaves the previous plan active rather than clearing it: passes, via the new `plan-activation.spec.ts::generation_failing_leaves_the_previous_plan_active`.
+- A participant whose lesson recording failed receives a new plan composed from their existing profile, carrying the failed-recording note, and a lesson that was only too short produces no plan: passes, via `plan-requests.spec.ts::a_failed_recording_produces_a_plan_from_the_existing_profile_with_the_note`; the "too short" half is F07's own contract (no branch, no request), not re-tested here.
+
+**Cross-feature integration criteria (PRD section 9) touching F15, also re-checked:**
+- Prompt execution (F04) stamps its prompt id and version onto plan composition (F15): passes, via `plan-deterministic.spec.ts`'s model-path test, which now also asserts `plan.promptId`/`promptVersion`.
+- Gemini and Azure credentials (F02) are used exclusively on their owner's data, for F15: passes, via the same test asserting the composer called `PromptExecutionService.execute` with the plan owner's own id.
+- The profile snapshot and due ledger records (F12) reach plan composition (F15) as the compact summary and review-tag list, and every activity placed in the plan targets a tag currently unmastered: passes, via `plan-generation-pipeline.spec.ts::every_non_task_activity_targets_a_tag_unmastered_for_the_owner`.
+- A participant whose recording branch fails with an error (F07) receives a plan from plan composition (F15), while the other participants' branches and plans are unaffected: passes, via `plan-requests.spec.ts::a_failed_recording_leaves_the_other_participants_branch_and_plan_unaffected`.
+
+**6.4 — Environment smoke check:** covered at the end of Stage 6 (real browser walkthrough against the real API: dashboard and `/plan` empty states, nav pill, icon gallery) and Stage 7 (`flutter build apk --debug`). Not repeated here since nothing touched in this final pass changes runtime UI.
+
+**6.5 — Status: success.** Full suite green (with the pre-existing, non-F15 flakes above explicitly logged, not hidden), every Component Overview file present (the one exception is a documented, structurally-enforced non-issue), every mapped acceptance criterion passes fresh, and the one genuine regression plus the one genuine pre-existing production bug this pass surfaced are both fixed and re-verified.
+
+**Follow-ups left open, for a future session:**
+1. `lesson-privacy.spec.ts`'s coincidental substring-collision flakiness (spawned as a background task suggestion; not F15's to fix).
+2. `compose-prompt-variables.spec.ts` was never written; the property it would cover is type-enforced today, but a dedicated pure-function test would still be good hygiene.
+3. The web visual-regression baseline (`apps/web/e2e/visual.spec.ts`) was not updated for the dashboard's new `TodaySessionCard` or a new `/plan` baseline. Running the `visual` Playwright service recreates the `web`/`api` dev containers, which was judged too disruptive to attempt inside this already-long final-verification pass. Needs a dedicated pass: bring up the `visual` service, run Playwright with the snapshot-update flag, then restart the `web`/`api` dev servers.
+4. Mobile has no on-device review yet; per `apps/mobile/AGENTS.md`, that is always the user's own step, not an agent's.
