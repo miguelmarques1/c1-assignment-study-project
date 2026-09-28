@@ -65,6 +65,20 @@ export const ERROR_CODES = {
   PLAN_ACTIVITY_NOT_IN_CURRENT_PLAN: 'PLAN004',
   /** At least one infrastructure dependency is unreachable. */
   HEALTH_DEPENDENCY_DOWN: 'HEALTH001',
+  /** The writing activity was resolved but no task has ever been opened for it. */
+  WRITING_TASK_NOT_STARTED: 'WRIT001',
+  /** No usable Gemini key; nothing is written and nothing counts toward the limit. */
+  WRITING_GEMINI_KEY_REQUIRED: 'WRIT002',
+  /** The rolling 24-hour limit of correction requests is reached. */
+  WRITING_DAILY_LIMIT: 'WRIT003',
+  /** `baseRevision` is behind the server's, and the text differs from the server copy. */
+  WRITING_DRAFT_CONFLICT: 'WRIT004',
+  /** Fewer than 80 words at submission. */
+  WRITING_TOO_SHORT: 'WRIT005',
+  /** More than 600 words at submission. */
+  WRITING_TOO_LONG: 'WRIT006',
+  /** The task is already `correcting` or `corrected` under another submission. */
+  WRITING_ALREADY_SUBMITTED: 'WRIT007',
   /** Unhandled server-side failure. */
   INTERNAL_ERROR: 'ERR500',
 } as const;
@@ -104,6 +118,13 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   [ERROR_CODES.PLAN_ACTIVITY_NOT_FOUND]: 404,
   [ERROR_CODES.PLAN_ACTIVITY_NOT_IN_CURRENT_PLAN]: 409,
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 503,
+  [ERROR_CODES.WRITING_TASK_NOT_STARTED]: 404,
+  [ERROR_CODES.WRITING_GEMINI_KEY_REQUIRED]: 409,
+  [ERROR_CODES.WRITING_DAILY_LIMIT]: 429,
+  [ERROR_CODES.WRITING_DRAFT_CONFLICT]: 409,
+  [ERROR_CODES.WRITING_TOO_SHORT]: 400,
+  [ERROR_CODES.WRITING_TOO_LONG]: 400,
+  [ERROR_CODES.WRITING_ALREADY_SUBMITTED]: 409,
   [ERROR_CODES.INTERNAL_ERROR]: 500,
 };
 
@@ -148,5 +169,12 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ERROR_CODES.PLAN_ACTIVITY_NOT_FOUND]: 'This activity could not be found.',
   [ERROR_CODES.PLAN_ACTIVITY_NOT_IN_CURRENT_PLAN]: 'This activity is no longer in your current plan.',
   [ERROR_CODES.HEALTH_DEPENDENCY_DOWN]: 'One or more dependencies are unavailable.',
+  [ERROR_CODES.WRITING_TASK_NOT_STARTED]: 'This writing task has not been started.',
+  [ERROR_CODES.WRITING_GEMINI_KEY_REQUIRED]: 'Add your Gemini key to have your writing corrected.',
+  [ERROR_CODES.WRITING_DAILY_LIMIT]: "You have reached today's limit of 10 corrections.",
+  [ERROR_CODES.WRITING_DRAFT_CONFLICT]: 'This draft was updated on another device.',
+  [ERROR_CODES.WRITING_TOO_SHORT]: 'Write at least 80 words before submitting.',
+  [ERROR_CODES.WRITING_TOO_LONG]: 'This text is too long to be corrected. Keep it under 600 words.',
+  [ERROR_CODES.WRITING_ALREADY_SUBMITTED]: 'This writing has already been submitted.',
   [ERROR_CODES.INTERNAL_ERROR]: 'Something went wrong on our side.',
 };
