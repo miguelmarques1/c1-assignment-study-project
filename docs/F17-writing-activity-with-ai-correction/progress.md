@@ -69,14 +69,20 @@
 **Soft-fails:** No integration coverage yet for submission, the correction runner, retries/failures, or the daily limit — needs Docker (Testcontainers) plus new fake-Gemini and fixture helpers; deferred as a follow-up rather than written unverified. `WritingTaskRulesService` is not yet instantiated by the real app (module registration is Stage 4).
 **Commit:** _(pending — recorded after this stage's commit lands)_
 
-## Stage 4: HTTP Surface — ⬜ pending
+## Stage 4: HTTP Surface — ✅ done
 
-- [ ] **12. Writing Routes and OpenAPI**
+- [x] **12. Writing Routes and OpenAPI**
 
-**Observations:** _(none yet)_
+**Observations:**
+- Stage 3's commit SHA: `6551395`.
+- `WritingController` and `WritingModule` follow `PlansController`/`PlansModule` and `CredentialsController` almost exactly: `ZodValidationPipe` on the `activityId` path param and both bodies, `@CurrentUser()`, `@HttpCode(200)` on both POSTs, `dataEnvelope(...)` responses, `ERROR_RESPONSE` for every error status. `WritingModule` imports `TaxonomyModule`, `ProfileModule` and `PlansModule` exactly as spec's Component Overview states; Prisma/Credentials/Prompts are global and needed no import.
+- `WritingModule` now actually registers `WritingTaskRulesService`, so `onModuleInit` — and with it the rules-file-vs-taxonomy boot check from Stage 1/2 — runs for real the first time in this run, as part of Nest's normal provider bootstrapping. Booting the app in Nest's `preview: true` mode (via `openapi.spec.ts`, which builds the whole module graph without a database) confirmed the module wires cleanly: no missing-provider or circular-dependency error, and all four writing routes appear correctly in the generated document (`every_route_is_documented` and `protected_routes_declare_a_session_transport` both pass over them). Preview mode does not instantiate providers, so it does not itself exercise `onModuleInit`; that still needs a real boot, which needs Postgres/Redis (see Soft-fails).
+- Regenerated `docs/api/openapi.json` the same way as Stage 1 (a throwaway vitest spec calling `buildOpenApiDocument`, since the `tsx`-based CLI script still fails in this sandbox for the pre-existing, unrelated reason noted in Stage 1). The diff is exactly the four new operations, their request/response schemas, and the `writing` tag — nothing else moved.
+- Added a `writing` tag to `openapi/setup.ts` and five new components (`WritingActivityView`, `SaveWritingDraftRequest`, `WritingDraftSaved`, `SubmitWritingRequest`, `WritingLimitDetails`, `WritingDraftConflictDetails`) to `openapi/components.ts`, all derived from the shared Zod schemas per the project's "nothing here is hand-written" convention. `WRIT005`/`WRIT006`'s `details` shape (`{ words }`) is intentionally left untyped in OpenAPI, matching spec's component list, which names only the limit and conflict details as registered components.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** typecheck ✅ (`pnpm -r typecheck`) · lint ✅ (`pnpm lint`, zero warnings) · unit tests ✅ (82 files / 666 tests, unchanged in count — no new pure-logic surface this stage) · `openapi.spec.ts` ✅ 4/4 (snapshot freshness, 3.1.0, every route documented, every protected route declares a session transport) — this is also, incidentally, the first real exercise of the whole module graph resolving together
+**Soft-fails:** No real (non-preview) boot of the API in this sandbox — Postgres/Redis/Testcontainers are unavailable, so `WritingTaskRulesService.onModuleInit` and the actual HTTP routes have not been exercised end-to-end against a running stack. Preview-mode DI resolution and OpenAPI generation are the runtime check this environment can offer; a full smoke test (start the stack, open/save/submit a real writing activity) is left as a follow-up for a Docker-enabled environment.
+**Commit:** _(pending — recorded after this stage's commit lands)_
 
 ## Stage 5: Web — ⬜ pending
 
