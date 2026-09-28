@@ -22,18 +22,25 @@
 **Validation:** typecheck ✅ (`pnpm --filter @english-quest/api exec tsc --noEmit`, after `npx prisma generate`) · lint ✅ (`eslint src/speaking test/unit/speaking-corpus.spec.ts`) · `pnpm --filter @english-quest/shared build` ✅ · unit tests ✅ (`speaking-corpus.spec.ts`, 7/7) · migration applied and inspected against a real local Postgres (see Observations) — soft-fail: the project's own Testcontainers-based integration suite could not run (no Docker daemon in this container).
 **Commit:** _(pending — see end of stage)_
 
-## Stage 2: Scoring Core — ⬜ pending
+## Stage 2: Scoring Core — ✅ done
 
-- [ ] **4. WAV Validation and Body Reading**
-- [ ] **5. Token Alignment and Segment Planning**
-- [ ] **6. Attempt Result Assembly**
-- [ ] **7. Attempt Policy and Profile Outcome**
-- [ ] **8. Task Selection**
+- [x] **4. WAV Validation and Body Reading**
+- [x] **5. Token Alignment and Segment Planning**
+- [x] **6. Attempt Result Assembly**
+- [x] **7. Attempt Policy and Profile Outcome**
+- [x] **8. Task Selection**
 
-**Observations:** _(none yet)_
+**Observations:**
+- `PronunciationAssessmentService.assessClip` and `ExcerptClipSlicer` actually live in `apps/api/src/speech/` and `apps/api/src/pronunciation/excerpt-clip.slicer.ts` respectively (not both under `pronunciation/` as a first skim of the spec's prose suggested) — `SpeechModule` already exports both F08's and F10's clip capabilities together, with a doc comment naming F18 as an intended second caller. `SpeakingModule` (stage 3) imports `SpeechModule`, not `PronunciationModule`.
+- F10's `weightedScores` was a module-private function taking `AssessedExcerptInput[]`; exported it and widened its parameter to `ReadonlyArray<{ durationMs; scores }>` (a new `WeightableScores` interface) per A7. `AssessedExcerptInput` still satisfies it structurally, and `pronunciation-aggregate.spec.ts` (10/10) still passes unchanged.
+- `readAudioBody` must be declared `async` (not a plain function returning `Promise<Buffer>`): its early validation throws (`VAL001`/`SPEAK004`) are synchronous by nature, and without `async` they escape as real exceptions instead of a rejected promise. Caught immediately by the unit tests (three failed on the first run, all for this reason) and fixed before moving on.
+- `displayWords` and `recognizedWordCount` (`attempt-result.ts`) dropped the `shape` parameter the spec's Component Overview lists: the actual behavioural difference for read-aloud vs. open response reduces entirely to "was this recording transcribed first or not", which `recognizedWordCount(sttWordCount, assessedWords)` already captures via `sttWordCount` being `null` or not (a long, transcribed read-aloud behaves like an open response here, not like a direct one) — a `shape` parameter would be redundant and could disagree with it. Deviation, logged per the skill's adaptation rule.
+- `attempt-policy.ts`'s `canUpload`/`canRescore` take `now` and treat a `scoring` row past `SCORING_LEASE_MS` as not holding the slot, so the "at most 3 scored, one in flight, a stale lease frees it" rules are fully unit-testable without a database — the service layer (stage 3) still has to actually flip that stale row to `failed`/`interrupted` in the same transaction, but the policy decision itself needed no DB round-trip to test.
+- `task-selector.ts`'s "other unmastered phonemes" (A4 key 2) is computed by subtracting the activity's own `targetTags` from the caller-supplied `unmasteredPhonemes` list, so a caller doesn't have to pre-filter — matches the spec's "other" wording literally rather than trusting F12's raw `unmasteredTags()` output to already exclude the targets.
+- No integration with real Prisma/DB in this stage — every new file here is a pure function or a boot-time file loader, so none of it needed the (unavailable) Testcontainers stack.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** typecheck ✅ · lint ✅ (`eslint src/speaking test/unit/speaking-*.spec.ts`) · full unit suite ✅ — `pnpm --filter @english-quest/api exec vitest run test/unit`: 683/684 passing, the one failure being `openapi.spec.ts`'s committed-snapshot check, expected to go red until stage 4 adds the actual routes and regenerates `docs/api/openapi.json` (the new `SPEAK00x` error codes already changed the schema's enum). New speaking-only suites: `speaking-wav-header` 11/11, `speaking-audio-body` 8/8, `speaking-token-alignment` 8/8, `speaking-segment-planner` 8/8, `speaking-attempt-result` 10/10, `speaking-attempt-policy` 13/13, `speaking-outcome` 7/7, `speaking-task-selector` 9/9.
+**Commit:** _(pending — see end of stage)_
 
 ## Stage 3: Scoring Service and Attempt Flow — ⬜ pending
 

@@ -216,9 +216,24 @@ function rankWorstWords(instances: WordInstance[]): WorstWordResult[] {
     .slice(0, WORST_WORDS_LIMIT);
 }
 
-function weightedScores(excerpts: AssessedExcerptInput[]): AggregateResult['scores'] {
+/** One scored clip's contribution to a duration-weighted mean: its own duration and its five scores. */
+export interface WeightableScores {
+  durationMs: number;
+  scores: AggregateResult['scores'];
+}
+
+/**
+ * Duration-weighted means over any scored clips, `pronunciation` through
+ * `completeness` weighted by every clip's own duration, `prosody` weighted
+ * only over the clips that reported it (null if none did). Exported
+ * additively for F18, which reuses it unchanged to merge a speaking
+ * attempt's segments the same way this file merges a lesson's excerpts;
+ * `AssessedExcerptInput` already satisfies the widened parameter type, so
+ * this file's own behaviour and tests are untouched.
+ */
+export function weightedScores(excerpts: ReadonlyArray<WeightableScores>): AggregateResult['scores'] {
   const totalMs = excerpts.reduce((sum, excerpt) => sum + excerpt.durationMs, 0);
-  const weighted = (pick: (excerpt: AssessedExcerptInput) => number) =>
+  const weighted = (pick: (excerpt: WeightableScores) => number) =>
     excerpts.reduce((sum, excerpt) => sum + pick(excerpt) * excerpt.durationMs, 0) / totalMs;
 
   const withProsody = excerpts.filter((excerpt) => excerpt.scores.prosody !== null);
