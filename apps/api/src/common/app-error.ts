@@ -144,4 +144,34 @@ export class AppError extends Error {
   static planActivityNotInCurrentPlan(activityId: string): AppError {
     return new AppError(ERROR_CODES.PLAN_ACTIVITY_NOT_IN_CURRENT_PLAN, { activityId });
   }
+
+  /** The activity resolved, but no writing task has ever been opened for it. */
+  static writingTaskNotStarted(): AppError {
+    return new AppError(ERROR_CODES.WRITING_TASK_NOT_STARTED);
+  }
+
+  static writingGeminiKeyRequired(): AppError {
+    return new AppError(ERROR_CODES.WRITING_GEMINI_KEY_REQUIRED);
+  }
+
+  static writingDailyLimit(details: { limit: number; used: number; resetsAt: string }): AppError {
+    return new AppError(ERROR_CODES.WRITING_DAILY_LIMIT, details);
+  }
+
+  /** `details.draft` carries the server's own copy, so the losing device can show it (A5). */
+  static writingDraftConflict(draft: { text: string; revision: number; savedAt: string | null }): AppError {
+    return new AppError(ERROR_CODES.WRITING_DRAFT_CONFLICT, { draft });
+  }
+
+  static writingTooShort(words: number): AppError {
+    return new AppError(ERROR_CODES.WRITING_TOO_SHORT, { words });
+  }
+
+  static writingTooLong(words: number): AppError {
+    return new AppError(ERROR_CODES.WRITING_TOO_LONG, { words });
+  }
+
+  static writingAlreadySubmitted(): AppError {
+    return new AppError(ERROR_CODES.WRITING_ALREADY_SUBMITTED);
+  }
 }

@@ -69,3 +69,6 @@ export const WRITING_FAILURE_STATUS: Record<WritingFailureCode, Extract<WritingT
 
 /** `PromptExecutionService.execute`'s own feature label for telemetry (F04's convention: `F<feature>_<promptId>`). */
 export const WRITING_PROMPT_ID = 'writing-correct';
+
+/** The analysis-family tags a writing task may ever target — never `phoneme:` (A3). */
+export const WRITING_ANALYSIS_FAMILIES: readonly string[] = ['grammar', 'vocab', 'discourse'];
