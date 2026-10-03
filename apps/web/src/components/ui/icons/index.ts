@@ -32,4 +32,7 @@ export { CloudCheckIcon } from './cloud-check-icon';
 export { PencilIcon } from './pencil-icon';
 export { TextIcon } from './text-icon';
 export { PuzzleIcon } from './puzzle-icon';
+export { PlayIcon } from './play-icon';
+export { StopIcon } from './stop-icon';
+export { VoiceIcon } from './voice-icon';
 export type { IconProps } from './icon-props';

@@ -20,7 +20,7 @@
 - Pinned the corpus's sha256 fingerprint (`8bc2ff7f...`) in `speaking-corpus.spec.ts`, mirroring `error-taxonomy.spec.ts`'s `PINNED_FINGERPRINTS` pattern; bump the corpus `version` and add a new pin if the corpus content ever changes.
 
 **Validation:** typecheck ✅ (`pnpm --filter @english-quest/api exec tsc --noEmit`, after `npx prisma generate`) · lint ✅ (`eslint src/speaking test/unit/speaking-corpus.spec.ts`) · `pnpm --filter @english-quest/shared build` ✅ · unit tests ✅ (`speaking-corpus.spec.ts`, 7/7) · migration applied and inspected against a real local Postgres (see Observations) — soft-fail: the project's own Testcontainers-based integration suite could not run (no Docker daemon in this container).
-**Commit:** _(pending — see end of stage)_
+**Commit:** `c2751cf` — F18 stage 1 - contracts, corpus and data model
 
 ## Stage 2: Scoring Core — ✅ done
 
@@ -40,7 +40,7 @@
 - No integration with real Prisma/DB in this stage — every new file here is a pure function or a boot-time file loader, so none of it needed the (unavailable) Testcontainers stack.
 
 **Validation:** typecheck ✅ · lint ✅ (`eslint src/speaking test/unit/speaking-*.spec.ts`) · full unit suite ✅ — `pnpm --filter @english-quest/api exec vitest run test/unit`: 683/684 passing, the one failure being `openapi.spec.ts`'s committed-snapshot check, expected to go red until stage 4 adds the actual routes and regenerates `docs/api/openapi.json` (the new `SPEAK00x` error codes already changed the schema's enum). New speaking-only suites: `speaking-wav-header` 11/11, `speaking-audio-body` 8/8, `speaking-token-alignment` 8/8, `speaking-segment-planner` 8/8, `speaking-attempt-result` 10/10, `speaking-attempt-policy` 13/13, `speaking-outcome` 7/7, `speaking-task-selector` 9/9.
-**Commit:** _(pending — see end of stage)_
+**Commit:** `97d0aee` — F18 stage 2 - scoring core
 
 ## Stage 3: Scoring Service and Attempt Flow — ✅ done
 
@@ -60,7 +60,7 @@
 - No Testcontainers integration test files were written yet for the attempt/activity/re-score flows (`speaking-activity-routes.spec.ts`, `speaking-attempts.spec.ts`, `speaking-rescore.spec.ts`) — they exercise HTTP routes that don't exist until stage 4's controller lands, so they are deferred to close out alongside it rather than written against a route that isn't there yet.
 
 **Validation:** typecheck ✅ (whole `apps/api` package) · lint ✅ (`eslint src test`, whole package) · full unit suite ✅ — 683/684 (same pre-existing `openapi.spec.ts` staleness expected until stage 4 regenerates the snapshot) · DI graph ✅ (`AppModule` compiles and resolves every new speaking provider via vitest/SWC) · migration re-verified against local Postgres. Soft-fail: no Docker in this container, so the Testcontainers-based integration suites for this stage's services are deferred to stage 4 (see above) and will still only be soft-fail-executable here even once written.
-**Commit:** _(pending — see end of stage)_
+**Commit:** `f4dc5b8` — F18 stage 3 - scoring service and attempt flow
 
 ## Stage 4: HTTP Surface — ✅ done
 
@@ -73,21 +73,35 @@
 - `SpeakingModule` now also registers `SpeakingController`; `app.module.ts`'s import (added in stage 3, ahead of schedule, to validate DI) needed no further change here.
 - Wrote the three integration test files the spec's testing strategy names (`speaking-activity-routes.spec.ts`, `speaking-attempts.spec.ts`, `speaking-rescore.spec.ts`) plus a shared `helpers/speaking-fixtures.ts`, following `pipeline-fixtures.ts`'s and `plan-activity-state.spec.ts`'s established patterns exactly (`seedSpeaker` for BYOK-aware login, direct `speaking_tasks` row seeding to bypass corpus selection for deterministic reference text, the same fake Azure clients at the client boundary F08/F10 already provide). They cover the AC-mapped scenarios: storage key, format/duration rejection, the direct and transcribed scoring paths, the 10-word floor, the attempt limit, retention/replay, the best-attempt profile write, plan state transitions, client-id replay, the BYOK gate and audit labels, and (in the re-score file) a failed assessment re-scored without re-recording, a rejected key invalidating itself, quota, a non-rescorable audio rejection, the limit, cross-user privacy and the audio stream's headers.
 - These three files could only be typechecked and linted, not executed — this container still has no Docker daemon, and they need real Postgres/Redis/MinIO via Testcontainers. Logged as a soft-fail; they are structurally sound (reasoned through by hand against the fakes' exact per-key/per-reference-text scripting contract) but unverified by a real run.
+- *Stage 5 follow-up (confirmed during the web stage's own `pnpm -r test` run):* all three files do run and fail the same way every other Testcontainers-based integration suite in this repo fails here — `Could not find a working container runtime strategy` from `startMinio`, not a logic failure — confirming the soft-fail is purely environmental, not a defect in the test files themselves.
 
 **Validation:** typecheck ✅ (whole package) · lint ✅ (whole package) · full unit suite ✅ — 684/684, including `openapi.spec.ts` now that the snapshot is regenerated · OpenAPI regenerated and committed. Soft-fail: the three new integration test files (Testcontainers-based) are typechecked and linted only, not executed, for lack of a Docker daemon in this container.
+**Commit:** `61a6846` — F18 stage 4 - speaking routes and OpenAPI
+
+## Stage 5: Web — ✅ done
+
+- [x] **14. Web Data Layer and Route Registration**
+- [x] **15. Capture and Playback Hooks**
+- [x] **16. Speaking Runner Components**
+- [x] **17. Speaking Page, Dashboard Card and Design Reference**
+
+**Observations:**
+- `packages/design-tokens`'s `dist/` was missing entirely at the start of this stage (never built in this container) — `apps/web`'s typecheck failed on every file importing `@english-quest/design-tokens`, not just new speaking files. Fixed by running `pnpm --filter @english-quest/design-tokens build` once; unrelated to anything this stage wrote, so no code changed for it.
+- TypeScript 5.9's DOM lib makes `Uint8Array` generic over its backing buffer (`Uint8Array<ArrayBufferLike>` by default). A bare `Uint8Array` return/parameter type doesn't satisfy `fetch`'s `BodyInit` (which wants `ArrayBufferView<ArrayBuffer>`) under this TS version — `encodeWav`'s return type and `uploadAttempt`'s `wav` parameter both had to be written as `Uint8Array<ArrayBuffer>` explicitly, not just `Uint8Array`.
+- jsdom's own `Blob` has no `arrayBuffer()` method, which `useWavRecorder.finish()` needs on the blob `MediaRecorder` hands it. Every test exercising that path (`wav-recorder.spec.ts`, `speaking-runner.spec.tsx`) stubs the global `Blob` with Node's own (`import { Blob } from 'node:buffer'`), which does implement it.
+- `useWavRecorder` and `useAttemptAudio` are tested against the real browser-API surface (a fake `MediaRecorder`, `getUserMedia`, `AudioContext`) rather than mocking the hooks themselves in `speaking-runner.spec.tsx` — the same global stubs as `wav-recorder.spec.ts`, reused so the runner test exercises the real hook code, not a stand-in for it. `@testing-library/react`'s `waitFor` polls with real timers; `vi.useFakeTimers()` together with it just hangs (RTL's own poll never fires), so the auto-stop-at-limit test uses a tiny real `maxRecordingSeconds` (50 ms) instead of faking the clock.
+- F16 and F17 (which the spec's Component Overview names as the natural owners of `components/activity/difficulty-rating.tsx` and the bank-activity runner precedent) have no `spec.md`/`plan.md` or any implementation yet — confirmed by `ls docs/F16-*` and `docs/F17-*` before building. `DifficultyRating` is therefore new, first-implementation code here (per the spec's own "(or F16's, A24)" allowance), and the speaking runner has no sibling runner to mirror; its layout follows the design-system primitives and `TodaySessionCard`'s established shell/state conventions directly, with no corresponding mockup (A24's precedent: a screen the PRD requires but the mockup set never drew).
+- `PlanActivityView` already carries `rating`/`notUseful` fields (from F15), but no client builds a rating UI yet anywhere in the web app — `DifficultyRating` is the first.
+- `word-colouring.tsx`'s `BAND_CLASS` was module-private; exported it per the spec (additive, no rendering change) for `SpokenWords` to reuse, exactly as F19's `wordLabel`/`BAND_LABEL` were already public.
+- The runner's rendering is derived entirely from `useWavRecorder`'s own `status` plus two local flags (`uploadFailure`, `resultAttemptId`) rather than a separately-tracked `phase` enum — avoids the two ever disagreeing about which screen is up. The spec's named states (`ready`/`recording`/`review`/`submitting`/`result`/`upload_failed`/`blocked`/`mic_denied`/`no_microphone`/`unsupported`) are all represented, just as derived conditions instead of a stored field.
+- `RecorderPanel` hides its own record button once `attemptsRemaining` reaches 0 (a `canRecord` prop), rather than the runner swapping in a different component — keeps the "All 3 attempts used" counter text and the controls in one place.
+- A server block (`plan_archived`/`activity_skipped`) hides the recorder and the difficulty-rating widget but keeps the attempt list and replay visible (read-only per the failure-modes table's "Read-only: list and replay"); `azure_key_missing` only hides the recorder — the attempt list, replay and rating stay available since none of those need the key.
+- `PronunciationPracticeCard`'s four states follow A25's literal cascade order (no plan → key not ready → next activity → all done): even when every speaking activity is already done, a plan with no ready Azure key still shows the key message rather than "all done" — matches the spec's ordering exactly, not a judgement call.
+- `design/README.md`'s "Treino de Pronúncia" row flipped from `deferred` to `implemented`; the sibling "Módulos Essenciais" header row's note was also updated (it referenced only F15's card shipping standalone — now both F15's and F18's do, still with zero actual grid members).
+- No Testcontainers-based integration testing applies to this stage (pure client code, no server to spin up); every check here is typecheck, lint and Vitest/RTL component tests, all of which actually run in this container (web has no Docker dependency at all).
+
+**Validation:** typecheck ✅ (whole `apps/web` package, after fixing the pre-existing unbuilt `design-tokens`) · lint ✅ (whole repo's `pnpm lint`, zero warnings) · full web unit/component suite ✅ — `pnpm --filter @english-quest/web test`: 242/242 across 40 files (34 new this stage: `wav-encoder`, `wav-recorder` ×5, `attempt-audio` ×4, `spoken-words` ×4, `difficulty-rating` ×3, `attempt-list` ×5, `speaking-runner` ×5, `pronunciation-practice-card` ×4) · `pnpm -r typecheck` and root `pnpm lint` both clean across the whole monorepo · confirmed (via this stage's own `pnpm -r test` run) that the three Stage 4 integration test files fail only on the environmental `Could not find a working container runtime strategy`, not on logic — see the Stage 4 follow-up note above. No runtime smoke test against the dev server: this container has no browser and the dev server was not started this stage (Stage 6 and the final verification step are better points to do a combined runtime check across web, mobile and API together).
 **Commit:** _(pending — see end of stage)_
-
-## Stage 5: Web — ⬜ pending
-
-- [ ] **14. Web Data Layer and Route Registration**
-- [ ] **15. Capture and Playback Hooks**
-- [ ] **16. Speaking Runner Components**
-- [ ] **17. Speaking Page, Dashboard Card and Design Reference**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 6: Mobile and Follow-Ups — ⬜ pending
 

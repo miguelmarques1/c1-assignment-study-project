@@ -51,6 +51,9 @@ export {
   PencilIcon,
   TextIcon,
   PuzzleIcon,
+  PlayIcon,
+  StopIcon,
+  VoiceIcon,
   type IconProps,
 } from './icons';
 export { cn } from './cn';
