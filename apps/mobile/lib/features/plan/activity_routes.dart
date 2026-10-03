@@ -7,6 +7,8 @@ import 'plan_models.dart';
 /// promising a screen nobody built yet (spec A22).
 final Map<PlanActivityKind, String Function(PlanActivityView activity)> activityRoutes = {
   PlanActivityKind.writing: (activity) => '/app/plan/activities/${activity.id}/writing',
+  PlanActivityKind.pronunciation: (activity) => '/app/speaking/${activity.id}',
+  PlanActivityKind.speaking: (activity) => '/app/speaking/${activity.id}',
 };
 
 /// The route for an activity, or null when no runner is registered for its kind.

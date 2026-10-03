@@ -9,6 +9,8 @@ import type { PlanActivityKind, PlanActivityView } from '@english-quest/shared';
  */
 export const ACTIVITY_ROUTES: Partial<Record<PlanActivityKind, (activity: PlanActivityView) => string>> = {
   writing: (activity) => `/plan/activities/${activity.id}/writing`,
+  pronunciation: (activity) => `/speaking/${activity.id}`,
+  speaking: (activity) => `/speaking/${activity.id}`,
 };
 
 /** The href for an activity, or null when no runner is registered for its kind. */

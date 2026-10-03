@@ -174,4 +174,44 @@ export class AppError extends Error {
   static writingAlreadySubmitted(): AppError {
     return new AppError(ERROR_CODES.WRITING_ALREADY_SUBMITTED);
   }
+
+  /** An unknown activity id, another user's, and one that is not a speaking kind are the same answer. */
+  static speakingActivityNotFound(): AppError {
+    return new AppError(ERROR_CODES.SPEAKING_ACTIVITY_NOT_FOUND);
+  }
+
+  static speakingAttemptLimit(): AppError {
+    return new AppError(ERROR_CODES.SPEAKING_ATTEMPT_LIMIT);
+  }
+
+  /** `reason` is one of `WavHeaderFailureReason` (A30), carried for the client's diagnostic detail. */
+  static speakingAudioInvalid(reason: string): AppError {
+    return new AppError(ERROR_CODES.SPEAKING_AUDIO_INVALID, { reason });
+  }
+
+  static speakingAudioTooLong(): AppError {
+    return new AppError(ERROR_CODES.SPEAKING_AUDIO_TOO_LONG);
+  }
+
+  /** An unknown attempt id and another user's are the same answer, so existence never leaks. */
+  static speakingAttemptNotFound(): AppError {
+    return new AppError(ERROR_CODES.SPEAKING_ATTEMPT_NOT_FOUND);
+  }
+
+  /** `reason` is one of `not_failed`, `not_transient`, `audio_missing` (spec §5). */
+  static speakingNotRescorable(reason: string): AppError {
+    return new AppError(ERROR_CODES.SPEAKING_NOT_RESCORABLE, { reason });
+  }
+
+  static speakingScoringInFlight(): AppError {
+    return new AppError(ERROR_CODES.SPEAKING_SCORING_IN_FLIGHT);
+  }
+
+  static speakingUploadFailed(): AppError {
+    return new AppError(ERROR_CODES.SPEAKING_UPLOAD_FAILED);
+  }
+
+  static speakingActivitySkipped(): AppError {
+    return new AppError(ERROR_CODES.SPEAKING_ACTIVITY_SKIPPED);
+  }
 }

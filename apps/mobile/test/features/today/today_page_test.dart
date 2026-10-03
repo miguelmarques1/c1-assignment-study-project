@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mobile/features/plan/plans_api.dart';
+import 'package:mobile/features/settings/credentials_controller.dart';
 import 'package:mobile/features/today/today_page.dart';
 
 import '../../helpers/pump_screen.dart';
@@ -13,8 +14,13 @@ Future<ScriptedAdapter> _pump(
   double textScale = 1,
   VoidCallback? onSeeFullPlan,
 }) async {
-  final (dio, adapter) = scriptedDio(responders);
-  final page = TodayPage(key: UniqueKey(), api: PlansApi(dio), onSeeFullPlan: onSeeFullPlan ?? () {});
+  final (dio, adapter) = scriptedDio({'GET /credentials': ok(<Map<String, Object?>>[]), ...responders});
+  final page = TodayPage(
+    key: UniqueKey(),
+    api: PlansApi(dio),
+    credentials: CredentialsController(dio),
+    onSeeFullPlan: onSeeFullPlan ?? () {},
+  );
   await pumpOnSmallPhone(tester, page, textScale: textScale);
   return adapter;
 }

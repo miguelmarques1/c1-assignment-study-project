@@ -22,6 +22,7 @@ import { PromptsModule } from './prompts/prompts.module';
 import { PronunciationModule } from './pronunciation/pronunciation.module';
 import { RedisModule } from './redis/redis.module';
 import { ScenarioModule } from './scenario/scenario.module';
+import { SpeakingModule } from './speaking/speaking.module';
 import { StorageModule } from './storage/storage.module';
 import { TaxonomyModule } from './taxonomy/taxonomy.module';
 import { TranscriptionModule } from './transcription/transcription.module';
@@ -56,6 +57,7 @@ import { WritingModule } from './writing/writing.module';
     PlansModule,
     PlanGenerationModule,
     WritingModule,
+    SpeakingModule,
   ],
   providers: [
     // Authentication is global: a route is protected unless it opts out with

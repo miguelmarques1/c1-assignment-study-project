@@ -27,6 +27,10 @@ import {
   saveWritingDraftSchema,
   scenarioViewSchema,
   sessionTokenSchema,
+  speakingActivityViewSchema,
+  speakingAttemptViewSchema,
+  speakingRatingInputSchema,
+  speakingRatingViewSchema,
   studyPlanViewSchema,
   submitWritingSchema,
   validationDetailSchema,
@@ -100,6 +104,10 @@ export const OPENAPI_COMPONENTS: Record<string, SchemaObject> = {
   SubmitWritingRequest: toOpenApi(submitWritingSchema, 'input'),
   WritingLimitDetails: toOpenApi(writingLimitDetailsSchema, 'output'),
   WritingDraftConflictDetails: toOpenApi(writingDraftConflictDetailsSchema, 'output'),
+  SpeakingActivityView: toOpenApi(speakingActivityViewSchema, 'output'),
+  SpeakingAttemptView: toOpenApi(speakingAttemptViewSchema, 'output'),
+  SpeakingRatingRequest: toOpenApi(speakingRatingInputSchema, 'input'),
+  SpeakingRatingView: toOpenApi(speakingRatingViewSchema, 'output'),
 };
 
 /** Shorthand for the error responses, which every route can return. */
