@@ -2,7 +2,7 @@ import 'package:english_quest_tokens/english_quest_tokens.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../../design/widgets/eq_button.dart';
+import '../../../design/widgets/eq_button.dart';
 
 const _micRationaleShownKey = 'eq.speaking.micRationaleShown';
 

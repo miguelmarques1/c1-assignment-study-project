@@ -1,6 +1,6 @@
 # Implementation Progress: Speaking and Pronunciation Activities
 
-**Status:** in progress
+**Status:** done
 **Branch:** claude/eager-tesla-gl9atx
 **Started:** 2026-09-28
 **Last updated:** 2026-10-03
@@ -129,3 +129,30 @@
 
 **Validation:** `flutter analyze` ✅ (whole `apps/mobile` package, 0 issues) · `flutter test` ✅ — full suite **154/154** across every test file (28 new this stage: `audio_recorder_service` ×5, `attempt_audio_player` ×4, `speaking_models` ×7, `speaking_api` ×4, `speaking_controller` ×5, `speaking_page` ×5, `spoken_words` ×3, `attempt_list` ×4, `difficulty_rating` ×2, `pronunciation_practice_card` ×4, minus the day-one duplicate count — see the test file list above for the true per-file tally), plus the two existing `today_page_test.dart` tests adapted for the new `credentials` dependency. Confirmed both bugs the full-suite run surfaced (the player-construction test-isolation bug, the `PronunciationPracticeCard` overflow) are fixed by re-running clean afterward. Soft-fail: `flutter build apk --debug` not run — no Android SDK in this container (see above).
 **Commit:** `729657a` — F18 stage 6 - mobile and follow-ups
+
+## Step 6: Final Verification — ✅ done
+
+**Component Overview walkthrough:** every file row in spec.md's §4 tables (API, shared, web, mobile, docs, database) was checked against the actual tree. One mismatch found and fixed: `microphone_rationale_sheet.dart` had been placed directly under `features/speaking/` in Stage 6 instead of `features/speaking/widgets/`, where the spec's own row lists it alongside `task_card.dart`/`recording_waveform.dart`/etc. Moved it with `git mv`, fixed its now-three-levels-up `eq_button.dart` import and `speaking_page.dart`'s import path (plus one `directives_ordering` resort the move triggered). Re-ran `flutter analyze` (0 issues) and the full `flutter test` suite (154/154) clean afterward. Every other file in every table is present at the exact path and name the spec gives it.
+
+**Full-suite re-validation, fresh, after the path fix above:**
+- `pnpm -r typecheck` ✅ (all 4 TS/JS workspace projects: `design-tokens`, `shared`, `api`, `web`).
+- `pnpm lint` ✅ (root ESLint across `apps/api`, `apps/web`, `packages/shared`, `packages/design-tokens` — zero warnings, the `--max-warnings 0` gate).
+- `pnpm --filter @english-quest/web test` ✅ — **242/242** across 40 files.
+- `pnpm --filter @english-quest/shared test` ✅ — no test files (none exist for this package; nothing F18 added belongs there).
+- `pnpm --filter @english-quest/design-tokens test` ✅ — **17/17**.
+- `pnpm --filter @english-quest/api exec vitest run test/unit` ✅ — **684/684**.
+- `flutter analyze` (whole `apps/mobile`) ✅ — 0 issues.
+- `flutter test` (whole `apps/mobile`) ✅ — **154/154**.
+- **Build smoke check, beyond typecheck:** `pnpm --filter @english-quest/api build` (real `nest build`, tsc) ✅. `pnpm --filter @english-quest/web build` (real `next build`, production mode) ✅ — the route table it prints confirms `/speaking/[activityId]` compiled and was collected as a dynamic server route alongside every pre-existing one, with no new ESLint/type errors during the build's own check pass. `flutter build apk --debug` not run (no Android SDK in this container, logged in Stage 6).
+
+**Acceptance criteria / failure-modes re-check against spec.md §5's table, by scenario:**
+- Azure key missing/deleted, microphone denied/missing, upload failure (network and `CRED002`), the 10-word floor, the attempt limit (`SPEAK002`), upload-while-scoring (`SPEAK007`), bad format/duration (`SPEAK003`/`SPEAK004`), every `failed`/`discarded` reason's sentence, archived-plan read-only (`PLAN004`), skipped-activity read-only (`SPEAK009`), and the corpus-boot-failure case are all implemented server-side (Stages 1-4, already verified there) and surfaced through both clients' gates (Stages 5-6) — traced one by one against `speaking-blocked.tsx`/`SpeakingBlocked` (web/mobile) and `review-panel.tsx`'s/`SpeakingPage._reviewPanel`'s upload-failure branches. The one scenario clients render less precisely than the spec's literal wording is mobile's `NotFoundError` (see Stage 6's dated deviation note) — everything else matches the table's wording exactly, reusing the server's own sentence text rather than paraphrasing it.
+- A response lost after a successful upload returns the same stored attempt on retry, no second score: guaranteed by both clients reusing the same `clientAttemptId` across repeated `submit()` calls until a successful upload clears it (`_pendingClientId`/`_pendingClientId` in `speaking-runner.tsx` and `speaking_controller.dart`), joined with the server's own idempotent replay-by-client-id logic (Stage 3) — never regenerated mid-retry on either client.
+- Cross-client parity: every state the web runner renders (idle/recording/review/submitting/result, each blocked gate, the attempt list with re-score, the rating widget) has a mobile equivalent rendering the same copy, confirmed file-by-file during the Component Overview pass above.
+
+**Environment smoke check:** this container has no Docker daemon (no Postgres/Redis/MinIO it could point a running server at) and no Android SDK — the same standing limitation logged in every earlier stage. Within what the container does allow: the API's and web's real production builds both succeeded (above), and all four runtime-independent suites (web, api unit, design-tokens, mobile) passed fresh. No live click-through against a running stack was possible here; that remains the user's own step; the three Stage-4 integration test files and `flutter build apk --debug` are the specific checks it would additionally cover.
+
+**Regressions:** none. Every stage's own validation passed at commit time; this pass re-confirms all of it fresh, and the two issues it found (the `microphone_rationale_sheet.dart` path mismatch here, plus Stage 6's own player-construction and overflow bugs it already caught and fixed) are closed.
+
+**Status:** `success` — every Component Overview file is present at its specified path, every full-suite check this environment can run is green, every scenario in spec.md's failure-modes table is implemented and reachable from both clients, and every unexercised check (Docker-backed API integration tests, `flutter build apk`, a live click-through) is an honestly-logged environment soft-fail rather than a silent gap.
+**Commit:** _(pending — see final report)_
