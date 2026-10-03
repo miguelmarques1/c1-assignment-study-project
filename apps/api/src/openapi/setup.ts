@@ -58,6 +58,7 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     .addTag('profile', "The caller's learning profile: smoothed competency scores, recurring weaknesses and the error ledger")
     .addTag('lessons', "The caller's lesson history: every lesson with its own processing status, and one lesson's summary")
     .addTag('plans', "The caller's study plan: the current plan, its history, and retrying a failed build")
+    .addTag('writing', "The caller's writing activity: the composed task, its draft, submission and AI correction")
     .addTag('speaking', "The caller's read-aloud and open-response speaking activities: the task, recording, scores and re-scoring")
     .build();
 

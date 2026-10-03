@@ -1,0 +1,91 @@
+# Writing task rules (F17). Read only when the API boots.
+# Every task stores the version and fingerprint it was composed under, and
+# test/unit/writing-task-rules.spec.ts pins the fingerprint per version: bump
+# `version` with any change. `requirements` must name exactly the taxonomy's
+# analysis tags; the boot check also proves every scenario × tag combination
+# is 80–150 words.
+version: "1"
+
+statement_words: { min: 80, max: 150 }
+tags_per_task: { max: 2 }
+scenario_no_repeat_within: 4
+
+closing: "Write between 120 and 250 words; you need at least 80 words to submit."
+
+general_requirement: "Organise your text into at least three paragraphs and link your ideas with precise connectors rather than \"and\" or \"but\"."
+
+scenarios:
+  - id: riverside-car-park
+    heading: "Letter to the editor"
+    text: "Your city council has just announced that a riverside park, promised to residents ten years ago, will be replaced by a car park. A local newspaper has invited readers to respond. Write a letter to the editor giving your view of the decision and of how it was reached, and suggest what the council should do now."
+  - id: office-four-day-week
+    heading: "Letter to the manager"
+    text: "Your company is considering moving the whole office onto a four-day working week, with the same pay but longer daily hours. Management has asked staff for written opinions before deciding. Write a letter to your manager giving your view of the proposal, weighing what it would gain and what it would cost the team."
+  - id: ai-in-classrooms
+    heading: "Essay: AI in classrooms"
+    text: "Many schools are now allowing students to use AI writing tools for homework, while others ban them outright. Your local education board is reviewing its policy and has asked residents for essays on the question. Write an essay giving your opinion on whether AI tools should be allowed in student homework, with reasons and examples."
+  - id: remote-work-cities
+    heading: "Essay: remote work and cities"
+    text: "Since remote work became common, some city-centre offices have stood empty for years while housing remains scarce nearby. A current-affairs magazine is running essays from readers on how cities should respond. Write an essay on whether empty offices should be converted into homes, considering the practical, financial and the economic sides of the question."
+  - id: community-garden-proposal
+    heading: "Proposal: community garden"
+    text: "An unused plot of land behind your local library has been empty for years, and neighbours keep asking what will happen to it. The library's community board is accepting written proposals from residents for how the plot could be used. Write a proposal suggesting a community garden there, with reasons why it would benefit the area."
+  - id: workplace-mentoring-proposal
+    heading: "Proposal: a mentoring scheme"
+    text: "New employees at your company often say they feel lost for their first few months, with no clear person to ask for guidance. Human resources has invited staff to propose ideas to fix this before the next round of hiring begins. Write a proposal for a mentoring scheme pairing new joiners with experienced colleagues."
+  - id: museum-visit-report
+    heading: "Report: a museum visit"
+    text: "Your local college sent a group of students to a new science museum last month, and the head of department has asked every participant for a short written report. Write a report on the visit, describing what the museum offered, how useful it was for your studies, and whether future groups should go there again."
+  - id: team-survey-report
+    heading: "Report: a staff survey"
+    text: "Your department recently ran a survey asking colleagues how they felt about the new open-plan office layout, and the results have just come back mixed. Your manager has asked you to report on the findings. Write a report summarising what the survey found and recommending clearly whether the layout should be changed or kept."
+  - id: restaurant-review
+    heading: "Review: a new restaurant"
+    text: "A restaurant that opened recently in your neighbourhood has quickly become the subject of local conversation, with opinions sharply divided online. A community website has invited residents to submit their own reviews after eating there. Write a review of the restaurant, covering the food, the service and the atmosphere, and give it a clear recommendation."
+  - id: app-review
+    heading: "Review: a language app"
+    text: "A language-learning app has been advertising heavily lately, promising fluency within months, and several friends have asked whether it is actually worth downloading. A student magazine has invited readers who tried it to write reviews for other students. Write a review of the app, covering its strengths, its weaknesses, and who it would suit."
+  - id: volunteering-article
+    heading: "Article: the value of volunteering"
+    text: "Fewer young people are signing up for local volunteering than a decade ago, according to a report your college newsletter recently covered. The newsletter has invited student contributors to write articles encouraging classmates to get involved. Write an article for the newsletter making the case for volunteering and suggesting how a busy student could start."
+  - id: social-media-article
+    heading: "Article: a week without social media"
+    text: "A classmate recently challenged herself to spend a week without any social media and described the experience as eye-opening when she returned. Your college magazine has asked contributors to write articles reflecting on what such a break might reveal. Write an article exploring what a week away from social media could teach someone, and why."
+
+requirements:
+  grammar:subject-verb-agreement: "Include at least three sentences where the subject and verb must agree precisely, choosing subjects that could easily tempt a wrong verb form."
+  grammar:present-simple-continuous: "Contrast a general habit with something happening right now, using both the present simple and the present continuous at least once each."
+  grammar:present-perfect: "Describe at least two changes or experiences up to now using the present perfect, rather than the simple past."
+  grammar:past-simple: "Narrate at least two completed past events using the past simple, each with a clear, finished time reference."
+  grammar:past-perfect: "Describe two past events in the order they happened using the past perfect for whichever came first."
+  grammar:future-forms: "Refer to at least two future plans or predictions, choosing between will, going to and the present continuous appropriately."
+  grammar:conditional-2: "Include at least two sentences imagining a hypothetical present or future situation, using the second conditional (If + past simple, would + infinitive)."
+  grammar:conditional-3: "Include at least two sentences that imagine how a past decision could have turned out differently, using the third conditional (If + had + past participle, would have + past participle)."
+  grammar:conditional-mixed: "Include at least one sentence mixing a past condition with a present result, using a mixed conditional structure."
+  grammar:modal-verb: "Use at least three different modal verbs to express obligation, possibility or advice appropriate to the situation."
+  grammar:passive-voice: "Describe at least two actions using the passive voice, where the person responsible is unknown or unimportant."
+  grammar:reported-speech: "Report at least two things someone said or asked, shifting tense and pronouns correctly into reported speech."
+  grammar:relative-clause: "Add extra detail to at least two nouns using relative clauses, choosing the relative pronoun carefully each time."
+  grammar:article-definite: "Refer to at least three specific, previously identified things using the definite article correctly."
+  grammar:article-indefinite: "Introduce at least three new, non-specific things using the indefinite article correctly."
+  grammar:preposition: "Include at least four prepositional phrases of time, place or manner, choosing each preposition precisely."
+  grammar:word-order: "Include at least two sentences with an adverbial or a fronted element, keeping subject, verb and object in a natural order."
+  grammar:question-form: "Include at least two direct questions, forming each one with the correct inversion or auxiliary verb."
+  grammar:gerund-infinitive: "Follow at least three different verbs or adjectives with either a gerund or an infinitive, whichever each one requires."
+  grammar:countable-uncountable: "Refer to at least one countable and one uncountable noun related to the topic, using quantifiers correctly with each."
+  grammar:comparison: "Compare at least two things using both a comparative and a superlative form."
+  grammar:pronoun: "Refer back to people or things already mentioned at least three times, choosing the pronoun case and number carefully."
+  vocab:collocation: "Use at least three natural word combinations relevant to the topic, rather than a literal word-for-word translation."
+  vocab:phrasal-verb: "Use at least three phrasal verbs naturally relevant to the topic, choosing the correct particle for each."
+  vocab:idiom: "Use at least one fixed idiomatic expression appropriate to the topic and register, applied correctly in context."
+  vocab:word-choice: "Choose precise, topic-specific vocabulary throughout, avoiding vague words like \"thing\", \"nice\" or \"good\" wherever a sharper word exists."
+  vocab:word-form: "Use at least three related word families, choosing the correct part of speech for each context: noun, verb, adjective or adverb."
+  vocab:false-friend: "Use at least one word that has a deceptively similar form in another language, taking care to use its true English meaning."
+  vocab:register: "Keep the vocabulary consistent with the task’s expected register throughout, avoiding words that are too casual or too formal for it."
+  vocab:domain-term: "Use at least three terms specific to this topic’s domain accurately, rather than only general, everyday vocabulary."
+  discourse:connector: "Link your ideas across sentences with at least four different connectors, avoiding repeating \"and\" or \"but\" throughout."
+  discourse:cohesion: "Make the connection between sentences explicit at least three times, using reference words, ellipsis or substitution instead of repeating full nouns."
+  discourse:turn-taking: "Frame at least one part of your text as responding directly to another person’s point, acknowledging it before adding your own."
+  discourse:hedging: "Soften at least three of your claims with hedging language, such as \"it would seem that\", \"arguably\" or \"tends to\"."
+  discourse:clarification: "Include at least one moment where you anticipate a possible misunderstanding and clarify your meaning explicitly."
+  discourse:politeness: "Phrase at least one request, disagreement or refusal with a level of politeness appropriate to who you are addressing."

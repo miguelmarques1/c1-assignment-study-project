@@ -26,6 +26,7 @@ import { SpeakingModule } from './speaking/speaking.module';
 import { StorageModule } from './storage/storage.module';
 import { TaxonomyModule } from './taxonomy/taxonomy.module';
 import { TranscriptionModule } from './transcription/transcription.module';
+import { WritingModule } from './writing/writing.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { TranscriptionModule } from './transcription/transcription.module';
     GenerationModule,
     PlansModule,
     PlanGenerationModule,
+    WritingModule,
     SpeakingModule,
   ],
   providers: [

@@ -50,6 +50,8 @@ model User {
   studyPlans           StudyPlan[]
   studyPlanActivities  StudyPlanActivity[]
   studyPlanRequests    StudyPlanRequest[]
+  writingTasks         WritingTask[]
+  writingCorrections   WritingCorrection[]
   speakingTasks        SpeakingTask[]
   speakingAttempts     SpeakingAttempt[]
 
@@ -1202,6 +1204,7 @@ model StudyPlanActivity {
   contentItem ContentItem?        @relation(fields: [contentItemId], references: [id], onDelete: NoAction)
   carriedFrom StudyPlanActivity?  @relation("StudyPlanActivityCarry", fields: [carriedFromActivityId], references: [id], onDelete: SetNull)
   carriedTo   StudyPlanActivity[] @relation("StudyPlanActivityCarry")
+  writingTask WritingTask?
   speakingTask     SpeakingTask?    @relation("SpeakingTaskRoot")
   speakingAttempts SpeakingAttempt[] @relation("SpeakingAttemptActivity")
 
@@ -1327,4 +1330,114 @@ model StudyPlanRequest {
   @@unique([userId, lessonId, origin], map: "ux_plan_requests_user_lesson_origin")
   @@index([status, nextAttemptAt], map: "ix_plan_requests_claim")
   @@map("study_plan_requests")
+}
+
+/// The task composed when a plan's writing activity is first opened (F17),
+/// and its one server-side draft. Looked up by every id in the activity's
+/// carry-over lineage, so a carried-over copy reopens the same task.
+model WritingTask {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId           String    @map("user_id") @db.Uuid
+  activityId       String    @unique(map: "ux_writing_tasks_activity") @map("activity_id") @db.Uuid
+  heading          String    @db.VarChar(80)
+  statement        String
+  statementWords   Int       @map("statement_words") @db.SmallInt
+  targetTags       String[]  @default([]) @map("target_tags")
+  scenarioId       String    @map("scenario_id") @db.VarChar(48)
+  rulesVersion     String    @map("rules_version") @db.VarChar(32)
+  rulesFingerprint String    @map("rules_fingerprint") @db.Char(64)
+  taxonomyVersion  String    @map("taxonomy_version") @db.VarChar(16)
+  /// One of draft, correcting, uncorrected, correction_failed, corrected.
+  status           String    @default("draft") @db.VarChar(24)
+  draftText        String    @default("") @map("draft_text")
+  draftRevision    Int       @default(0) @map("draft_revision")
+  /// Null exactly at revision 0.
+  draftSavedAt     DateTime? @map("draft_saved_at") @db.Timestamptz(6)
+  activeSeconds    Int       @default(0) @map("active_seconds")
+  /// The latest submission.
+  submittedAt      DateTime? @map("submitted_at") @db.Timestamptz(6)
+  /// Set exactly when corrected.
+  correctedAt      DateTime? @map("corrected_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user        User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activity    StudyPlanActivity    @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  corrections WritingCorrection[]
+
+  @@index([userId, createdAt(sort: Desc)], map: "ix_writing_tasks_user_created")
+  @@map("writing_tasks")
+}
+
+/// One row per correction request: a submission or a resubmission (F17). The
+/// daily limit counts these rows in a rolling 24-hour window, and the
+/// curator reads their prompt stamp and, for invalid output, the raw
+/// response.
+model WritingCorrection {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  taskId               String    @map("task_id") @db.Uuid
+  userId               String    @map("user_id") @db.Uuid
+  submissionId         String    @map("submission_id") @db.Uuid
+  draftRevision        Int       @map("draft_revision")
+  submittedText        String    @map("submitted_text")
+  wordCount            Int       @map("word_count") @db.SmallInt
+  /// One of running, succeeded, failed.
+  status               String    @default("running") @db.VarChar(16)
+  attempts             Int       @default(0) @db.SmallInt
+  attemptOutcomes      String[]  @default([]) @map("attempt_outcomes")
+  requestedAt          DateTime  @default(now()) @map("requested_at") @db.Timestamptz(6)
+  /// Lease start while running.
+  claimedAt            DateTime? @map("claimed_at") @db.Timestamptz(6)
+  /// Set exactly when not running.
+  finishedAt           DateTime? @map("finished_at") @db.Timestamptz(6)
+  /// One of request_failed, invalid_output, gemini_key. Set exactly when failed.
+  failureCode          String?   @map("failure_code") @db.VarChar(24)
+  failureDetail        String?   @map("failure_detail") @db.VarChar(500)
+  /// Only for invalid_output.
+  rawResponse          String?   @map("raw_response")
+  promptId             String?   @map("prompt_id") @db.VarChar(64)
+  promptVersion        String?   @map("prompt_version") @db.VarChar(16)
+  model                String?   @db.VarChar(64)
+  inputTokens          Int?      @map("input_tokens")
+  outputTokens         Int?      @map("output_tokens")
+  latencyMs            Int?      @map("latency_ms")
+  overallComment       String?   @map("overall_comment")
+  scoreGrammar         Int?      @map("score_grammar") @db.SmallInt
+  scoreVocabulary      Int?      @map("score_vocabulary") @db.SmallInt
+  scoreCoherence       Int?      @map("score_coherence") @db.SmallInt
+  scoreTaskAchievement Int?      @map("score_task_achievement") @db.SmallInt
+  revisedText          String?   @map("revised_text")
+  /// Unlocated, overlong or duplicate errors.
+  discardedErrorCount  Int?      @map("discarded_error_count") @db.SmallInt
+  /// `{ "<tag>": <prior occurrences> }`.
+  ledgerPriorCounts    Json?     @map("ledger_prior_counts")
+  /// From F12's ingestion result. Nullable at the database level (unset until succeeded); Prisma reads a NULL array as empty.
+  rejectedTags         String[] @map("rejected_tags")
+
+  task   WritingTask                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user   User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  errors WritingCorrectionError[]
+
+  @@unique([taskId, submissionId], map: "ux_writing_corrections_submission")
+  @@index([userId, requestedAt(sort: Desc)], map: "ix_writing_corrections_user_requested")
+  @@map("writing_corrections")
+}
+
+/// One accepted error on a writing correction (F17), located verbatim in the
+/// submitted text: the quote is the text's own span.
+model WritingCorrectionError {
+  id           String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correctionId String @map("correction_id") @db.Uuid
+  idx          Int    @db.SmallInt
+  quote        String @db.VarChar(500)
+  tag          String @db.VarChar(64)
+  correction   String @db.VarChar(500)
+  explanation  String
+  startOffset  Int    @map("start_offset")
+  endOffset    Int    @map("end_offset")
+
+  correctionRow WritingCorrection @relation(fields: [correctionId], references: [id], onDelete: Cascade)
+
+  @@unique([correctionId, idx], map: "ux_writing_errors_correction_idx")
+  @@map("writing_correction_errors")
 }

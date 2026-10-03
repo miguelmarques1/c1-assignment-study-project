@@ -3,9 +3,11 @@ import type { CorrectionSegment } from '@english-quest/shared';
 /**
  * Case- and punctuation-insensitive comparison key. A token that is all
  * punctuation (a dash, an ellipsis) keeps its raw text, so it only ever
- * matches itself rather than every other punctuation-only token.
+ * matches itself rather than every other punctuation-only token. Exported
+ * for `writing/output/revision-diff.ts` (F17), which compares words exactly
+ * as this file's own segments do.
  */
-function matchKey(token: string): string {
+export function matchKey(token: string): string {
   const letters = token.normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
   return letters === '' ? token : letters;
 }

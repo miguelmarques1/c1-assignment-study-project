@@ -5,6 +5,8 @@ export { Meter, type MeterProps } from './meter';
 export { Chip, type ChipProps } from './chip';
 export { Field, fieldControlClassName, type FieldControlProps } from './field';
 export { TextField, type TextFieldProps } from './text-field';
+export { TextArea, type TextAreaProps } from './text-area';
+export { Dialog, type DialogProps } from './dialog';
 export { Stack } from './stack';
 export { Grid } from './grid';
 export { Skeleton } from './skeleton';

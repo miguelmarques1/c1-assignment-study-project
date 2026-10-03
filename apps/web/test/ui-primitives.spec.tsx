@@ -1,14 +1,17 @@
 import { cleanup, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Badge } from '@/components/ui/badge';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
+import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Grid } from '@/components/ui/grid';
 import { Meter } from '@/components/ui/meter';
 import { Stack } from '@/components/ui/stack';
+import { TextArea } from '@/components/ui/text-area';
 
 afterEach(() => {
   cleanup();
@@ -148,6 +151,68 @@ describe('Chip', () => {
       </Chip>,
     );
     expect(screen.getByRole('button', { name: 'Remove Past tense' })).toBeInTheDocument();
+  });
+});
+
+describe('TextArea', () => {
+  it('text_area_is_labelled_and_reports_errors', () => {
+    render(<TextArea label="Your writing" error="Write at least 80 words before submitting." />);
+    const textarea = screen.getByLabelText('Your writing');
+    expect(textarea.tagName).toBe('TEXTAREA');
+    expect(textarea).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByRole('alert')).toHaveTextContent('Write at least 80 words before submitting.');
+  });
+
+  it('text_area_read_only_presentation', () => {
+    render(<TextArea label="Submitted text" defaultValue="Frozen once submitted." readOnlyPresentation />);
+    const textarea = screen.getByLabelText('Submitted text');
+    expect(textarea).toHaveAttribute('readonly');
+    expect(textarea).toHaveValue('Frozen once submitted.');
+  });
+});
+
+function DialogFixture() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button onClick={() => setOpen(true)}>Open</button>
+      <Dialog open={open} onClose={() => setOpen(false)} title="Detail">
+        <p>Body</p>
+      </Dialog>
+    </>
+  );
+}
+
+describe('Dialog', () => {
+  it('dialog_is_labelled_moves_focus_in_and_closes_on_escape', async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <Dialog open onClose={onClose} title="Submit for correction?">
+        <p>Body</p>
+      </Dialog>,
+    );
+
+    const dialog = screen.getByRole('dialog', { name: 'Submit for correction?' });
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+    expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus();
+
+    await user.keyboard('{Escape}');
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('dialog_returns_focus_on_close', async () => {
+    const user = userEvent.setup();
+    render(<DialogFixture />);
+    const opener = screen.getByRole('button', { name: 'Open' });
+    opener.focus();
+    expect(opener).toHaveFocus();
+
+    await user.click(opener);
+    expect(screen.getByRole('button', { name: 'Close' })).toHaveFocus();
+
+    await user.click(screen.getByRole('button', { name: 'Close' }));
+    expect(opener).toHaveFocus();
   });
 });
 

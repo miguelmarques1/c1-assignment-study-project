@@ -75,7 +75,7 @@
 | A26 | **No new dependency and no new environment variable.** Every number is a constant in the shared package or `writing.constants.ts`, or lives in the rules file | These are the PRD's fixed values and the rules file's content, not deployment settings (F12's reasoning) | Technical decisions with a clear recommendation |
 | A27 | **Replaced plans.** A task whose activity's plan is archived and not carried forward is read-only: it can be opened and read, but a save or submit returns `PLAN004`. A correction that finishes after its plan was replaced still stores its result and reaches the profile, but it does not call `markCompleted`, which F15 would reject | The learning evidence is real, and the activity it belonged to can no longer change state | Partial PRD specifications |
 | A28 | **Task card default.** The task card is expanded when the draft is empty and collapsed when resuming a draft that already has text. `Show task` and `Hide task` toggle it | This is the PRD's "collapsible once reading is done": a returning writer gets the full editor height | Partial PRD specifications |
-| A29 | **Tables are plural** (`writing_tasks`, `writing_corrections`, `writing_correction_errors`) and use `ck_`, `ux_` and `ix_` names. The migration takes the next free number, which is `0016` on today's `main`; F16, F18 and F20 are in the same wave | This is the schema's majority convention (F12, F14, F15) | Multiple conflicting patterns in the codebase |
+| A29 | **Tables are plural** (`writing_tasks`, `writing_corrections`, `writing_correction_errors`) and use `ck_`, `ux_` and `ix_` names. The migration took the next free number, `0016`, on `main` as it stood when this spec was written; F18 merged into `main` first and also claimed `0016`, so this feature's migration was renumbered to `0017` when merging — exactly the contingency this row anticipated ("take the next free number if a Wave 12 sibling lands first") | This is the schema's majority convention (F12, F14, F15) | Multiple conflicting patterns in the codebase |
 
 **Traceability (PRD block → spec section):**
 
@@ -102,7 +102,7 @@
 | API: boot, wiring, errors, OpenAPI | `apps/api/src/boot/verify-writing-prompt.ts`, `main.ts`, `app.module.ts`, `common/app-error.ts`, `openapi/components.ts`, `openapi/setup.ts` |
 | API: finished features reused | `apps/api/src/analysis/correction-diff.ts` (one additive export), `analysis/recurrence-label.ts`, `plans/plan-activity-state.service.ts`, `profile/profile-ingestion.service.ts`, `profile/error-ledger.reader.ts`, `credentials/credentials.service.ts`, `prompts/prompt-execution.service.ts` |
 | Prompt and rules | `apps/api/prompts/writing-correct.yaml` (version `"2"`), `apps/api/rules/writing-tasks.yaml` (new, version `"1"`) |
-| Database | `apps/api/prisma/schema.prisma`, `apps/api/prisma/migrations/0016_writing_activities/migration.sql` |
+| Database | `apps/api/prisma/schema.prisma`, `apps/api/prisma/migrations/0017_writing_activities/migration.sql` |
 | Shared contracts | `packages/shared/src/schemas/writing.ts`, `errors/codes.ts`, `index.ts` |
 | Web | `apps/web/src/app/(app)/plan/activities/[activityId]/writing/**`, `components/writing/**`, `components/ui/text-area.tsx`, `components/ui/dialog.tsx`, `lib/writing*.ts`, `lib/activity-routes.ts`, the design-system gallery |
 | Mobile | `apps/mobile/lib/features/writing/**`, `features/plan/activity_routes.dart`, `features/plan/plan_module.dart` |
@@ -288,7 +288,7 @@ stateDiagram-v2
 
 | Migration File | Tables Affected | Operation | Notes |
 |---|---|---|---|
-| `apps/api/prisma/migrations/0016_writing_activities/migration.sql` | `writing_tasks`, `writing_corrections`, `writing_correction_errors` | CREATE | `main` holds `0001`–`0015`. Take the next free number if a Wave 12 sibling lands first |
+| `apps/api/prisma/migrations/0017_writing_activities/migration.sql` | `writing_tasks`, `writing_corrections`, `writing_correction_errors` | CREATE | `main` holds `0001`–`0015`. Take the next free number if a Wave 12 sibling lands first |
 
 **Screen states (both clients):**
 

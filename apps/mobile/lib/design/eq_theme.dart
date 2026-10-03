@@ -12,7 +12,42 @@ class EqTheme {
   static const ThemeMode mode = ThemeMode.light;
 
   static ThemeData _withComponents(ThemeData base, {required bool dark}) {
-    return base.copyWith(tabBarTheme: _tabBarTheme(dark: dark));
+    return base.copyWith(
+      tabBarTheme: _tabBarTheme(dark: dark),
+      inputDecorationTheme: _inputDecorationTheme(dark: dark),
+    );
+  }
+
+  /// A 2px-outlined field on a filled surface, matching the web `TextField`/
+  /// `TextArea`'s look (F17) — no Material underline, no floating-label tint.
+  /// A bare `TextField` across the app inherits this, which is `mobile-ui`'s
+  /// "add the component theme" instruction rather than a one-off per screen.
+  static InputDecorationTheme _inputDecorationTheme({required bool dark}) {
+    final outline = dark ? EqDarkColors.outlineStrong : EqLightColors.outlineStrong;
+    final surface = dark ? EqDarkColors.surfaceContainerLowest : EqLightColors.surfaceContainerLowest;
+    final onSurfaceVariant = dark ? EqDarkColors.onSurfaceVariant : EqLightColors.onSurfaceVariant;
+    final error = dark ? EqDarkColors.error : EqLightColors.error;
+    final border = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(EqRadius.md),
+      borderSide: BorderSide(color: outline, width: 2),
+    );
+    final errorBorder = border.copyWith(borderSide: BorderSide(color: error, width: 2));
+
+    return InputDecorationTheme(
+      filled: true,
+      fillColor: surface,
+      border: border,
+      enabledBorder: border,
+      focusedBorder: border,
+      disabledBorder: border,
+      errorBorder: errorBorder,
+      focusedErrorBorder: errorBorder,
+      contentPadding: EdgeInsets.symmetric(horizontal: EqSpacing.md, vertical: EqSpacing.sm),
+      labelStyle: EqTextStyles.labelMd(dark: dark).copyWith(color: onSurfaceVariant),
+      floatingLabelStyle: EqTextStyles.labelMd(dark: dark).copyWith(color: onSurfaceVariant),
+      hintStyle: EqTextStyles.bodyMd(dark: dark).copyWith(color: onSurfaceVariant),
+      errorStyle: EqTextStyles.bodySm(dark: dark).copyWith(color: error),
+    );
   }
 
   /// The lesson detail's section tabs (F19): the web's `NavPill` look — the

@@ -24,6 +24,7 @@ import {
   planHistoryViewSchema,
   publicUserSchema,
   saveCredentialSchema,
+  saveWritingDraftSchema,
   scenarioViewSchema,
   sessionTokenSchema,
   speakingActivityViewSchema,
@@ -31,7 +32,12 @@ import {
   speakingRatingInputSchema,
   speakingRatingViewSchema,
   studyPlanViewSchema,
+  submitWritingSchema,
   validationDetailSchema,
+  writingActivityViewSchema,
+  writingDraftConflictDetailsSchema,
+  writingDraftSavedSchema,
+  writingLimitDetailsSchema,
 } from '@english-quest/shared';
 import type { SchemaObject } from '@nestjs/swagger/dist/interfaces/open-api-spec.interface';
 import { z, type ZodType } from 'zod';
@@ -92,6 +98,12 @@ export const OPENAPI_COMPONENTS: Record<string, SchemaObject> = {
   CurrentPlanView: toOpenApi(currentPlanViewSchema, 'output'),
   StudyPlanView: toOpenApi(studyPlanViewSchema, 'output'),
   PlanHistoryView: toOpenApi(planHistoryViewSchema, 'output'),
+  WritingActivityView: toOpenApi(writingActivityViewSchema, 'output'),
+  SaveWritingDraftRequest: toOpenApi(saveWritingDraftSchema, 'input'),
+  WritingDraftSaved: toOpenApi(writingDraftSavedSchema, 'output'),
+  SubmitWritingRequest: toOpenApi(submitWritingSchema, 'input'),
+  WritingLimitDetails: toOpenApi(writingLimitDetailsSchema, 'output'),
+  WritingDraftConflictDetails: toOpenApi(writingDraftConflictDetailsSchema, 'output'),
   SpeakingActivityView: toOpenApi(speakingActivityViewSchema, 'output'),
   SpeakingAttemptView: toOpenApi(speakingAttemptViewSchema, 'output'),
   SpeakingRatingRequest: toOpenApi(speakingRatingInputSchema, 'input'),

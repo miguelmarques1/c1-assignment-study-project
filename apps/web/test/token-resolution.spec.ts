@@ -38,6 +38,7 @@ const BORDER_WIDTH_PATTERN = /^([trbl]-)?\d+$/;
  */
 const NON_UTILITY_ALLOWLIST = new Set([
   'text-block', // LoadingVariant discriminant in loading-state.tsx, not a Tailwind class
+  'text-area', // the design-system gallery's vrId for TextArea's section, not a Tailwind class
 ]);
 
 function listSourceFiles(): string[] {
