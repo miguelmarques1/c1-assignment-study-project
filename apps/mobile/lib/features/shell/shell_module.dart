@@ -6,6 +6,7 @@ import '../lessons/lessons_module.dart';
 import '../plan/plan_module.dart';
 import '../profile/profile_page.dart';
 import '../settings/settings_module.dart';
+import '../speaking/speaking_module.dart';
 import '../today/today_page.dart';
 import 'shell_page.dart';
 
@@ -27,7 +28,8 @@ final shellModule = createModule(
           ..route('/profile', child: (ctx, state) => const ProfilePage())
           ..module(lessonsModule)
           ..module(planModule)
-          ..module(settingsModule);
+          ..module(settingsModule)
+          ..module(speakingModule);
       },
     );
   },

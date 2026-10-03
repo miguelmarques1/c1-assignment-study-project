@@ -7,7 +7,7 @@ import { cn } from '@/components/ui';
  * for `poor`, a dotted one for `fair`, none for `good` — and every word
  * carries its score and error types in its accessible label (F19, A16).
  */
-const BAND_CLASS: Record<PronunciationWordBand, string> = {
+export const BAND_CLASS: Record<PronunciationWordBand, string> = {
   good: 'text-tertiary',
   fair: 'text-badge-warning-fg underline decoration-dotted decoration-2 underline-offset-4',
   poor: 'text-error underline decoration-solid decoration-2 underline-offset-4',
