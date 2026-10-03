@@ -2,11 +2,12 @@ import 'plan_models.dart';
 
 /// Where an activity's runner lives — one entry per kind, registered by the
 /// feature that builds that runner (F16 for the five bank kinds, F17 for
-/// `writing`, F18 for `speaking` and `pronunciation`). Empty until one of
-/// those exists, which is exactly what keeps a "start" action from promising
-/// a screen nobody built yet (spec A22), mirroring the web's
-/// `lib/activity-routes.ts`.
-final Map<PlanActivityKind, String Function(PlanActivityView activity)> activityRoutes = {};
+/// `writing`, F18 for `speaking` and `pronunciation`). Mirrors the web's
+/// `lib/activity-routes.ts`. A kind with no entry keeps a "start" action from
+/// promising a screen nobody built yet (spec A22).
+final Map<PlanActivityKind, String Function(PlanActivityView activity)> activityRoutes = {
+  PlanActivityKind.writing: (activity) => '/app/plan/activities/${activity.id}/writing',
+};
 
 /// The route for an activity, or null when no runner is registered for its kind.
 String? activityRouteFor(PlanActivityView activity) => activityRoutes[activity.kind]?.call(activity);
