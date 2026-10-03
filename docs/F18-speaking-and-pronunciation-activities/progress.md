@@ -128,4 +128,4 @@
 - No on-device or emulator review — per `apps/mobile/AGENTS.md`, that is always the user's own step.
 
 **Validation:** `flutter analyze` ✅ (whole `apps/mobile` package, 0 issues) · `flutter test` ✅ — full suite **154/154** across every test file (28 new this stage: `audio_recorder_service` ×5, `attempt_audio_player` ×4, `speaking_models` ×7, `speaking_api` ×4, `speaking_controller` ×5, `speaking_page` ×5, `spoken_words` ×3, `attempt_list` ×4, `difficulty_rating` ×2, `pronunciation_practice_card` ×4, minus the day-one duplicate count — see the test file list above for the true per-file tally), plus the two existing `today_page_test.dart` tests adapted for the new `credentials` dependency. Confirmed both bugs the full-suite run surfaced (the player-construction test-isolation bug, the `PronunciationPracticeCard` overflow) are fixed by re-running clean afterward. Soft-fail: `flutter build apk --debug` not run — no Android SDK in this container (see above).
-**Commit:** _(pending — see end of stage)_
+**Commit:** `729657a` — F18 stage 6 - mobile and follow-ups
