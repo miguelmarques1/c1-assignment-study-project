@@ -17,6 +17,8 @@ import '../plan/widgets/activity_kind_icon.dart';
 import '../plan/widgets/activity_state_badge.dart';
 import '../plan/widgets/plan_status_banner.dart';
 import '../plan/widgets/session_summary.dart';
+import '../settings/credentials_controller.dart';
+import '../speaking/widgets/pronunciation_practice_card.dart';
 
 /// How often the tab refreshes itself while a build is still preparing.
 const todayPollInterval = Duration(seconds: 10);
@@ -24,9 +26,10 @@ const todayPollInterval = Duration(seconds: 10);
 /// The Today tab: what to do today, wherever the plan currently stands
 /// (A16) — the mobile counterpart of the dashboard's `TodaySessionCard`.
 class TodayPage extends StatefulWidget {
-  const TodayPage({super.key, this.api, this.onOpenActivity, this.onSeeFullPlan});
+  const TodayPage({super.key, this.api, this.credentials, this.onOpenActivity, this.onSeeFullPlan});
 
   final PlansApi? api;
+  final CredentialsController? credentials;
 
   /// Tests observe navigation here; the app pushes the activity's own runner.
   final void Function(String path)? onOpenActivity;
@@ -40,12 +43,14 @@ class TodayPage extends StatefulWidget {
 
 class _TodayPageState extends State<TodayPage> {
   late final CurrentPlanController _controller = CurrentPlanController(widget.api ?? PlansApi(inject<Dio>()));
+  late final CredentialsController _credentials = widget.credentials ?? CredentialsController(inject<Dio>());
   Timer? _poll;
 
   @override
   void initState() {
     super.initState();
     _controller.load();
+    _credentials.load();
     _poll = Timer.periodic(todayPollInterval, (_) {
       if (mounted && TickerMode.valuesOf(context).enabled && _controller.isPreparing) _controller.load();
     });
@@ -66,15 +71,19 @@ class _TodayPageState extends State<TodayPage> {
     }
   }
 
-  void _openActivity(PlanActivityView activity) {
-    final path = activityRouteFor(activity);
-    if (path == null) return;
+  void _openPath(String path) {
     final open = widget.onOpenActivity;
     if (open != null) {
       open(path);
     } else {
       context.navigate(path);
     }
+  }
+
+  void _openActivity(PlanActivityView activity) {
+    final path = activityRouteFor(activity);
+    if (path == null) return;
+    _openPath(path);
   }
 
   @override
@@ -161,12 +170,28 @@ class _TodayPageState extends State<TodayPage> {
         }
       }
 
+      final plan = _controller.loaded.value ? view!.plan : null;
+
       return Scaffold(
         appBar: AppBar(title: const Text('Today')),
         body: SafeArea(
           child: RefreshIndicator(
             onRefresh: _controller.load,
-            child: ListView(padding: padding, children: [body]),
+            child: ListView(
+              padding: padding,
+              children: [
+                body,
+                if (_controller.loaded.value) ...[
+                  SizedBox(height: EqSpacing.md),
+                  PronunciationPracticeCard(
+                    plan: plan,
+                    credentials: _credentials.credentials.value,
+                    onOpenActivity: _openPath,
+                    onSeeFullPlan: _seeFullPlan,
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
       );

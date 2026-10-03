@@ -184,3 +184,6 @@ _2026-09-26. Correction to Stage 5's validation line: the mobile suite is **64/6
 
 **Follow-up added by F15 (2026-09-27), appended — earlier notes above are unchanged:**
 - **A `completed` branch reads `Ready`, and the stepper's last step now runs.** F15 added `plan_generation` as the pipeline's last stage and `completed` as its terminal branch status (see F08's own follow-up note for the mechanics). `deriveLessonStatus` already treated a branch parked past its last known stage as `ready`, so no change was needed there; a `lesson-status.spec.ts` test (`a_completed_branch_reads_ready`) pins it. Both clients' Status stepper already listed `plan_generation` / `Plan generated` (F19 built it forward-compatible), and it now actually reaches `Done` in the ordinary case rather than staying `Not started` forever.
+
+**Follow-up added by F18 (2026-10-03), appended — earlier notes above are unchanged:**
+- **`word-colouring.tsx`'s `BAND_CLASS` is now exported** (additive — the map itself and every existing rendering path are unchanged). F18's web `spoken_words.tsx` imports it directly to colour a speaking attempt's words with the same band treatment this feature already uses for a lesson transcript, rather than redefining the same four Tailwind class strings a second time. `BAND_LABEL` and `wordLabel` were already public and needed no change.
