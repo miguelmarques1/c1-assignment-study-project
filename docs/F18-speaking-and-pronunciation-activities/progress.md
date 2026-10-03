@@ -101,7 +101,7 @@
 - No Testcontainers-based integration testing applies to this stage (pure client code, no server to spin up); every check here is typecheck, lint and Vitest/RTL component tests, all of which actually run in this container (web has no Docker dependency at all).
 
 **Validation:** typecheck ✅ (whole `apps/web` package, after fixing the pre-existing unbuilt `design-tokens`) · lint ✅ (whole repo's `pnpm lint`, zero warnings) · full web unit/component suite ✅ — `pnpm --filter @english-quest/web test`: 242/242 across 40 files (34 new this stage: `wav-encoder`, `wav-recorder` ×5, `attempt-audio` ×4, `spoken-words` ×4, `difficulty-rating` ×3, `attempt-list` ×5, `speaking-runner` ×5, `pronunciation-practice-card` ×4) · `pnpm -r typecheck` and root `pnpm lint` both clean across the whole monorepo · confirmed (via this stage's own `pnpm -r test` run) that the three Stage 4 integration test files fail only on the environmental `Could not find a working container runtime strategy`, not on logic — see the Stage 4 follow-up note above. No runtime smoke test against the dev server: this container has no browser and the dev server was not started this stage (Stage 6 and the final verification step are better points to do a combined runtime check across web, mobile and API together).
-**Commit:** _(pending — see end of stage)_
+**Commit:** `dc72f3f` — F18 stage 5 - web
 
 ## Stage 6: Mobile and Follow-Ups — ⬜ pending
 
