@@ -155,4 +155,4 @@
 **Regressions:** none. Every stage's own validation passed at commit time; this pass re-confirms all of it fresh, and the two issues it found (the `microphone_rationale_sheet.dart` path mismatch here, plus Stage 6's own player-construction and overflow bugs it already caught and fixed) are closed.
 
 **Status:** `success` — every Component Overview file is present at its specified path, every full-suite check this environment can run is green, every scenario in spec.md's failure-modes table is implemented and reachable from both clients, and every unexercised check (Docker-backed API integration tests, `flutter build apk`, a live click-through) is an honestly-logged environment soft-fail rather than a silent gap.
-**Commit:** _(pending — see final report)_
+**Commit:** `94d640f` (the path fix) and `e1f7d83` (the rest of the fix, plus this section) — F18 final verification - close the run
