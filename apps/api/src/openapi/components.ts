@@ -26,6 +26,10 @@ import {
   saveCredentialSchema,
   scenarioViewSchema,
   sessionTokenSchema,
+  speakingActivityViewSchema,
+  speakingAttemptViewSchema,
+  speakingRatingInputSchema,
+  speakingRatingViewSchema,
   studyPlanViewSchema,
   validationDetailSchema,
 } from '@english-quest/shared';
@@ -88,6 +92,10 @@ export const OPENAPI_COMPONENTS: Record<string, SchemaObject> = {
   CurrentPlanView: toOpenApi(currentPlanViewSchema, 'output'),
   StudyPlanView: toOpenApi(studyPlanViewSchema, 'output'),
   PlanHistoryView: toOpenApi(planHistoryViewSchema, 'output'),
+  SpeakingActivityView: toOpenApi(speakingActivityViewSchema, 'output'),
+  SpeakingAttemptView: toOpenApi(speakingAttemptViewSchema, 'output'),
+  SpeakingRatingRequest: toOpenApi(speakingRatingInputSchema, 'input'),
+  SpeakingRatingView: toOpenApi(speakingRatingViewSchema, 'output'),
 };
 
 /** Shorthand for the error responses, which every route can return. */

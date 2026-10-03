@@ -62,14 +62,20 @@
 **Validation:** typecheck ✅ (whole `apps/api` package) · lint ✅ (`eslint src test`, whole package) · full unit suite ✅ — 683/684 (same pre-existing `openapi.spec.ts` staleness expected until stage 4 regenerates the snapshot) · DI graph ✅ (`AppModule` compiles and resolves every new speaking provider via vitest/SWC) · migration re-verified against local Postgres. Soft-fail: no Docker in this container, so the Testcontainers-based integration suites for this stage's services are deferred to stage 4 (see above) and will still only be soft-fail-executable here even once written.
 **Commit:** _(pending — see end of stage)_
 
-## Stage 4: HTTP Surface — ⬜ pending
+## Stage 4: HTTP Surface — ✅ done
 
-- [ ] **13. Speaking Routes and OpenAPI**
+- [x] **13. Speaking Routes and OpenAPI**
 
-**Observations:** _(none yet)_
+**Observations:**
+- The upload route reads the raw body itself (`readAudioBody`, stage 2) rather than any body-parser middleware: Nest's default JSON/urlencoded parsers skip a request whose `Content-Type` is `audio/wav`, exactly like the LiveKit webhook precedent, except here nothing needs `app.use(raw(...))` in `main.ts` at all — the controller's `@Req() req: IncomingMessage` still has the untouched stream.
+- The audio-stream route uses Nest's `StreamableFile` (new to this codebase — no prior binary-response route existed to copy) rather than a hand-rolled `@Res({ passthrough: false })`; `Cache-Control: private, no-store` is still set via `@Res({ passthrough: true })` alongside it.
+- Confirmed the spec's own implementation note the hard way: `apps/api/package.json`'s `openapi:generate` script runs through `tsx` (esbuild), which — consistent with stage 3's DI-check detour — does not reliably emit the decorator metadata Nest's Swagger module needs. Regenerating via `pnpm build && node dist/openapi/generate.js` (real `tsc`, as the spec's implementation note prescribes) produced the correct 5 new routes and 4 new components on the first try; the stale-snapshot run of `openapi.spec.ts` from stages 1–3 now passes.
+- `SpeakingModule` now also registers `SpeakingController`; `app.module.ts`'s import (added in stage 3, ahead of schedule, to validate DI) needed no further change here.
+- Wrote the three integration test files the spec's testing strategy names (`speaking-activity-routes.spec.ts`, `speaking-attempts.spec.ts`, `speaking-rescore.spec.ts`) plus a shared `helpers/speaking-fixtures.ts`, following `pipeline-fixtures.ts`'s and `plan-activity-state.spec.ts`'s established patterns exactly (`seedSpeaker` for BYOK-aware login, direct `speaking_tasks` row seeding to bypass corpus selection for deterministic reference text, the same fake Azure clients at the client boundary F08/F10 already provide). They cover the AC-mapped scenarios: storage key, format/duration rejection, the direct and transcribed scoring paths, the 10-word floor, the attempt limit, retention/replay, the best-attempt profile write, plan state transitions, client-id replay, the BYOK gate and audit labels, and (in the re-score file) a failed assessment re-scored without re-recording, a rejected key invalidating itself, quota, a non-rescorable audio rejection, the limit, cross-user privacy and the audio stream's headers.
+- These three files could only be typechecked and linted, not executed — this container still has no Docker daemon, and they need real Postgres/Redis/MinIO via Testcontainers. Logged as a soft-fail; they are structurally sound (reasoned through by hand against the fakes' exact per-key/per-reference-text scripting contract) but unverified by a real run.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** typecheck ✅ (whole package) · lint ✅ (whole package) · full unit suite ✅ — 684/684, including `openapi.spec.ts` now that the snapshot is regenerated · OpenAPI regenerated and committed. Soft-fail: the three new integration test files (Testcontainers-based) are typechecked and linted only, not executed, for lack of a Docker daemon in this container.
+**Commit:** _(pending — see end of stage)_
 
 ## Stage 5: Web — ⬜ pending
 

@@ -11,6 +11,7 @@ import { SpeakingActivityService } from './speaking-activity.service';
 import { SpeakingAttemptRepository } from './speaking-attempt.repository';
 import { SpeakingAttemptService } from './speaking-attempt.service';
 import { SpeakingScorerService } from './scoring/speaking-scorer.service';
+import { SpeakingController } from './speaking.controller';
 import { SpeakingTaskRepository } from './speaking-task.repository';
 import { SpeakingViewMapper } from './speaking-view.mapper';
 import { SPEAKING_RETRY_DELAYS_OVERRIDE, SPEAKING_WORK_ROOT } from './speaking.constants';
@@ -26,6 +27,7 @@ import { SPEAKING_RETRY_DELAYS_OVERRIDE, SPEAKING_WORK_ROOT } from './speaking.c
  */
 @Module({
   imports: [SpeechModule, StorageModule, PlansModule, ProfileModule, TaxonomyModule],
+  controllers: [SpeakingController],
   providers: [
     SpeakingCorpusService,
     ExcerptClipSlicer,
