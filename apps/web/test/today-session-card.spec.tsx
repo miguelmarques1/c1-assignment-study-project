@@ -141,6 +141,18 @@ describe('TodaySessionCard', () => {
     expect(screen.getByRole('link', { name: 'See the full plan' })).toHaveAttribute('href', '/plan');
   });
 
+  it('a_writing_activity_is_startable', () => {
+    const sessions = sevenSessions();
+    const writingActivity = activity({ day: 3, title: 'Writing: Third conditional', kind: 'writing' });
+    sessions[2] = session(3, { state: 'in_progress', activities: [writingActivity] });
+    render(<TodaySessionCard current={current({ plan: plan(sessions) })} />);
+
+    expect(screen.getByRole('link', { name: 'Start session' })).toHaveAttribute(
+      'href',
+      `/plan/activities/${writingActivity.id}/writing`,
+    );
+  });
+
   it('shows_the_completed_today_summary_with_a_work_ahead_link', () => {
     vi.useFakeTimers({ now: new Date(2026, 8, 25, 14, 0, 0), toFake: ['Date'] });
     const sessions = sevenSessions();

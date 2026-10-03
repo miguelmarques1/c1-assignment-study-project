@@ -6,6 +6,7 @@ import { BadgeSection } from './sections/badge-section';
 import { ButtonSection } from './sections/button-section';
 import { CardSection } from './sections/card-section';
 import { ChipSection } from './sections/chip-section';
+import { DialogSection } from './sections/dialog-section';
 import { EmptySection } from './sections/empty-section';
 import { ErrorSection } from './sections/error-section';
 import { FieldSection } from './sections/field-section';
@@ -14,6 +15,7 @@ import { IconSection } from './sections/icon-section';
 import { LoadingSection } from './sections/loading-section';
 import { MeterSection } from './sections/meter-section';
 import { StackSection } from './sections/stack-section';
+import { TextAreaSection } from './sections/text-area-section';
 
 /**
  * Every component with every variant and state, side by side, in whichever
@@ -34,6 +36,8 @@ export default function DesignSystemPage() {
       <MeterSection />
       <ChipSection />
       <FieldSection />
+      <TextAreaSection />
+      <DialogSection />
       <IconSection />
       <StackSection />
       <GridSection />

@@ -2,6 +2,8 @@
 
 import { useId, type ReactNode } from 'react';
 
+import { cn } from './cn';
+
 export interface FieldControlProps {
   id: string;
   'aria-describedby'?: string;
@@ -24,16 +26,18 @@ interface FieldProps {
   error?: string | null;
   /** Render prop so the id/aria wiring can never be forgotten at the call site. */
   children: (props: FieldControlProps) => ReactNode;
+  /** Overrides the outer wrapper's layout classes — a control that must fill its container's height, for example. */
+  className?: string;
 }
 
-export function Field({ label, labelAside, hint, error, children }: FieldProps) {
+export function Field({ label, labelAside, hint, error, children, className }: FieldProps) {
   const id = useId();
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = error ? `${id}-error` : undefined;
   const describedBy = [hintId, errorId].filter((value): value is string => Boolean(value)).join(' ') || undefined;
 
   return (
-    <div className="flex flex-col gap-xs">
+    <div className={cn('flex flex-col gap-xs', className)}>
       <div className="flex items-center justify-between gap-sm">
         <label htmlFor={id} className="text-label-md text-on-surface-variant">
           {label}
