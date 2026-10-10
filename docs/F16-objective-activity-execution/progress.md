@@ -20,19 +20,25 @@
 - Environment: `@msgpack/msgpack` is missing from this worktree's `node_modules` (F14 dependency), so `pnpm --filter @english-quest/api typecheck` reports two `TS2307` errors in `frequency-list-builder`. Pre-existing and unrelated; every other file typechecks.
 
 **Validation:** shared build ✅ · api typecheck: only the 2 pre-existing `@msgpack/msgpack` errors · lint ✅ (touched files, zero warnings) · unit `activity-contracts` + `byte-range` + shared suite ✅ (21 + 7). The migration is exercised by the integration suites from Stage 3 (Testcontainers applies it from scratch).
+**Commit:** b95b0dd F16 stage 1 - contracts and data model
+
+## Stage 2: Correction and Outcome Core — ✅ done
+
+- [x] **4. Question Checks and Projection**
+- [x] **5. Answer Normalization and Grading**
+- [x] **6. Profile Outcome Builder**
+- [x] **7. Session Context**
+
+**Observations:**
+- All modules are pure and live under `apps/api/src/activities/objective/`, plus `activity.constants.ts`.
+- `buildActivityOutcome` takes the **item's** target tags (not the plan activity's up-to-5 subset): F12's note for F16 says "per item target tag", and F12 drops tags outside the taxonomy anyway. Stage 3 passes `payload.targetTags`.
+- `projectQuestion` builds each view field by field, so a field added to the stored question shape cannot leak by default (A3).
+- `checkQuestion` classifies a schema-valid ordering/matching question as `format_unavailable` before looking at its key, so a defective ordering key is not reported as a curator defect F16 cannot judge yet.
+- A fill-in-the-blank blank is `/_{3,}/` (F13's marker), not exactly three underscores.
+- Test fixtures shared by the unit specs live in `test/unit/objective-test-data.ts`.
+
+**Validation:** typecheck ✅ (only the pre-existing `@msgpack/msgpack` errors) · lint ✅ · unit 36/36 ✅ (question-check 8, normalization 7, grading 8, outcome 10, session-context 3).
 **Commit:** _(recorded in the next stage's commit)_
-
-## Stage 2: Correction and Outcome Core — ⬜ pending
-
-- [ ] **4. Question Checks and Projection**
-- [ ] **5. Answer Normalization and Grading**
-- [ ] **6. Profile Outcome Builder**
-- [ ] **7. Session Context**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 3: Activity Services and Routes — ⬜ pending
 
