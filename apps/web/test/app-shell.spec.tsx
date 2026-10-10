@@ -103,6 +103,22 @@ describe('header', () => {
     expect(screen.queryByText(/\bXP\b/)).toBeNull();
   });
 
+  it('the_profile_pill_stays_active_on_the_progress_page', () => {
+    usePathname.mockReturnValue('/profile/progress');
+    render(
+      <AppHeader
+        user={{
+          id: '4e5f6a7b-8c9d-4e0f-a1b2-c3d4e5f6a7b8',
+          email: 'miguel@example.com',
+          displayName: 'Miguel Marques',
+          sessionExpiresAt: '2026-09-26T10:00:00.000Z',
+        }}
+      />,
+    );
+
+    expect(screen.getByRole('link', { name: 'Profile' })).toHaveAttribute('aria-current', 'page');
+  });
+
   it('the_header_carries_the_profile_destination', () => {
     usePathname.mockReturnValue('/profile');
     render(

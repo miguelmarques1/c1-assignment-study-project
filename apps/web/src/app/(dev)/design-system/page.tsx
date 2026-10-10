@@ -14,6 +14,7 @@ import { GridSection } from './sections/grid-section';
 import { IconSection } from './sections/icon-section';
 import { LoadingSection } from './sections/loading-section';
 import { MeterSection } from './sections/meter-section';
+import { SegmentedControlSection } from './sections/segmented-control-section';
 import { StackSection } from './sections/stack-section';
 import { TextAreaSection } from './sections/text-area-section';
 
@@ -35,6 +36,7 @@ export default function DesignSystemPage() {
       <BadgeSection />
       <MeterSection />
       <ChipSection />
+      <SegmentedControlSection />
       <FieldSection />
       <TextAreaSection />
       <DialogSection />

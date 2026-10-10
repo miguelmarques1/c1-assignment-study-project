@@ -176,6 +176,19 @@ describe('ProfileScreen', () => {
     expect(screen.queryByText('grammar:conditional-3')).toBeNull();
   });
 
+  it('links_to_the_progress_page', () => {
+    render(<ProfileScreen initialView={view()} initialTag={null} />);
+
+    expect(screen.getByRole('heading', { name: 'Progress over time' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'See your progress' })).toHaveAttribute('href', '/profile/progress');
+  });
+
+  it('hides_the_progress_card_when_empty', () => {
+    render(<ProfileScreen initialView={view({ empty: true, recurringWeaknesses: [] })} initialTag={null} />);
+
+    expect(screen.queryByRole('link', { name: 'See your progress' })).toBeNull();
+  });
+
   it('an_empty_weakness_list_explains_when_a_tag_appears', () => {
     render(<ProfileScreen initialView={view({ recurringWeaknesses: [] })} initialTag={null} />);
 

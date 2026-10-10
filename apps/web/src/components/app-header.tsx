@@ -7,12 +7,12 @@ import { Avatar, Logo, NavPill, ThemeToggle, type NavDestination } from '@/compo
  * here rather than changing NavPill itself — see design/README.md for
  * "Scenarios & Practice", deferred to F06. The order mirrors the mobile
  * shell's tabs (Today, Plan, Profile, Lessons, Settings): Dashboard, Profile
- * (F12), Lessons (F19), Settings.
+ * (F12, prefix-matched so its Progress page, F20, keeps it active), Lessons (F19), Settings.
  */
 const DESTINATIONS: NavDestination[] = [
   { href: '/dashboard', label: 'Dashboard' },
   { href: '/plan', label: 'Plan', matchPrefix: true },
-  { href: '/profile', label: 'Profile' },
+  { href: '/profile', label: 'Profile', matchPrefix: true },
   { href: '/lessons', label: 'Lessons', matchPrefix: true },
   { href: '/settings', label: 'Settings' },
 ];
