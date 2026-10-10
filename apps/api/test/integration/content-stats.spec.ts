@@ -2,7 +2,13 @@ import { PostgreSqlContainer, type StartedPostgreSqlContainer } from '@testconta
 import { PrismaClient, type Prisma } from '@prisma/client';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { collectContentStats, relativeTime, renderContentStats } from '../../src/content/content-stats';
+import {
+  collectActivityStats,
+  collectContentStats,
+  relativeTime,
+  renderActivityStats,
+  renderContentStats,
+} from '../../src/content/content-stats';
 import { FIXTURE_TAGS, fiveQuestions, fixtureTaxonomy } from './helpers/content-fixtures';
 import { applyMigrations } from './helpers/test-app';
 
@@ -73,9 +79,110 @@ afterAll(async () => {
 
 beforeEach(async () => {
   await prisma.contentItemServing.deleteMany();
+  await prisma.objectiveAttempt.deleteMany();
+  await prisma.studyPlanActivity.deleteMany();
+  await prisma.studyPlan.deleteMany();
   await prisma.contentItem.deleteMany();
+  await prisma.lesson.deleteMany();
   await prisma.user.deleteMany();
 });
+
+interface AttemptSeed {
+  itemId: string;
+  userId: string;
+  promptId?: string;
+  promptVersion?: string;
+  rating?: 'too_easy' | 'just_right' | 'too_hard' | null;
+  notUseful?: boolean;
+  ratedAt?: Date;
+  unscored?: Array<{ index: number; reason: 'answer_key_invalid' | 'format_unavailable' }>;
+}
+
+/** A graded attempt on its own plan activity, as F16 leaves it. */
+async function attempt(options: AttemptSeed): Promise<void> {
+  const now = new Date();
+  const lesson = await prisma.lesson.create({
+    data: {
+      room: 'classroom-main',
+      openedBy: options.userId,
+      maxParticipants: 2,
+      status: 'ended',
+      startedAt: now,
+      endedAt: now,
+      endReason: 'ended_by_participant',
+      durationSeconds: 60,
+      recordingStatus: 'recorded',
+    },
+  });
+  const plan = await prisma.studyPlan.create({
+    data: {
+      userId: options.userId,
+      lessonId: lesson.id,
+      origin: 'lesson',
+      status: 'archived',
+      precedenceAt: now,
+      composition: 'deterministic',
+      deterministicReason: 'no_profile',
+      generalMaterial: true,
+      rulesVersion: '1',
+      rulesFingerprint: 'f'.repeat(64),
+      taxonomyVersion: '1',
+      createdAt: now,
+      activatedAt: now,
+      archivedAt: now,
+    },
+  });
+  const activity = await prisma.studyPlanActivity.create({
+    data: {
+      planId: plan.id,
+      userId: options.userId,
+      day: 1,
+      position: 1,
+      kind: 'reading',
+      contentItemId: options.itemId,
+      title: 'Reading',
+      targetTags: [FIXTURE_TAGS.grammar],
+      estimatedMinutes: 7,
+      rationale: 'x',
+      rationaleSource: 'template',
+      placement: 'model',
+      state: 'completed',
+      startedAt: now,
+      completedAt: now,
+    },
+  });
+  const unscored = options.unscored ?? [];
+  const results = [0, 1, 2, 3, 4].map((index) => {
+    const flagged = unscored.find((entry) => entry.index === index);
+    return flagged
+      ? { index, outcome: 'unscored', unscoredReason: flagged.reason, issues: [] }
+      : { index, outcome: 'correct', unscoredReason: null, issues: [] };
+  });
+  await prisma.objectiveAttempt.create({
+    data: {
+      userId: options.userId,
+      planActivityId: activity.id,
+      contentItemId: options.itemId,
+      kind: 'reading',
+      status: 'submitted',
+      provenance: options.promptId ? 'generated' : 'curated',
+      promptId: options.promptId ?? null,
+      promptVersion: options.promptVersion ?? null,
+      questions: [],
+      questionsFingerprint: 'a'.repeat(64),
+      submittedAt: now,
+      answers: [],
+      results,
+      scoreCorrect: 5 - unscored.length,
+      scoreTotal: 5 - unscored.length || 1,
+      unscoredCount: unscored.length,
+      timeSpentSeconds: 60,
+      difficultyRating: options.rating ?? null,
+      notUseful: options.notUseful ?? false,
+      ratedAt: options.rating || options.notUseful ? (options.ratedAt ?? now) : null,
+    },
+  });
+}
 
 describe('content:stats', () => {
   it('reports_inventory_by_type_provenance_level_difficulty_and_accent', async () => {
@@ -196,5 +303,69 @@ describe('content:stats', () => {
     await prisma.contentItem.deleteMany({ where: { slug: { startsWith: 'retired' } } });
     const clean = renderContentStats(await collectContentStats(prisma, taxonomy));
     expect(clean.some((line) => line.startsWith('Taxonomy drift'))).toBe(false);
+  });
+
+  describe('activity signals (F16)', () => {
+    const since = new Date(Date.now() - 90 * DAY_MS);
+
+    it('reports_ratings_per_prompt_version_and_a_curated_row', async () => {
+      const generated = await seed('gen-reading', { provenance: 'generated' });
+      const curated = await seed('cur-reading');
+      const userId = await user('rater@example.com');
+      const stamp = { promptId: 'reading-generate', promptVersion: '3' };
+      await attempt({ itemId: generated, userId, ...stamp, rating: 'too_easy' });
+      await attempt({ itemId: generated, userId, ...stamp, rating: 'just_right' });
+      await attempt({ itemId: generated, userId, ...stamp, rating: 'too_hard', notUseful: true });
+      await attempt({ itemId: curated, userId, rating: 'just_right' });
+      await attempt({ itemId: curated, userId, rating: 'too_hard', ratedAt: new Date(Date.now() - 120 * DAY_MS) });
+
+      const stats = await collectActivityStats(prisma, since);
+
+      expect(stats.ratings).toEqual([
+        { source: 'curated', rated: 1, tooEasy: 0, justRight: 1, tooHard: 0, notUseful: 0 },
+        { source: 'reading-generate@3', rated: 3, tooEasy: 1, justRight: 1, tooHard: 1, notUseful: 1 },
+      ]);
+      const lines = renderActivityStats(stats, 90);
+      expect(lines).toContain('Difficulty ratings by prompt version (last 90 days)');
+      expect(lines.some((line) => line.includes('reading-generate@3') && line.includes('33%'))).toBe(true);
+    });
+
+    it('lists_items_with_questions_that_could_not_be_corrected', async () => {
+      const broken = await seed('broken-key');
+      const fine = await seed('fine-key');
+      const userId = await user('flagged@example.com');
+      await attempt({ itemId: broken, userId, unscored: [{ index: 2, reason: 'answer_key_invalid' }] });
+      await attempt({
+        itemId: broken,
+        userId,
+        unscored: [
+          { index: 2, reason: 'answer_key_invalid' },
+          { index: 0, reason: 'answer_key_invalid' },
+        ],
+      });
+      await attempt({ itemId: fine, userId });
+
+      const stats = await collectActivityStats(prisma, since);
+
+      expect(stats.uncorrectable).toEqual([{ slug: 'broken-key', questions: [1, 3], attempts: 2, lastSeen: expect.any(Date) }]);
+      const text = renderActivityStats(stats, 90).join(String.fromCharCode(10));
+      expect(text).toContain('Questions that could not be corrected (last 90 days)');
+      expect(text).toContain('broken-key');
+      expect(text).not.toContain('fine-key');
+    });
+
+    it('counts_questions_waiting_for_the_full_scope_separately', async () => {
+      const ordered = await seed('has-ordering');
+      const userId = await user('ordering@example.com');
+      await attempt({ itemId: ordered, userId, unscored: [{ index: 4, reason: 'format_unavailable' }] });
+
+      const stats = await collectActivityStats(prisma, since);
+
+      expect(stats.uncorrectable).toEqual([]);
+      expect(stats.waitingForFullScope).toEqual({ items: 1, questions: 1 });
+      const lines = renderActivityStats(stats, 90);
+      expect(lines).toContain('  None. Every answer key was valid when it was used.');
+      expect(lines.some((line) => line.includes('1 ordering or matching question in 1 item waiting for F16 Full'))).toBe(true);
+    });
   });
 });

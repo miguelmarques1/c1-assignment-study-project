@@ -111,6 +111,27 @@ describe('PlanActivityStateService', () => {
     expect(resolved.planStatus).toBe('active');
   });
 
+  it('resolves_the_whole_chain_from_the_id_of_any_copy', async () => {
+    const userId = await seedUser(ctx, 'Hanna');
+    const lessons = [
+      await seedLesson(ctx, [userId], new Date('2026-01-01')),
+      await seedLesson(ctx, [userId], new Date('2026-01-08')),
+      await seedLesson(ctx, [userId], new Date('2026-01-15')),
+    ];
+    const firstPlan = await seedPlan(userId, lessons[0]!, 'archived');
+    const original = await seedActivity(firstPlan.id, userId, { state: 'in_progress' });
+    const secondPlan = await seedPlan(userId, lessons[1]!, 'archived');
+    const middle = await seedActivity(secondPlan.id, userId, { carriedFromActivityId: original.id, state: 'in_progress' });
+    const thirdPlan = await seedPlan(userId, lessons[2]!, 'active');
+    const newest = await seedActivity(thirdPlan.id, userId, { carriedFromActivityId: middle.id, state: 'in_progress' });
+
+    for (const start of [original.id, middle.id, newest.id]) {
+      const resolved = await service().resolveForOwner(userId, start);
+      expect(resolved.activityId).toBe(newest.id);
+      expect(resolved.lineage).toEqual([original.id, middle.id, newest.id]);
+    }
+  });
+
   it('throws_plan_activity_not_found_for_an_unknown_or_foreign_id', async () => {
     const userId = await seedUser(ctx, 'Ivy');
     const other = await seedUser(ctx, 'Jan');
