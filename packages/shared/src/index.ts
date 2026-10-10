@@ -275,6 +275,23 @@ export {
 } from './schemas/profile';
 
 export {
+  competencyHistoryPointSchema,
+  competencyHistorySeriesSchema,
+  competencyHistoryViewSchema,
+  measurementSourceKindSchema,
+  progressDashboardViewSchema,
+  progressRangeBoundarySchema,
+  progressRangeSchema,
+  type CompetencyHistoryPoint,
+  type CompetencyHistorySeries,
+  type CompetencyHistoryView,
+  type MeasurementSourceKind,
+  type ProgressDashboardView,
+  type ProgressRange,
+  type ProgressRangeBoundary,
+} from './schemas/progress';
+
+export {
   answerKeyIssues,
   CONTENT_BODY_MAX_LENGTH,
   CONTENT_SLUG_MAX_LENGTH,
