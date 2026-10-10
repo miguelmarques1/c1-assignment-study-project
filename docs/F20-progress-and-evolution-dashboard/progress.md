@@ -1,6 +1,6 @@
 # Implementation Progress: Progress and Evolution Dashboard
 
-**Status:** in progress
+**Status:** success
 **Branch:** claude/progress-evolution-dashboard-d6eb36
 **Started:** 2026-10-10
 **Last updated:** 2026-10-10
@@ -65,15 +65,56 @@
 - **Test gotchas:** `find.text('Fluency')` must be scrolled into view before a tap (the plot pushes the tiles below the fold on a 360×690 phone). `▶ Steady` appears in the legend and in the weakness row, so that count is 2.
 - Not done: no emulator or device run (the user reviews on their own device, per `apps/mobile/AGENTS.md`). `pubspec.lock` was rewritten by `flutter pub get` and is not committed.
 
-**Validation:** `flutter analyze` ✅ 0 issues · `flutter test` 254/254 ✅ (new: chart model 21, models 4, page 14, segmented control 3, profile 1, navigation 1) · `flutter build apk --debug`: result recorded in Stage 4
-**Commit:** _(see Stage 4's commit)_
+**Validation:** `flutter analyze` ✅ 0 issues · `flutter test` 254/254 ✅ (new: chart model 21, models 4, page 14, segmented control 3, profile 1, navigation 1) · `flutter build apk --debug` ✅ (`app-debug.apk`, 714 s on a cold Gradle cache)
+**Commit:** `1f0f581` F20 stage 3 - mobile progress screen
 
-## Stage 4: Design reference, verification and hand-off — ⬜ pending
+## Stage 4: Design reference, verification and hand-off — ✅ done
 
-- [ ] **14. Design reference and live verification**
-- [ ] **15. Follow-ups for neighbouring features**
+- [x] **14. Design reference and live verification**
+- [x] **15. Follow-ups for neighbouring features**
 
-**Observations:** _(none yet)_
+**Observations:**
+- `design/README.md`: `Nível de Domínio` is `dropped` (Section 7, Pedagogy), `Tempo de Conversação` stays `deferred` to F20's Full Scope with A16's reason, and the pill row says Profile is prefix-matched. `design-reference.spec.ts` passes with a deferred `Stat card` row still present.
+- **Live API check (isolated stack `eq-f20`), as Ana and as Bruno** (two accounts sharing four seeded lessons): the embedded `profile` equals `GET /profile` minus `serverTime` for both, every non-empty series ends on its snapshot score, the `since` boundaries are `serverTime` minus 90 and 30 days, Ana's response carries none of Bruno's tags and Bruno's grammar series is his own scores. Data was seeded through F12's ingestion service with a scratch script (kept outside the repo).
+- **Web:** walked in Stage 2's observations (light, dark, 375 px, hover, isolate, table, entry card, active pill).
+- **Mobile:** analyzer, the full test suite and a debug APK build. No emulator or device run, per `apps/mobile/AGENTS.md`; the user reviews the screen on their own device. Translation decisions for that review: no mockup existed for either client (A19), so the screen is composed from `Eq*` widgets. The web's crosshair tooltip became a tap or drag with a readout under the plot; `Show as table` became `Show as list` (cards instead of table rows); the legend is two columns instead of three; the weakness detail is a bottom sheet; the empty state has no `Open classroom` action because the live lesson is web-only.
+- **Neighbouring logs:** dated, appended notes in F12's progress (ProfileService exported, recent improvements waiting, weakness row extracted) and F22's (the two stat cards settled).
+- **Clean-up:** the `eq-f20` containers and volumes were removed, the generated `.env` deleted, and the local API and `next dev` stopped. The scratch data lived only in that throwaway database, so no `rebuild` was needed.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** see Final verification.
+**Commit:** the closing commit of this run (`F20 final verification - close the run`).
+
+## Final verification
+
+**Status:** success.
+
+- **Typecheck** ✅ (shared, design-tokens, web, api) · **lint** ✅ (0 warnings) · **design-tokens** 17/17 ✅ · **web** 327/327 ✅ · **API unit** 752/752 ✅ · **mobile** analyze 0 issues, 254/254 ✅, `flutter build apk --debug` ✅.
+- **Web suite flake:** run while the local servers and Gradle were using the machine, two scanning guards and one credential-card test hit vitest's 5 s timeout (`token-resolution`, `no-raw-values`, `credential-card`). After stopping them the guards passed, and `credential-card.spec.tsx` passes on its own (10/10). Nothing in F20 changed that test; the scanners simply read more files now.
+- **API integration (full, Testcontainers):** 512 passed, 6 failed, 20 skipped across 49 files. `progress-routes.spec.ts` 13/13 ✅ in the full run. The failures are all outside F20's surface and were not re-run on the base commit; the only API source F20 touched outside its own module is `ProfileModule` (an added export), `AppModule`, and the OpenAPI components and tag:
+  - `lesson-privacy.spec.ts > there_is_no_export_route`: F18's `GET /speaking/attempts/{attemptId}/audio` matches the test's `/audio/` regex. A conflict between F18 and an earlier guard, unrelated to `/progress`.
+  - `pronunciation-routes.spec.ts` and `analysis-routes.spec.ts > reports_each_status_truthfully`: pipeline status timing under load.
+  - `speaking-activity-routes.spec.ts` (2 tests, a Prisma query error) and `speaking-rescore.spec.ts > refused_audio_is_not_rescorable` (`not_enough_speech` where `audio_rejected` was expected): F18's audio path.
+  - `transcription-pipeline.spec.ts` and `plan-generation-pipeline.spec.ts`: the Testcontainers reaper could not map its port in `beforeAll`, so all 20 tests skipped.
+- **Component Overview walk-through:** every file in spec section 4 exists with its described role (tokens and DESIGN.md, `progress.ts`, the six API files and three wiring edits, the web route, loading, server and browser reads, chart model, six components, the segmented control with its gallery section and barrel export, profile entry card, header prefix match, the nine mobile files plus the profile module and extracted row, the README and OpenAPI snapshot). **Missing from spec: none.**
+- **Acceptance criteria (PRD, F20)**, each re-run in this state:
+  - ✓ line chart with last 20 and the three ranges: `keeps_the_newest_twenty_points_per_competency_oldest_first`, `range_boundaries_are_ninety_and_thirty_days_before_server_time`, `points_in_range_keeps_measurements_on_or_after_since`, `range_selector_changes_the_plotted_points` (web and mobile).
+  - ✓ lesson and activity distinguished: `lesson_and_activity_points_carry_their_source_kind`, `markers_follow_the_source_kind`, `lesson_and_activity_points_use_different_markers`.
+  - ✓ `Warming up` and no trend arrow: `warming_up_competencies_carry_no_trend`, `legend_tiles_show_score_trend_or_warming_up` (both clients).
+  - ✓ explanatory empty state: `chartable_is_false_until_a_competency_has_three_measurements`, `fewer_than_three_measurements_shows_the_explanatory_empty_state` (both clients).
+  - ✓ recurring weaknesses ranked with trend and chip: `recurring_weaknesses_are_the_profiles_ranked_list`, `renders_recurring_weaknesses_and_opens_the_detail`, `tapping_a_weakness_opens_its_sheet`.
+  - ✓ both clients render the same data and ranges: one server view, the shared chart case table passing in both languages, the same 21 / 21 / 13 counts from one fixture.
+  - — Recent improvements: **blocked on F12's Full Scope** (A2); `has_no_recent_improvements_region_in_core` proves it is absent rather than empty.
+  - — 10 worst phonemes, domain coverage, activity statistics: **deferred to the Full Scope** (spec Scope).
+  - Cross-feature: ✓ F12→F20 consistency (`the_embedded_profile_equals_get_profile`, `the_last_point_equals_the_snapshot_score`), ✓ activity outcomes appear as points (`an_activity_outcome_appears_as_an_activity_point`), ✓ F21 tokens-only screens (`no-raw-values`, `token-resolution`, `renders_tokens_only`, `flutter analyze`, the six chart pairs in the token suite). F15 and F06→F20 criteria: deferred with the Full Scope.
+- **Soft-fails:**
+  - The `visual` Playwright service was not run: it recreates the `english-quest` stack's `web` and `api` containers, which belong to another checkout and session, and it serves that checkout's code, not this worktree's. `segmented-control-light.png` and `segmented-control-dark.png` are therefore not generated, and the `visual.spec.ts` block list already names `segmented-control`, so that spec fails on a missing baseline until someone generates them.
+  - No emulator or device run of the mobile screen (as above); the mobile chart was verified through widget tests and a build, not by eye.
+  - No live check of the web as the second user in the browser (the API was checked as both users).
+
+**Open follow-ups:**
+1. Generate the gallery baselines for the segmented-control block in both themes (`docker compose up -d visual`, `docker compose exec visual npx playwright test --update-snapshots --workers=1`) from the main checkout after merging, then restart the dev servers the `visual` service recreates.
+2. Review the mobile Progress screen on a device (chart legibility, drag selection, the list view).
+3. Triage the six API integration failures listed above on the base commit (most look environmental; the `there_is_no_export_route` one needs F18's audio route allowed or the test regex narrowed).
+4. F20 Full Scope: activity statistics, rating distribution, phoneme list, domain coverage, and the `Tempo de Conversação` decision (A16).
+5. When F12's Full Scope adds `recentImprovements`, add the region to the progress page (A2).
+6. The vitest 5 s default timeout is tight for the two source-scanning web guards on a loaded machine; consider a per-test timeout.
