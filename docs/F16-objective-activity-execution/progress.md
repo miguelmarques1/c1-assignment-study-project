@@ -84,16 +84,24 @@
 
 **Validation:** web typecheck ✅ · eslint zero warnings ✅ · new specs 57/57 ✅ (`activity-draft`, `activity-navigation`, `audio-player`, `activity-shell`, `activity-runner`) · `today-session-card` 9/9 ✅ · full web suite 338/341 under load, the three failures (`no-raw-values` inline-style scan, `token-resolution`, an unrelated `credential-card` test) are 5-second timeouts from running the whole suite in parallel and pass when run alone (20/20).
 **Soft-fail (runtime):** the runner page was not yet exercised in a browser against the running stack in this stage; see the final verification.
-**Commit:** _(recorded in the next stage's commit)_
+**Commit:** 3d21aeb F16 stage 4 - web runner
 
-## Stage 5: Mobile Runner and Follow-Ups — ⬜ pending
+## Stage 5: Mobile Runner and Follow-Ups — ✅ done
 
-- [ ] **19. Mobile Models, API and Pure Helpers**
-- [ ] **20. Mobile Design Widgets and Shell**
-- [ ] **21. Mobile Runner Page**
-- [ ] **22. Follow-Up Notes in Finished Features**
+- [x] **19. Mobile Models, API and Pure Helpers**
+- [x] **20. Mobile Design Widgets and Shell**
+- [x] **21. Mobile Runner Page**
+- [x] **22. Follow-Up Notes in Finished Features**
 
-**Observations:** _(none yet)_
+**Observations:**
+- **`just_audio` was already declared** in `pubspec.yaml` (F18 added it for attempt playback) and F18 has its own `AttemptAudioPlayer` for local files. F16 adds the spec's `AudioPlayback` interface (`core/audio/audio_playback_service.dart`, streaming over HTTP with headers) and `EqAudioPlayer` beside it rather than reusing F18's file-oriented class. `pubspec.lock` was stale for it, so `flutter pub get` refreshed the lock.
+- **Mobile `DifficultyRatingWidget` already existed** (F18). `RatingPrompt` is the spec's new widget (large buttons, `Not now`) and leaves F18's untouched; merging the two is a follow-up shared with the web.
+- The activity module is mounted at the app root (`/activity/:activityId`) with the same session guard as the shell, so there is no bottom navigation. `activityRoutes` maps the five bank kinds to `/activity/{id}`.
+- File layout is leaner than the spec's list: `question_widgets.dart` (multiple choice, fill-in-the-blank, unscored, dots), `results_view.dart` (results and tile), `session_progress.dart`, `skip_activity_sheet.dart`, `rating_prompt.dart`, `passage_pane.dart`, `submission_status.dart`, `activity_unavailable.dart` and `palette.dart` (the light/dark colour roles the runner reads). The listening layout lives in the page. Behaviour is the spec's.
+- `EqTextField` and `EqAudioPlayer` wrap themselves in a transparent `Material`, so they work outside a `Scaffold`. `EqTextField.hint` is helper text only (an earlier version also used it as the placeholder and showed it twice).
+- Layout: passage pane capped at 30% of the screen height on top, questions scrolling below, the primary action pinned at the bottom. The spec's 45% proved too tall on a 360×690 phone with the header and progress bar.
+- Large-text pass (1.3×) found one overflow in the rating prompt's two links; they now sit in a `Wrap`.
+- Step 22: dated follow-up notes were appended to the progress files of F12, F13, F14 and F15, including the correction to `resolveForOwner` found in stage 3.
 
-**Validation:** _(not run)_
-**Commit:** _(none)_
+**Validation:** `flutter analyze` ✅ no issues · `flutter test` 273/273 ✅ (new: models, reconciliation/navigation/draft store, controller 13, page 11 on 360×690 and 1.3× text, rating prompt 4, `EqAudioPlayer` 6, `EqTextField` 5, Today `Resume session`) · `flutter build apk --debug` not run yet (final verification).
+**Commit:** _(recorded in the final verification commit)_

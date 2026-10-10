@@ -182,3 +182,9 @@
 
 **Follow-up added by F15 (2026-09-27), appended — earlier notes above are unchanged:**
 - **F15 is wired as `generateForPlan`'s consumer.** `PlanComposerService.compose` calls it once per plan build with `runKey: lesson:<lessonId>` (or `fallback:<lessonId>` for a request build), wires `onProgress` to the stage's `context.reportProgress`, and draws on both the run's `generated` and `fallback` ids alongside curated bank candidates to fill the plan's quotas. A dropped slot is filled from the bank and surfaced as a plan note (`missing_listening` / `missing_reading`); F14's own quota and quality notes pass through unchanged. `recordServed` is called once per bank item placed, inside the same transaction that activates the plan.
+
+## F16 follow-up (2026-10-10)
+
+- **Ratings are stored against the prompt version.** `objective_attempts` snapshots the item's `prompt_id` and `prompt_version` when the attempt starts, and the one-tap difficulty rating (`PUT /activities/:activityId/rating`) is written on that attempt beside the stamp, as well as on the plan activity. A later re-import therefore cannot rewrite what a rating referred to.
+- **Curator signal.** `pnpm content:stats` reports the ratings per `promptId@promptVersion` (shares of too easy, just right and too hard, and the not-useful count), next to F14's gate statistics, which is the "signal that tunes the prompt library".
+- F14's generation, gate and prompts are unchanged.
