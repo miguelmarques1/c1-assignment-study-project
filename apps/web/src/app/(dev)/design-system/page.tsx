@@ -3,6 +3,7 @@
 import { ThemeToggle } from '@/components/ui';
 
 import { BadgeSection } from './sections/badge-section';
+import { AudioPlayerSection } from './sections/audio-player-section';
 import { ButtonSection } from './sections/button-section';
 import { CardSection } from './sections/card-section';
 import { ChipSection } from './sections/chip-section';
@@ -32,6 +33,7 @@ export default function DesignSystemPage() {
       </header>
 
       <ButtonSection />
+      <AudioPlayerSection />
       <CardSection />
       <BadgeSection />
       <MeterSection />

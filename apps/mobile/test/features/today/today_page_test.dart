@@ -55,11 +55,35 @@ void main() {
       await _pump(tester, {'GET /plans/current': ok(currentJson(plan: plan))}, onSeeFullPlan: () => sawFullPlan = true);
 
       expect(find.textContaining('Day 3 ·'), findsOneWidget);
-      // ACTIVITY_ROUTES is empty until F16-F18 register a kind, so no start button exists yet.
-      expect(find.text('Start session'), findsNothing);
+      expect(find.text('Start session'), findsOneWidget);
+      expect(find.text('Resume session'), findsNothing);
 
       await tester.tap(find.text('See the full plan'));
       expect(sawFullPlan, isTrue);
+    });
+
+    testWidgets('shows_resume_session_when_the_next_activity_is_in_progress', (tester) async {
+      final plan = planJson();
+      final session = sessionJson(day: 3, state: 'in_progress');
+      session['activities'] = [activityJson(day: 3, kind: 'grammar', state: 'in_progress')];
+      (plan['sessions'] as List)[2] = session;
+      await _pump(tester, {'GET /plans/current': ok(currentJson(plan: plan))});
+
+      expect(find.text('Resume session'), findsOneWidget);
+      expect(find.text('Start session'), findsNothing);
+    });
+
+    testWidgets('start_session_opens_the_objective_runner', (tester) async {
+      final plan = planJson();
+      final opened = <String>[];
+      final (dio, _) = scriptedDio({'GET /credentials': ok(<Map<String, Object?>>[]), 'GET /plans/current': ok(currentJson(plan: plan))});
+      await pumpOnSmallPhone(
+        tester,
+        TodayPage(key: UniqueKey(), api: PlansApi(dio), credentials: CredentialsController(dio), onOpenActivity: opened.add, onSeeFullPlan: () {}),
+      );
+
+      await tester.tap(find.text('Start session'));
+      expect(opened, ['/activity/a1']);
     });
 
     testWidgets('shows_the_completed_today_summary', (tester) async {

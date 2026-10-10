@@ -1,4 +1,8 @@
 import {
+  activityRatingInputSchema,
+  activityRatingViewSchema,
+  activitySkipInputSchema,
+  activityViewSchema,
   apiErrorSchema,
   changePasswordSchema,
   classroomEndResultSchema,
@@ -22,6 +26,7 @@ import {
   loginSchema,
   maskedCredentialListSchema,
   maskedCredentialSchema,
+  objectiveSubmissionInputSchema,
   planHistoryViewSchema,
   publicUserSchema,
   saveCredentialSchema,
@@ -110,6 +115,11 @@ export const OPENAPI_COMPONENTS: Record<string, SchemaObject> = {
   SpeakingAttemptView: toOpenApi(speakingAttemptViewSchema, 'output'),
   SpeakingRatingRequest: toOpenApi(speakingRatingInputSchema, 'input'),
   SpeakingRatingView: toOpenApi(speakingRatingViewSchema, 'output'),
+  ActivityView: toOpenApi(activityViewSchema, 'output'),
+  ObjectiveSubmissionInput: toOpenApi(objectiveSubmissionInputSchema, 'input'),
+  ActivitySkipInput: toOpenApi(activitySkipInputSchema, 'input'),
+  ActivityRatingInput: toOpenApi(activityRatingInputSchema, 'input'),
+  ActivityRatingView: toOpenApi(activityRatingViewSchema, 'output'),
 };
 
 /** Shorthand for the error responses, which every route can return. */

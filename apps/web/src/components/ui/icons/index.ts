@@ -34,5 +34,7 @@ export { TextIcon } from './text-icon';
 export { PuzzleIcon } from './puzzle-icon';
 export { PlayIcon } from './play-icon';
 export { StopIcon } from './stop-icon';
+export { PauseIcon } from './pause-icon';
+export { CrossCircleIcon } from './cross-circle-icon';
 export { VoiceIcon } from './voice-icon';
 export type { IconProps } from './icon-props';

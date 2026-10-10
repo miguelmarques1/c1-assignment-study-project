@@ -57,8 +57,20 @@ export class PlanActivityStateService {
     if (!first || first.userId !== userId) {
       throw AppError.planActivityNotFound(activityId);
     }
+    // Back to the oldest copy first: a runner may hold the id of any copy, and an attempt started
+    // on an older one has to stay reachable from the newest (F16 resumes across the whole chain).
+    const older: string[] = [];
+    for (let previous = first; previous.carriedFromActivityId; ) {
+      const parent: StudyPlanActivity | null = await this.repository.activityById(client, previous.carriedFromActivityId);
+      if (!parent || parent.userId !== userId) {
+        break;
+      }
+      older.unshift(parent.id);
+      previous = parent;
+    }
+
     let current: StudyPlanActivity = first;
-    const lineage = [current.id];
+    const lineage = [...older, current.id];
     for (;;) {
       const next: StudyPlanActivity | null = await client.studyPlanActivity.findFirst({ where: { carriedFromActivityId: current.id } });
       if (!next) {

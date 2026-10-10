@@ -128,3 +128,10 @@
 - **`ContentBankService.candidatesFor(ids)` is now called.** F15's plan composer uses it to look up metadata for the content ids a fresh F14 run just produced, which by construction were never served to anyone before — so this method deliberately carries no served-window exclusion and no body fields, exactly as F13 built it for this purpose.
 - **`recordServed` is now called** inside F15's `PlanActivationService.activate`, once per bank item placed in the new plan, in the same transaction that inserts the plan and its activities — so a failed activation rolls the servings back along with everything else.
 - F13's own service, schema and CLI are unchanged.
+
+## F16 follow-up (2026-10-10)
+
+- **Projection.** `getPayload` is now consumed by `ActivityViewService`, which projects each question field by field: no `answer`, `explanation`, listening `body` (transcript) or source reaches a client before a submission. The full payload is read again at grading time, against a per-attempt snapshot of the questions (`objective_attempts.questions`, with a SHA-256 fingerprint), so a re-import can never change what an attempt is graded against or what a finished attempt shows. A curator fixing a key by re-import only affects attempts started afterwards.
+- **Media route.** `GET /activities/:activityId/media` streams a listening item's `mediaObjectKey` through `StorageService.getObjectStream` with HTTP byte ranges (`206`), after an ownership check. A missing object is `ACT004` and is logged with the item slug; an unreachable store is `ACT005`.
+- **`pnpm content:stats` gains two sections** over the same 90-day window as F14's: difficulty ratings per `promptId@promptVersion` (plus a `curated` row), and questions that could not be corrected (per item slug: question numbers, attempts affected, last seen). Ordering and matching questions, which Core leaves unscored, are counted on a separate line as waiting for the Full scope; they are not defects.
+- F13's schema, importer and `ContentBankService` are unchanged.

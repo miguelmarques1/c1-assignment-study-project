@@ -17,6 +17,7 @@ export { ThemeToggle } from './theme-toggle';
 export { Logo } from './logo';
 export { Avatar, type AvatarProps } from './avatar';
 export { SegmentedControl, type SegmentedControlOption, type SegmentedControlProps } from './segmented-control';
+export { AudioPlayer, type AudioPlayerProps } from './audio-player';
 export { NavPill, type NavDestination, type NavPillProps } from './nav-pill';
 export {
   MailIcon,
@@ -56,6 +57,8 @@ export {
   PuzzleIcon,
   PlayIcon,
   StopIcon,
+  PauseIcon,
+  CrossCircleIcon,
   VoiceIcon,
   type IconProps,
 } from './icons';

@@ -4,6 +4,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 
 import { AnalysisModule } from './analysis/analysis.module';
+import { ActivitiesModule } from './activities/activities.module';
 import { AuthModule } from './auth/auth.module';
 import { SessionGuard } from './auth/session.guard';
 import { ClassroomModule } from './classroom/classroom.module';
@@ -60,6 +61,7 @@ import { WritingModule } from './writing/writing.module';
     WritingModule,
     SpeakingModule,
     ProgressModule,
+    ActivitiesModule,
   ],
   providers: [
     // Authentication is global: a route is protected unless it opts out with

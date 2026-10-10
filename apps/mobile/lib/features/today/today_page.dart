@@ -160,7 +160,10 @@ class _TodayPageState extends State<TodayPage> {
                 ],
                 SizedBox(height: EqSpacing.sm),
                 if (nextPath != null) ...[
-                  EqButton(label: 'Start session', onPressed: () => _openActivity(next!)),
+                  EqButton(
+                    label: next!.state == PlanActivityState.inProgress ? 'Resume session' : 'Start session',
+                    onPressed: () => _openActivity(next!),
+                  ),
                   SizedBox(height: EqSpacing.sm),
                 ],
                 EqButton(label: 'See the full plan', onPressed: _seeFullPlan, variant: EqButtonVariant.neutral),

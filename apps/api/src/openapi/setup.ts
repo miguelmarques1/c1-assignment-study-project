@@ -61,6 +61,7 @@ export function buildOpenApiDocument(app: INestApplication): OpenAPIObject {
     .addTag('plans', "The caller's study plan: the current plan, its history, and retrying a failed build")
     .addTag('writing', "The caller's writing activity: the composed task, its draft, submission and AI correction")
     .addTag('speaking', "The caller's read-aloud and open-response speaking activities: the task, recording, scores and re-scoring")
+    .addTag('activities', "The caller's bank-backed activity runner: the item and its questions, the attempt, submission, skip, rating and listening audio")
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

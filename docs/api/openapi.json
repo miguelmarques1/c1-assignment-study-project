@@ -3080,6 +3080,586 @@
           "progress"
         ]
       }
+    },
+    "/activities/{activityId}": {
+      "get": {
+        "description": "Resolves `activityId` forward through its carry-over lineage. For the five bank kinds it carries the item with its questions and never an answer, explanation, listening transcript or source before a submission. It has no side effects: opening an activity consumes nothing.",
+        "operationId": "ActivitiesController_activity",
+        "parameters": [
+          {
+            "name": "activityId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The activity, its session and its item.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ActivityView"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VAL001: activityId is not a UUID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH003: no valid session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PLAN003 (no such activity) or CONTENT001.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionBearer": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Read an activity",
+        "tags": [
+          "activities"
+        ]
+      }
+    },
+    "/activities/{activityId}/attempts": {
+      "post": {
+        "description": "Called on the first interaction. Idempotent: an open attempt anywhere in the lineage is returned as it is, a completed activity returns its graded attempt, and otherwise the item’s questions are snapshotted into a new attempt and the plan activity moves to `in_progress`.",
+        "operationId": "ActivitiesController_start",
+        "parameters": [
+          {
+            "name": "activityId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The activity with `objective.attempt` set.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ActivityView"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VAL001: activityId is not a UUID.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH003: no valid session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PLAN003: no such activity for the caller.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "PLAN004, ACT001 (not an objective activity), ACT003 (skipped) or ACT006 (nothing can be corrected).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionBearer": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Start (or resume) the attempt",
+        "tags": [
+          "activities"
+        ]
+      }
+    },
+    "/activities/{activityId}/attempts/{attemptId}/submission": {
+      "put": {
+        "description": "Grades the answers against the attempt’s question snapshot, stores the result, writes the outcome into the learner’s profile and completes the plan activity, in one transaction. Idempotent: a repeat, from a double tap, a retry or another device, returns the stored result and ignores its body.",
+        "operationId": "ActivitiesController_submit",
+        "parameters": [
+          {
+            "name": "activityId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "attemptId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The activity with `objective.result` set.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ActivityView"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VAL001: bad ids or body, a missing, duplicated or malformed answer, or a fingerprint that is not the attempt’s.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH003: no valid session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PLAN003 (no such activity) or ACT002 (no such attempt).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "ACT001 (not an objective activity) or ACT003 (the activity was skipped).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionBearer": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Submit an attempt",
+        "tags": [
+          "activities"
+        ]
+      }
+    },
+    "/activities/{activityId}/skip": {
+      "post": {
+        "description": "Records the reason through the plan contract and abandons an open objective attempt. Nothing is written to the ledger. Skipping a completed or skipped activity is a no-op.",
+        "operationId": "ActivitiesController_skip",
+        "parameters": [
+          {
+            "name": "activityId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The activity, now skipped.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ActivityView"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VAL001: the reason is empty or too long.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH003: no valid session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PLAN003: no such activity for the caller.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "PLAN004: the plan was replaced and the activity was not carried forward.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionBearer": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Skip an activity (any kind)",
+        "tags": [
+          "activities"
+        ]
+      }
+    },
+    "/activities/{activityId}/rating": {
+      "put": {
+        "description": "Stored on the plan activity and, for an objective activity, on its graded attempt beside the item’s prompt version. Archived plans are allowed. Rating again overwrites.",
+        "operationId": "ActivitiesController_rate",
+        "parameters": [
+          {
+            "name": "activityId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The stored rating.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "data"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/components/schemas/ActivityRatingView"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VAL001: an invalid body, or the activity is not completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH003: no valid session.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PLAN003: no such activity for the caller.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionBearer": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Rate a completed activity (any kind)",
+        "tags": [
+          "activities"
+        ]
+      }
+    },
+    "/activities/{activityId}/media": {
+      "get": {
+        "description": "Checks ownership, then streams the object through the API with HTTP byte ranges. Allowed in any activity state.",
+        "operationId": "ActivitiesController_audio",
+        "parameters": [
+          {
+            "name": "activityId",
+            "required": true,
+            "in": "path",
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "name": "Range",
+            "in": "header",
+            "description": "A single `bytes=start-end` range. Ignored when unparseable or unsatisfiable.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The whole audio object."
+          },
+          "206": {
+            "description": "The requested byte range."
+          },
+          "400": {
+            "description": "VAL001: activityId is not a UUID.",
+            "content": {
+              "audio/mpeg": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              },
+              "audio/mp4": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              },
+              "audio/wav": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              },
+              "audio/ogg": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH003: no valid session.",
+            "content": {
+              "audio/mpeg": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              },
+              "audio/mp4": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              },
+              "audio/wav": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              },
+              "audio/ogg": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "PLAN003 (no such activity) or ACT004 (no audio).",
+            "content": {
+              "audio/mpeg": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              },
+              "audio/mp4": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              },
+              "audio/wav": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              },
+              "audio/ogg": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ACT005: the object store could not be reached.",
+            "content": {
+              "audio/mpeg": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              },
+              "audio/mp4": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              },
+              "audio/wav": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              },
+              "audio/ogg": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sessionBearer": []
+          },
+          {
+            "sessionCookie": []
+          }
+        ],
+        "summary": "Stream a listening activity’s audio",
+        "tags": [
+          "activities"
+        ]
+      }
     }
   },
   "info": {
@@ -3148,6 +3728,10 @@
     {
       "name": "speaking",
       "description": "The caller's read-aloud and open-response speaking activities: the task, recording, scores and re-scoring"
+    },
+    {
+      "name": "activities",
+      "description": "The caller's bank-backed activity runner: the item and its questions, the attempt, submission, skip, rating and listening audio"
     }
   ],
   "servers": [
@@ -3571,6 +4155,12 @@
                   "SPEAK007",
                   "SPEAK008",
                   "SPEAK009",
+                  "ACT001",
+                  "ACT002",
+                  "ACT003",
+                  "ACT004",
+                  "ACT005",
+                  "ACT006",
                   "ERR500"
                 ]
               },
@@ -10086,6 +10676,995 @@
         "required": [
           "rating",
           "notUseful"
+        ],
+        "additionalProperties": false
+      },
+      "ActivityView": {
+        "type": "object",
+        "properties": {
+          "serverTime": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "activity": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "lineage": {
+                "minItems": 1,
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid",
+                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                }
+              },
+              "planId": {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              "planStatus": {
+                "type": "string",
+                "enum": [
+                  "active",
+                  "archived"
+                ]
+              },
+              "readOnly": {
+                "type": "boolean"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "listening",
+                  "reading",
+                  "vocabulary",
+                  "grammar",
+                  "error_review",
+                  "writing",
+                  "speaking",
+                  "pronunciation"
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "estimatedMinutes": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "targetTags": {
+                "maxItems": 5,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "tag": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "tag",
+                    "label"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "rationale": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "in_progress",
+                  "completed",
+                  "skipped"
+                ]
+              },
+              "startedAt": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "completedAt": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "skippedAt": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "skipReason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "rating": {
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "enum": [
+                      "too_easy",
+                      "just_right",
+                      "too_hard"
+                    ]
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "notUseful": {
+                "type": "boolean"
+              },
+              "planCompletionPercent": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              }
+            },
+            "required": [
+              "id",
+              "lineage",
+              "planId",
+              "planStatus",
+              "readOnly",
+              "kind",
+              "title",
+              "estimatedMinutes",
+              "targetTags",
+              "rationale",
+              "state",
+              "startedAt",
+              "completedAt",
+              "skippedAt",
+              "skipReason",
+              "rating",
+              "notUseful",
+              "planCompletionPercent"
+            ],
+            "additionalProperties": false
+          },
+          "session": {
+            "type": "object",
+            "properties": {
+              "day": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 7
+              },
+              "position": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 4
+              },
+              "count": {
+                "type": "integer",
+                "minimum": 2,
+                "maximum": 4
+              },
+              "activities": {
+                "minItems": 2,
+                "maxItems": 4,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid",
+                      "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                    },
+                    "day": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 7
+                    },
+                    "position": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 4
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "listening",
+                        "reading",
+                        "vocabulary",
+                        "grammar",
+                        "error_review",
+                        "writing",
+                        "speaking",
+                        "pronunciation"
+                      ]
+                    },
+                    "contentItemId": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "uuid",
+                          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "estimatedMinutes": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "targetTags": {
+                      "maxItems": 5,
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "tag": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "tag",
+                          "label"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "rationale": {
+                      "type": "string"
+                    },
+                    "isReview": {
+                      "type": "boolean"
+                    },
+                    "carriedOver": {
+                      "type": "boolean"
+                    },
+                    "state": {
+                      "type": "string",
+                      "enum": [
+                        "pending",
+                        "in_progress",
+                        "completed",
+                        "skipped"
+                      ]
+                    },
+                    "startedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "completedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "skippedAt": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "format": "date-time",
+                          "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "skipReason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "rating": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "too_easy",
+                            "just_right",
+                            "too_hard"
+                          ]
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "notUseful": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "day",
+                    "position",
+                    "kind",
+                    "contentItemId",
+                    "title",
+                    "estimatedMinutes",
+                    "targetTags",
+                    "rationale",
+                    "isReview",
+                    "carriedOver",
+                    "state",
+                    "startedAt",
+                    "completedAt",
+                    "skippedAt",
+                    "skipReason",
+                    "rating",
+                    "notUseful"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "day",
+              "position",
+              "count",
+              "activities"
+            ],
+            "additionalProperties": false
+          },
+          "objective": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "runnable": {
+                    "type": "boolean"
+                  },
+                  "item": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "listening",
+                          "reading",
+                          "vocabulary",
+                          "grammar",
+                          "error_review"
+                        ]
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "topic": {
+                        "type": "string"
+                      },
+                      "cefrLevel": {
+                        "type": "string",
+                        "enum": [
+                          "A1",
+                          "A2",
+                          "B1",
+                          "B2",
+                          "C1",
+                          "C2"
+                        ]
+                      },
+                      "accent": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "durationSeconds": {
+                        "anyOf": [
+                          {
+                            "type": "integer",
+                            "minimum": -9007199254740991,
+                            "maximum": 9007199254740991
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "passage": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "kind": {
+                                "type": "string",
+                                "enum": [
+                                  "text",
+                                  "transcript"
+                                ]
+                              },
+                              "text": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "kind",
+                              "text"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "hasAudio": {
+                        "type": "boolean"
+                      },
+                      "source": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "name": {
+                                "type": "string"
+                              },
+                              "url": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "name",
+                              "url"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ]
+                      },
+                      "questionsFingerprint": {
+                        "type": "string",
+                        "pattern": "^[0-9a-f]{64}$"
+                      },
+                      "questions": {
+                        "minItems": 5,
+                        "maxItems": 5,
+                        "type": "array",
+                        "items": {
+                          "oneOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "index": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 4
+                                },
+                                "format": {
+                                  "type": "string",
+                                  "const": "multiple_choice"
+                                },
+                                "prompt": {
+                                  "type": "string"
+                                },
+                                "options": {
+                                  "minItems": 4,
+                                  "maxItems": 4,
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                }
+                              },
+                              "required": [
+                                "index",
+                                "format",
+                                "prompt",
+                                "options"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "index": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 4
+                                },
+                                "format": {
+                                  "type": "string",
+                                  "const": "fill_blank"
+                                },
+                                "prompt": {
+                                  "type": "string"
+                                },
+                                "before": {
+                                  "type": "string"
+                                },
+                                "after": {
+                                  "type": "string"
+                                },
+                                "blankLength": {
+                                  "type": "integer",
+                                  "minimum": 4,
+                                  "maximum": 40
+                                }
+                              },
+                              "required": [
+                                "index",
+                                "format",
+                                "prompt",
+                                "before",
+                                "after",
+                                "blankLength"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "index": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 4
+                                },
+                                "format": {
+                                  "type": "string",
+                                  "const": "unscored"
+                                },
+                                "prompt": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "reason": {
+                                  "type": "string",
+                                  "enum": [
+                                    "format_unavailable",
+                                    "answer_key_invalid"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "index",
+                                "format",
+                                "prompt",
+                                "reason"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "title",
+                      "topic",
+                      "cefrLevel",
+                      "accent",
+                      "durationSeconds",
+                      "passage",
+                      "hasAudio",
+                      "source",
+                      "questionsFingerprint",
+                      "questions"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "attempt": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid",
+                            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "open",
+                              "submitted"
+                            ]
+                          },
+                          "startedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                          },
+                          "submittedAt": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "format": "date-time",
+                                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "status",
+                          "startedAt",
+                          "submittedAt"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "result": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "scoreCorrect": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 5
+                          },
+                          "scoreTotal": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 5
+                          },
+                          "unscoredCount": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 5
+                          },
+                          "timeSpentSeconds": {
+                            "anyOf": [
+                              {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "submittedAt": {
+                            "type": "string",
+                            "format": "date-time",
+                            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                          },
+                          "questions": {
+                            "minItems": 5,
+                            "maxItems": 5,
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "index": {
+                                  "type": "integer",
+                                  "minimum": 0,
+                                  "maximum": 4
+                                },
+                                "format": {
+                                  "type": "string",
+                                  "enum": [
+                                    "multiple_choice",
+                                    "fill_blank",
+                                    "unscored"
+                                  ]
+                                },
+                                "prompt": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "outcome": {
+                                  "type": "string",
+                                  "enum": [
+                                    "correct",
+                                    "incorrect",
+                                    "unscored"
+                                  ]
+                                },
+                                "response": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "correctAnswer": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "acceptedAnswers": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "explanation": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "unscoredReason": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "enum": [
+                                        "format_unavailable",
+                                        "answer_key_invalid"
+                                      ]
+                                    },
+                                    {
+                                      "type": "null"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "index",
+                                "format",
+                                "prompt",
+                                "outcome",
+                                "response",
+                                "correctAnswer",
+                                "acceptedAnswers",
+                                "explanation",
+                                "unscoredReason"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "scoreCorrect",
+                          "scoreTotal",
+                          "unscoredCount",
+                          "timeSpentSeconds",
+                          "submittedAt",
+                          "questions"
+                        ],
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "runnable",
+                  "item",
+                  "attempt",
+                  "result"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "serverTime",
+          "activity",
+          "session",
+          "objective"
+        ],
+        "additionalProperties": false
+      },
+      "ObjectiveSubmissionInput": {
+        "type": "object",
+        "properties": {
+          "questionsFingerprint": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "timeSpentSeconds": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991
+          },
+          "answers": {
+            "maxItems": 5,
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "index": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 4
+                    },
+                    "format": {
+                      "type": "string",
+                      "const": "multiple_choice"
+                    },
+                    "optionIndex": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 3
+                    }
+                  },
+                  "required": [
+                    "index",
+                    "format",
+                    "optionIndex"
+                  ]
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "index": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 4
+                    },
+                    "format": {
+                      "type": "string",
+                      "const": "fill_blank"
+                    },
+                    "text": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    }
+                  },
+                  "required": [
+                    "index",
+                    "format",
+                    "text"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "required": [
+          "questionsFingerprint",
+          "timeSpentSeconds",
+          "answers"
+        ]
+      },
+      "ActivitySkipInput": {
+        "type": "object",
+        "properties": {
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          }
+        },
+        "required": [
+          "reason"
+        ]
+      },
+      "ActivityRatingInput": {
+        "type": "object",
+        "properties": {
+          "rating": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "too_easy",
+                  "just_right",
+                  "too_hard"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notUseful": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "rating",
+          "notUseful"
+        ]
+      },
+      "ActivityRatingView": {
+        "type": "object",
+        "properties": {
+          "rating": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "too_easy",
+                  "just_right",
+                  "too_hard"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notUseful": {
+            "type": "boolean"
+          },
+          "ratedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "rating",
+          "notUseful",
+          "ratedAt"
         ],
         "additionalProperties": false
       }

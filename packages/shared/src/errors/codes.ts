@@ -97,6 +97,18 @@ export const ERROR_CODES = {
   SPEAKING_UPLOAD_FAILED: 'SPEAK008',
   /** The activity was skipped, so it takes no new recordings. */
   SPEAKING_ACTIVITY_SKIPPED: 'SPEAK009',
+  /** The activity is a writing, speaking or pronunciation task: it has no bank questions. */
+  ACTIVITY_NOT_OBJECTIVE: 'ACT001',
+  /** No such attempt for the caller within the activity's carry-over lineage. */
+  ACTIVITY_ATTEMPT_NOT_FOUND: 'ACT002',
+  /** The activity was skipped, so its attempt was abandoned and takes no submission. */
+  ACTIVITY_SKIPPED: 'ACT003',
+  /** The activity has no audio: not listening, no media key, or the object is missing from storage. */
+  ACTIVITY_AUDIO_NOT_FOUND: 'ACT004',
+  /** The object store could not be reached to stream the audio. */
+  ACTIVITY_AUDIO_UNAVAILABLE: 'ACT005',
+  /** No question in the item can be corrected. */
+  ACTIVITY_NOT_RUNNABLE: 'ACT006',
   /** Unhandled server-side failure. */
   INTERNAL_ERROR: 'ERR500',
 } as const;
@@ -152,6 +164,12 @@ export const ERROR_STATUS: Record<ErrorCode, number> = {
   [ERROR_CODES.SPEAKING_SCORING_IN_FLIGHT]: 409,
   [ERROR_CODES.SPEAKING_UPLOAD_FAILED]: 503,
   [ERROR_CODES.SPEAKING_ACTIVITY_SKIPPED]: 409,
+  [ERROR_CODES.ACTIVITY_NOT_OBJECTIVE]: 409,
+  [ERROR_CODES.ACTIVITY_ATTEMPT_NOT_FOUND]: 404,
+  [ERROR_CODES.ACTIVITY_SKIPPED]: 409,
+  [ERROR_CODES.ACTIVITY_AUDIO_NOT_FOUND]: 404,
+  [ERROR_CODES.ACTIVITY_AUDIO_UNAVAILABLE]: 503,
+  [ERROR_CODES.ACTIVITY_NOT_RUNNABLE]: 409,
   [ERROR_CODES.INTERNAL_ERROR]: 500,
 };
 
@@ -212,5 +230,11 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   [ERROR_CODES.SPEAKING_SCORING_IN_FLIGHT]: 'Another recording for this activity is still being scored.',
   [ERROR_CODES.SPEAKING_UPLOAD_FAILED]: 'Your recording could not be uploaded. Retry?',
   [ERROR_CODES.SPEAKING_ACTIVITY_SKIPPED]: 'This activity was skipped, so it takes no new recordings.',
+  [ERROR_CODES.ACTIVITY_NOT_OBJECTIVE]: 'This activity has no questions to answer.',
+  [ERROR_CODES.ACTIVITY_ATTEMPT_NOT_FOUND]: 'This attempt could not be found.',
+  [ERROR_CODES.ACTIVITY_SKIPPED]: 'This activity was skipped.',
+  [ERROR_CODES.ACTIVITY_AUDIO_NOT_FOUND]: 'This audio could not be found.',
+  [ERROR_CODES.ACTIVITY_AUDIO_UNAVAILABLE]: 'The audio could not be loaded right now.',
+  [ERROR_CODES.ACTIVITY_NOT_RUNNABLE]: 'This activity could not be corrected.',
   [ERROR_CODES.INTERNAL_ERROR]: 'Something went wrong on our side.',
 };

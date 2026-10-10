@@ -129,16 +129,27 @@ describe('TodaySessionCard', () => {
     expect(refresh).toHaveBeenCalledTimes(1);
   });
 
-  it('lists_the_current_sessions_activities_with_a_start_session_link_when_routable', () => {
+  it('shows_start_session_for_a_routable_objective_activity', () => {
     const sessions = sevenSessions();
-    sessions[2] = session(3, { state: 'in_progress', activities: [activity({ day: 3, title: 'Read: A missed train', kind: 'reading' })] });
+    const reading = activity({ day: 1, title: 'Read: A missed train', kind: 'reading' });
+    sessions[0] = session(1, { state: 'not_started', activities: [reading] });
     render(<TodaySessionCard current={current({ plan: plan(sessions) })} />);
 
-    expect(screen.getByText('Day 3 · 17 min')).toBeInTheDocument();
+    expect(screen.getByText('Day 1 · 17 min')).toBeInTheDocument();
     expect(screen.getByText('Read: A missed train')).toBeInTheDocument();
-    // ACTIVITY_ROUTES is empty until F16-F18 register a kind, so no runner exists yet.
-    expect(screen.queryByRole('link', { name: 'Start session' })).toBeNull();
+    expect(screen.getByRole('link', { name: 'Start session' })).toHaveAttribute('href', `/activities/${reading.id}`);
+    expect(screen.queryByRole('link', { name: 'Resume session' })).toBeNull();
     expect(screen.getByRole('link', { name: 'See the full plan' })).toHaveAttribute('href', '/plan');
+  });
+
+  it('shows_resume_session_when_the_next_activity_is_in_progress', () => {
+    const sessions = sevenSessions();
+    const grammar = activity({ day: 3, title: 'Grammar: Regrets', kind: 'grammar', state: 'in_progress', startedAt: '2026-09-25T08:00:00.000Z' });
+    sessions[2] = session(3, { state: 'in_progress', activities: [grammar] });
+    render(<TodaySessionCard current={current({ plan: plan(sessions) })} />);
+
+    expect(screen.getByRole('link', { name: 'Resume session' })).toHaveAttribute('href', `/activities/${grammar.id}`);
+    expect(screen.queryByRole('link', { name: 'Start session' })).toBeNull();
   });
 
   it('a_writing_activity_is_startable', () => {
