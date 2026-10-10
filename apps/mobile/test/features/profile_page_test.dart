@@ -66,6 +66,18 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('opens_progress_from_the_entry_card', (tester) async {
+      var opened = 0;
+      final (controller, _) = _controller({'GET /profile': _profile});
+      await pumpOnSmallPhone(tester, ProfilePage(controller: controller, onOpenProgress: () => opened += 1));
+
+      expect(find.text('Progress over time'), findsOneWidget);
+      expect(find.text('See how each competency has moved across your lessons and activities.'), findsOneWidget);
+      await tester.tap(find.text('Progress over time'));
+
+      expect(opened, 1);
+    });
+
     testWidgets('shows_the_empty_state_without_an_action', (tester) async {
       final (controller, _) = _controller({
         'GET /profile': (_) async => jsonBody({'data': profileJson(empty: true, weaknesses: [])}),

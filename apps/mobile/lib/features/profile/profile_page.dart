@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
 import 'package:get/get.dart';
 
-import '../../core/format/relative_time.dart';
-import '../../design/widgets/eq_badge.dart';
 import '../../design/widgets/eq_button.dart';
 import '../../design/widgets/eq_card.dart';
 import '../../design/widgets/eq_meter.dart';
@@ -13,6 +11,7 @@ import '../../design/widgets/eq_page_state.dart';
 import 'ledger_entry_sheet.dart';
 import 'profile_controller.dart';
 import 'profile_models.dart';
+import 'widgets/weakness_row.dart';
 
 /// The learning profile (F12) — the mobile mirror of the web's `/profile`,
 /// with the same copy and states. No mockup exists for either client; it is
@@ -20,10 +19,13 @@ import 'profile_models.dart';
 /// sheet here, and the empty state has no action because the live lesson is
 /// web-only.
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key, this.controller});
+  const ProfilePage({super.key, this.controller, this.onOpenProgress});
 
   /// Injected by tests; the app builds one over the shared `Dio`.
   final ProfileController? controller;
+
+  /// Tests observe navigation here; the app pushes the progress page.
+  final VoidCallback? onOpenProgress;
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -36,6 +38,14 @@ class _ProfilePageState extends State<ProfilePage> {
   void initState() {
     super.initState();
     _profile.load();
+  }
+
+  void _openProgress() {
+    if (widget.onOpenProgress != null) {
+      widget.onOpenProgress!();
+    } else {
+      context.pushNamed('/app/profile/progress');
+    }
   }
 
   @override
@@ -61,7 +71,7 @@ class _ProfilePageState extends State<ProfilePage> {
               child: const EqEmpty(message: 'No profile yet. Your competencies appear after your first analysed lesson.'),
             );
           } else {
-            content = _ProfileContent(view: view, profile: _profile);
+            content = _ProfileContent(view: view, profile: _profile, onOpenProgress: _openProgress);
           }
 
           return RefreshIndicator(
@@ -110,10 +120,11 @@ class _Heading extends StatelessWidget {
 }
 
 class _ProfileContent extends StatelessWidget {
-  const _ProfileContent({required this.view, required this.profile});
+  const _ProfileContent({required this.view, required this.profile, required this.onOpenProgress});
 
   final LearningProfileView view;
   final ProfileController profile;
+  final VoidCallback onOpenProgress;
 
   @override
   Widget build(BuildContext context) {
@@ -121,6 +132,8 @@ class _ProfileContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        _ProgressEntry(onTap: onOpenProgress),
+        SizedBox(height: EqSpacing.gutterMobile),
         if (view.notes.isNotEmpty) ...[
           EqCard(
             tone: EqCardTone.info,
@@ -160,7 +173,7 @@ class _ProfileContent extends StatelessWidget {
                     for (final entry in view.recurringWeaknesses)
                       Padding(
                         padding: EdgeInsets.only(bottom: EqSpacing.sm),
-                        child: _WeaknessRow(
+                        child: WeaknessRow(
                           entry: entry,
                           serverTime: view.serverTime,
                           onTap: () => showLedgerEntrySheet(
@@ -254,79 +267,45 @@ class _PronunciationTileState extends State<_PronunciationTile> {
   }
 }
 
-/// One tappable row per weakness: the human-readable name (never the raw
-/// tag), how often, when last seen, the state and the trend — read by
-/// screen readers as one sentence.
-class _WeaknessRow extends StatelessWidget {
-  const _WeaknessRow({required this.entry, required this.serverTime, required this.onTap});
+/// The way into the progress dashboard (F20): the whole card is one button.
+class _ProgressEntry extends StatelessWidget {
+  const _ProgressEntry({required this.onTap});
 
-  final LedgerEntry entry;
-  final DateTime serverTime;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
     final dark = Theme.of(context).brightness == Brightness.dark;
-    final lastSeen = formatRelativeTime(entry.lastSeenAt, reference: serverTime);
-    final trendColor = switch (entry.trend) {
-      TagTrend.rising => dark ? EqDarkColors.error : EqLightColors.error,
-      TagTrend.falling => dark ? EqDarkColors.tertiary : EqLightColors.tertiary,
-      TagTrend.flat => dark ? EqDarkColors.onSurfaceVariant : EqLightColors.onSurfaceVariant,
-    };
-
-    // One node that reads the whole row and carries the tap itself, since the
-    // excluded InkWell's own action would otherwise go with its semantics.
+    final variant = dark ? EqDarkColors.onSurfaceVariant : EqLightColors.onSurfaceVariant;
     return Semantics(
       container: true,
       button: true,
-      label:
-          '${entry.label}: ${timesLabel(entry.occurrenceCount)}, last seen $lastSeen, '
-          '${entry.state.label}, ${entry.trend.word}',
+      label: 'Progress over time. See how each competency has moved across your lessons and activities.',
       onTap: onTap,
       excludeSemantics: true,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: dark ? EqDarkColors.surface : EqLightColors.surface,
-          borderRadius: BorderRadius.circular(EqRadius.md),
-          border: Border.all(color: dark ? EqDarkColors.outlineStrong : EqLightColors.outlineStrong, width: 2),
-        ),
-        child: Material(
-          type: MaterialType.transparency,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(EqRadius.md),
-            onTap: onTap,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minHeight: 48),
-              child: Padding(
-                padding: EdgeInsets.all(EqSpacing.md),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: EqCard(
+          child: Row(
+            children: [
+              Icon(Icons.insights_outlined, size: 32, color: dark ? EqDarkColors.onSurface : EqLightColors.onSurface),
+              SizedBox(width: EqSpacing.md),
+              Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(entry.label, style: EqTextStyles.titleMd(dark: dark)),
+                    Text('Progress over time', style: EqTextStyles.titleLg(dark: dark)),
                     SizedBox(height: EqSpacing.xs),
                     Text(
-                      '${timesLabel(entry.occurrenceCount)} · last seen $lastSeen',
-                      style: EqTextStyles.bodySm(dark: dark).copyWith(
-                        color: dark ? EqDarkColors.onSurfaceVariant : EqLightColors.onSurfaceVariant,
-                      ),
-                    ),
-                    SizedBox(height: EqSpacing.sm),
-                    Wrap(
-                      spacing: EqSpacing.sm,
-                      runSpacing: EqSpacing.xs,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        EqBadge(status: ledgerStateBadge(entry.state), label: entry.state.label),
-                        Text(
-                          '${entry.trend.symbol} ${entry.trend.word}',
-                          style: EqTextStyles.labelMd(dark: dark).copyWith(color: trendColor),
-                        ),
-                      ],
+                      'See how each competency has moved across your lessons and activities.',
+                      style: EqTextStyles.bodyMd(dark: dark).copyWith(color: variant),
                     ),
                   ],
                 ),
               ),
-            ),
+              Icon(Icons.chevron_right, color: variant),
+            ],
           ),
         ),
       ),

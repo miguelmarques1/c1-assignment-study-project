@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_modular/flutter_modular.dart';
@@ -22,6 +25,7 @@ SessionController _sessionWith(SessionState state) {
 /// empty plan is enough since these tests are about the shell, not content.
 Module _testModule(SessionController controller) {
   final (dio, _) = scriptedDio({
+    'GET /progress': ok(((jsonDecode(File('test/features/progress/progress-view.json').readAsStringSync()) as Map<String, dynamic>)['data'])!),
     'GET /plans/current': ok({'serverTime': '2026-09-25T14:00:00.000Z', 'plan': null, 'preparing': null, 'failure': null}),
   });
   return createModule(
@@ -54,6 +58,18 @@ void main() {
 
       final destinations = tester.widgetList<NavigationDestination>(find.byType(NavigationDestination));
       expect(destinations.map((d) => d.label), ['Today', 'Plan', 'Profile', 'Lessons', 'Settings']);
+    });
+
+    testWidgets('profile_tab_stays_selected_on_progress', (tester) async {
+      await _pump(
+        tester,
+        _sessionWith(const Authenticated(SessionUser(id: '1', email: 'a@b.com', displayName: 'A'))),
+        initialRoute: '/app/profile/progress',
+      );
+
+      expect(find.text('Competencies over time'), findsOneWidget);
+      final bar = tester.widget<NavigationBar>(find.byType(NavigationBar));
+      expect(bar.selectedIndex, 2);
     });
 
     testWidgets('the_live_classroom_is_absent_from_navigation', (tester) async {
