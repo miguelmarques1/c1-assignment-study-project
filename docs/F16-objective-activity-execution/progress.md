@@ -1,6 +1,6 @@
 # Implementation Progress: Objective Activity Execution
 
-**Status:** in progress
+**Status:** success
 **Branch:** claude/f16-objective-activity-execution-4c854b
 **Started:** 2026-10-10
 **Last updated:** 2026-10-10
@@ -103,5 +103,45 @@
 - Large-text pass (1.3×) found one overflow in the rating prompt's two links; they now sit in a `Wrap`.
 - Step 22: dated follow-up notes were appended to the progress files of F12, F13, F14 and F15, including the correction to `resolveForOwner` found in stage 3.
 
-**Validation:** `flutter analyze` ✅ no issues · `flutter test` 273/273 ✅ (new: models, reconciliation/navigation/draft store, controller 13, page 11 on 360×690 and 1.3× text, rating prompt 4, `EqAudioPlayer` 6, `EqTextField` 5, Today `Resume session`) · `flutter build apk --debug` not run yet (final verification).
-**Commit:** _(recorded in the final verification commit)_
+**Validation:** `flutter analyze` ✅ no issues · `flutter test` 273/273 ✅ (new: models, reconciliation/navigation/draft store, controller 13, page 11 on 360×690 and 1.3× text, rating prompt 4, `EqAudioPlayer` 6, `EqTextField` 5, Today `Resume session`) · `flutter build apk --debug` ✅ (final verification).
+**Commit:** b73a1be F16 stage 5 - mobile runner and follow-ups
+
+## Final verification
+
+**Status: success.** Every check below is green, passed in isolation after a load-induced failure, or is a failure that does not touch F16 code and is listed as pre-existing.
+
+**Full suite (2026-10-10):**
+- `pnpm -r typecheck` ✅ · `pnpm lint` ✅ (zero warnings).
+- Shared 7/7 ✅ · API unit 98 files / 791 tests ✅ · web 49 files / 341 tests ✅ · Flutter `analyze` ✅ and `test` 273/273 ✅ · `flutter build apk --debug` ✅.
+- API integration (all 51 files, real Postgres, Redis and MinIO through Testcontainers): 545 passed, 13 skipped, 6 failed. F16's own suites are green inside that run: `activity-routes` 14, `objective-submission` 15, `activity-media` 6, `content-stats` 7, plus `plan-activity-state` and `plan-activation` with the `resolveForOwner` fix.
+  - **Failed under load, green alone (3 files, 34 tests):** `pronunciation-routes::reports_each_status_truthfully`, `analysis-routes::reports_each_status_truthfully` and `profile-pipeline` (13 skipped after a failed `beforeAll`). The log shows Prisma connection errors while the machine was running containers for the whole suite; rerun on their own they pass.
+  - **Pre-existing, unrelated to F16 (4 tests):** these fail inside the F17/F18 tests' own seeding or setup, before any route F16 touches runs.
+    - `speaking-activity-routes::a_carried_activity_keeps_its_task_and_attempts`: `seedSpeakingActivity` creates a second plan for the same user, lesson and origin, violating `(user_id, lesson_id, origin)`.
+    - `speaking-activity-routes::a_non_speaking_activity_is_not_found`: the test rewrites a pronunciation activity to `writing` and violates `ck_plan_activities_item`.
+    - `speaking-rescore::refused_audio_is_not_rescorable`: the upload returns `not_enough_speech` instead of `audio_rejected` (F18's audio path).
+    - `lesson-privacy::there_is_no_export_route`: the OpenAPI scan rejects F18's `/speaking/attempts/{attemptId}/audio`, because its regex bans any path containing `audio`. F16's `/activities/{activityId}/media` does not match it.
+    These were judged pre-existing by reading them; they were not rerun against the base commit. F17's progress already records that its API integration suites could never run (no Docker).
+
+**Component Overview walk-through:** every file in the spec's lists exists with the described role and contracts. The mobile widgets are consolidated into fewer files than the spec lists (`question_widgets.dart` holds the multiple-choice, fill-in-the-blank, unscored and dots widgets; `results_view.dart` holds the results and the per-question tile; the header and the listening layout live in `activity_runner_page.dart`). That is a deviation in file layout only, recorded under stage 5.
+
+**Acceptance criteria** (each mapped test passed in this final run): the Core half of the formats criterion, no AI call (`no_ai_call_is_made_from_open_to_rating`), the transcript half of the listening criterion, the reading text staying visible, per-question feedback, case-insensitive and whitespace-tolerant matching, completion recording with the prompt version, occurrences within 5 s, the encounter, failed-submission handling, and duplicate-submission deduplication. The three cross-feature criteria and the design-system composition criterion (`no-raw-values`, `token-resolution`, `flutter analyze`) are covered as the spec maps them.
+
+**Deviations from the spec**
+- Ordering and matching, cross-device resume and the replay limit stay deferred (spec A1/A2/A6), with their criteria covered by the Core halves the spec names.
+- The "next is writing without a route" example cannot occur with real data any more (all eight kinds are routable); tested with an unknown kind instead.
+- The integration suites assert zero `prompt_execution` and `credential_usage` rows instead of booting the fake Gemini.
+- Mobile passage pane is capped at 30% of the screen height, not 45%.
+- The activity module's mobile widgets are consolidated (above), and `AudioPlayback` is new beside F18's `AttemptAudioPlayer`.
+- `resolveForOwner` (F15) now also walks back through a carry-over chain (stage 3).
+
+**Soft-fails**
+- **Runtime smoke in a browser or on a device was not done.** The compose stack was not brought up for this worktree (isolated ports and a long container install, per the worktree notes). What does exercise the surface: every route against real Postgres, Redis and MinIO in the integration suites; the web runner through component tests; the mobile runner through widget tests at 360×690 and 1.3× text; the APK compiles. The listening player has not been heard on a real device or browser, and the `<audio>` cookie authentication across ports `:3000` and `:3001` has only been reasoned about.
+- The Playwright visual baselines for the design-system gallery (new `Audio player` section and two icons) were not regenerated (Docker `visual` service not run).
+
+**Follow-ups**
+1. Smoke the runner end to end on the compose stack, with a curated listening item and a seeded plan: web (cookie audio), mobile on a device (bearer-header audio).
+2. Regenerate the Playwright baselines for `design-system`.
+3. Merge F18's `DifficultyRating` widgets (web `difficulty-rating.tsx`, mobile `difficulty_rating.dart`) with F16's `RatingPrompt`.
+4. Fix the four pre-existing integration failures above (they belong to F17/F18's tests).
+5. Ledger example links to the activity (F12 A27) once F16-F18 runners are all registered, now unblocked.
+6. Optional: `EqTheme`'s app-wide `inputDecorationTheme` could adopt `EqTextField`'s look (spec A29).

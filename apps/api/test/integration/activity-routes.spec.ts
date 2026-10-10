@@ -10,6 +10,7 @@ import {
   seedItem,
   seedPlan,
   type ActivityTestContext,
+  type SeededItem,
   type SeedItemOptions,
 } from './helpers/activity-fixtures';
 import { seedLesson, seedSpeaker } from './helpers/pipeline-fixtures';
@@ -32,7 +33,7 @@ async function setup(name: string, items: Array<SeedItemOptions & { slug: string
   const { ctx } = env;
   const speaker = await seedSpeaker(ctx, name, { withKey: false });
   const lessonId = await seedLesson(ctx, [speaker.id], new Date());
-  const seeded = [];
+  const seeded: SeededItem[] = [];
   for (const { slug, ...options } of items) {
     seeded.push(await seedItem(ctx, `${slug}-${name.toLowerCase()}`, options));
   }
