@@ -163,7 +163,7 @@ export function TodaySessionCard({ current }: { current: ServerRead<CurrentPlanV
             href={next.href}
             className="press-button inline-flex items-center justify-center gap-sm rounded-md border-2 border-outline-strong bg-secondary px-md py-sm text-label-lg font-semibold text-on-secondary outline-offset-2 outline-outline-strong focus-visible:outline-2"
           >
-            Start session
+            {next.activity.state === 'in_progress' ? 'Resume session' : 'Start session'}
           </Link>
         ) : null}
         <Link

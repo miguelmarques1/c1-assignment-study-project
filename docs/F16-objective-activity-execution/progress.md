@@ -61,20 +61,30 @@
 
 **Validation:** typecheck ✅ (only the 2 pre-existing `@msgpack/msgpack` errors were fixed by `pnpm install`; clean now) · lint ✅ · API unit 98 files / 791 tests ✅ · integration: `activity-routes` 14/14, `objective-submission` 15/15, `activity-media` 6/6, `content-stats` 7/7, `plan-activity-state` and `plan-activation` ✅ against real Postgres, Redis and MinIO.
 **Soft-fail:** the spec says the integration suites boot the fake Gemini to assert it saw zero calls. They do not; `no_ai_call_is_made_from_open_to_rating` asserts zero `prompt_execution` and `credential_usage` rows for the user instead, and the fixtures give users no Gemini key, so any call would have surfaced as `CRED002`.
+**Commit:** 795676c F16 stage 3 - activity services and routes
+
+## Stage 4: Web Runner — ✅ done
+
+- [x] **14. Web Data and Pure Helpers**
+- [x] **15. Audio Player Primitive and Icons**
+- [x] **16. Activity Shell**
+- [x] **17. Objective Runner and Results**
+- [x] **18. Activity Pages and Today**
+
+**Observations:**
+- **Registries already had F17/F18 entries.** `activity-routes.ts` now maps the five bank kinds to `/activities/{id}` next to the existing `writing`, `speaking` and `pronunciation` entries. Because all eight kinds are routable, the spec's example "next is writing without a route → Back to Today" cannot occur with real data; `nextStep` is tested with an unknown kind standing in for an unregistered one, and `Back to Today` is also tested for a finished session.
+- **F18 shipped a `DifficultyRating` widget first** (`components/activity/difficulty-rating.tsx`, an inline row). F16 adds `RatingPrompt` (three large buttons, `Not useful` link, `Not now`) as the spec describes and leaves F18's widget untouched; merging the two is a follow-up.
+- `Dialog` and `PlayIcon` also existed (F17/F18), so only `PauseIcon`, `CrossCircleIcon` and `AudioPlayer` were added to the primitives.
+- `useObjectiveRunner` keeps its mutable bits (view, answers, attempt id, in-flight start, settled flag) in refs so the retry, online and backoff paths always see the latest values. The draft is reconciled in an effect (storage is unavailable while rendering on the server), so the first paint is a skeleton.
+- A start call that returns a different fingerprint than the page was rendered with (the item was re-imported meanwhile) clears the answers, resets to question 1 and shows `This activity was updated, so your answers were cleared.`; a submission already in flight at that moment goes back to `answering` instead of sending answers for the old questions.
+- `AUTH003` from any runner call keeps the draft and sends the browser to `/login?expired=1`, the same destination the server layouts use.
+- Tailwind arbitrary variants (`has-[...]`) are rejected by `no-raw-values`; the option cards use `focus-within:` instead.
+- The design-system gallery gained an `Audio player` section (a runtime-built silent WAV for the ready state, a missing file for the error state) and the two new icons. The Playwright visual baselines for the gallery were not regenerated (Docker `visual` service not run here): follow-up.
+- Existing `today-session-card` test that asserted "no Start session while the registry is empty" was replaced by `shows_start_session_for_a_routable_objective_activity` and `shows_resume_session_when_the_next_activity_is_in_progress`.
+
+**Validation:** web typecheck ✅ · eslint zero warnings ✅ · new specs 57/57 ✅ (`activity-draft`, `activity-navigation`, `audio-player`, `activity-shell`, `activity-runner`) · `today-session-card` 9/9 ✅ · full web suite 338/341 under load, the three failures (`no-raw-values` inline-style scan, `token-resolution`, an unrelated `credential-card` test) are 5-second timeouts from running the whole suite in parallel and pass when run alone (20/20).
+**Soft-fail (runtime):** the runner page was not yet exercised in a browser against the running stack in this stage; see the final verification.
 **Commit:** _(recorded in the next stage's commit)_
-
-## Stage 4: Web Runner — ⬜ pending
-
-- [ ] **14. Web Data and Pure Helpers**
-- [ ] **15. Audio Player Primitive and Icons**
-- [ ] **16. Activity Shell**
-- [ ] **17. Objective Runner and Results**
-- [ ] **18. Activity Pages and Today**
-
-**Observations:** _(none yet)_
-
-**Validation:** _(not run)_
-**Commit:** _(none)_
 
 ## Stage 5: Mobile Runner and Follow-Ups — ⬜ pending
 
