@@ -14,6 +14,7 @@ import {
 import { Injectable } from '@nestjs/common';
 
 import { env } from '../config/env';
+import { parseByteRange } from './byte-range';
 
 /**
  * The only place in the codebase that knows an object store exists. Every later
@@ -46,6 +47,18 @@ function isNotFoundError(error: unknown): boolean {
   }
   const candidate = error as { name?: string; $metadata?: { httpStatusCode?: number } };
   return candidate.name === 'NotFound' || candidate.$metadata?.httpStatusCode === 404;
+}
+
+/** A streamed read of an object, whole or one byte range of it. */
+export interface ObjectStream {
+  body: Readable;
+  /** The length of the bytes the stream carries. */
+  contentLength: number;
+  /** `bytes start-end/total`, set only when a range was honoured. */
+  contentRange: string | null;
+  contentType: string | null;
+  /** The whole object's size. */
+  totalBytes: number;
 }
 
 @Injectable()
@@ -114,6 +127,45 @@ export class StorageService {
       chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Uint8Array));
     }
     return Buffer.concat(chunks);
+  }
+
+  /**
+   * Streams an object, or one byte range of it when `rangeHeader` is a
+   * satisfiable single range (an invalid one is dropped and the whole
+   * object returned). `null` for a missing key; `StorageUnavailableError`
+   * when the store itself could not be reached.
+   */
+  async getObjectStream(key: string, rangeHeader?: string): Promise<ObjectStream | null> {
+    const totalBytes = await this.statObject(key);
+    if (totalBytes === null) {
+      return null;
+    }
+    const range = parseByteRange(rangeHeader, totalBytes);
+    try {
+      const response = await this.client.send(
+        new GetObjectCommand({
+          Bucket: this.bucket,
+          Key: key,
+          Range: range ? `bytes=${range.start}-${range.end}` : undefined,
+        }),
+      );
+      const body = response.Body as Readable | undefined;
+      if (!body) {
+        throw new Error(`Object ${key} returned an empty body.`);
+      }
+      return {
+        body,
+        contentLength: range ? range.end - range.start + 1 : totalBytes,
+        contentRange: range ? `bytes ${range.start}-${range.end}/${totalBytes}` : null,
+        contentType: response.ContentType ?? null,
+        totalBytes,
+      };
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        return null;
+      }
+      throw new StorageUnavailableError(error);
+    }
   }
 
   async objectExists(key: string): Promise<boolean> {
