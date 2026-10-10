@@ -168,6 +168,10 @@ The palette establishes a high-contrast yet soothing atmosphere. The default col
 - **Danger / Destructive:** `#BA1A1A`, with `error-container` `#FFDAD6` — reserved for delete actions, connection dropouts, and errors.
 - **Structural Black / Neutral:** `#18181B` (`outline-strong`) — forms every 2px stroke, typographic header, and hard drop shadow that anchors the neo-brutalist aesthetic. In dark mode this role flips to a light outline (`#E4E1E6`), since a black shadow is invisible on a dark surface — elevation there is carried by the outline, not the shadow.
 
+### Data visualization
+
+Charts with up to six series use six categorical roles, `chart-1` to `chart-6`, assigned in the learning profile's competency order (Grammar, Vocabulary, Fluency, Interaction, Comprehension, Pronunciation). Three reuse the palette (`secondary`, `primary`, `tertiary`) and three are added (amber, violet, magenta), each validated for separation under colour-vision deficiency and for 3:1 against the card surface in both themes. Status roles (`error`, the badge roles) are never used as series. Colour never carries meaning alone: the data source is told apart by marker shape (filled circle for a lesson, hollow diamond for an activity), and every chart offers a table view.
+
 ## Typography
 
 **Plus Jakarta Sans** provides geometric precision paired with friendly, humanist curve profiles. It supports the punchy boldness required by neo-brutalism without sacrificing the readability necessary for comprehensive grammar explanations and conversation transcripts.

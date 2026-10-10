@@ -1,0 +1,303 @@
+{
+  "data": {
+    "serverTime": "2026-09-28T10:00:00.000Z",
+    "profile": {
+      "serverTime": "2026-09-28T10:00:00.000Z",
+      "updatedAt": "2026-09-25T18:31:04.000Z",
+      "empty": false,
+      "competencies": [
+        {
+          "competency": "grammar",
+          "score": 68,
+          "delta": 1,
+          "measurementCount": 5,
+          "warmingUp": false,
+          "trend": "up",
+          "lastMeasuredAt": "2026-09-25T12:30:00.000Z",
+          "subScores": null
+        },
+        {
+          "competency": "vocabulary",
+          "score": 74,
+          "delta": 2,
+          "measurementCount": 4,
+          "warmingUp": false,
+          "trend": "up",
+          "lastMeasuredAt": "2026-09-24T12:00:00.000Z",
+          "subScores": null
+        },
+        {
+          "competency": "fluency",
+          "score": 71,
+          "delta": 1,
+          "measurementCount": 4,
+          "warmingUp": false,
+          "trend": "flat",
+          "lastMeasuredAt": "2026-09-24T12:00:00.000Z",
+          "subScores": null
+        },
+        {
+          "competency": "interaction",
+          "score": 77,
+          "delta": 2,
+          "measurementCount": 2,
+          "warmingUp": true,
+          "trend": null,
+          "lastMeasuredAt": "2026-09-24T12:00:00.000Z",
+          "subScores": null
+        },
+        {
+          "competency": "comprehension",
+          "score": 80,
+          "delta": 1,
+          "measurementCount": 4,
+          "warmingUp": false,
+          "trend": "down",
+          "lastMeasuredAt": "2026-09-24T12:00:00.000Z",
+          "subScores": null
+        },
+        {
+          "competency": "pronunciation",
+          "score": 71,
+          "delta": 2,
+          "measurementCount": 2,
+          "warmingUp": true,
+          "trend": null,
+          "lastMeasuredAt": "2026-09-24T12:00:00.000Z",
+          "subScores": {
+            "accuracy": 80,
+            "prosody": 64
+          }
+        }
+      ],
+      "recurringWeaknesses": [
+        {
+          "id": "2b7f0c1e-5d4a-4c3b-9a8e-1f2d3c4b5a60",
+          "tag": "grammar:conditional-3",
+          "label": "Third conditional",
+          "family": "grammar",
+          "occurrenceCount": 6,
+          "recentOccurrenceCount": 4,
+          "firstSeenAt": "2026-07-14T12:00:00.000Z",
+          "lastSeenAt": "2026-09-24T12:00:00.000Z",
+          "state": "practicing",
+          "dueAt": null,
+          "trend": "rising",
+          "retired": false
+        },
+        {
+          "id": "3c8a1d2f-6e5b-4d4c-8b9f-2a3e4d5c6b71",
+          "tag": "vocab:phrasal-verb",
+          "label": "Phrasal verbs",
+          "family": "vocabulary",
+          "occurrenceCount": 3,
+          "recentOccurrenceCount": 3,
+          "firstSeenAt": "2026-09-10T12:00:00.000Z",
+          "lastSeenAt": "2026-09-24T12:00:00.000Z",
+          "state": "new",
+          "dueAt": null,
+          "trend": "flat",
+          "retired": false
+        }
+      ],
+      "notes": []
+    },
+    "competencyHistory": {
+      "pointsPerCompetency": 20,
+      "chartable": true,
+      "ranges": [
+        {
+          "range": "all",
+          "since": null
+        },
+        {
+          "range": "90d",
+          "since": "2026-06-30T10:00:00.000Z"
+        },
+        {
+          "range": "30d",
+          "since": "2026-08-29T10:00:00.000Z"
+        }
+      ],
+      "series": [
+        {
+          "competency": "grammar",
+          "points": [
+            {
+              "measuredAt": "2026-07-14T12:00:00.000Z",
+              "score": 60,
+              "sourceKind": "lesson",
+              "lessonId": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+              "activityId": null
+            },
+            {
+              "measuredAt": "2026-08-20T12:00:00.000Z",
+              "score": 63,
+              "sourceKind": "lesson",
+              "lessonId": "5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f",
+              "activityId": null
+            },
+            {
+              "measuredAt": "2026-09-10T12:00:00.000Z",
+              "score": 66,
+              "sourceKind": "lesson",
+              "lessonId": "7d8e9f0a-1b2c-4d3e-9f4a-5b6c7d8e9f0a",
+              "activityId": null
+            },
+            {
+              "measuredAt": "2026-09-24T12:00:00.000Z",
+              "score": 67,
+              "sourceKind": "lesson",
+              "lessonId": "9f1c4d7e-3b2a-4f51-9d0c-7a6b5e4c3d21",
+              "activityId": null
+            },
+            {
+              "measuredAt": "2026-09-25T12:30:00.000Z",
+              "score": 68,
+              "sourceKind": "activity",
+              "lessonId": null,
+              "activityId": "0f1e2d3c-4b5a-4968-8776-5a4b3c2d1e0f"
+            }
+          ]
+        },
+        {
+          "competency": "vocabulary",
+          "points": [
+            {
+              "measuredAt": "2026-07-14T12:00:00.000Z",
+              "score": 70,
+              "sourceKind": "lesson",
+              "lessonId": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+              "activityId": null
+            },
+            {
+              "measuredAt": "2026-08-20T12:00:00.000Z",
+              "score": 71,
+              "sourceKind": "lesson",
+              "lessonId": "5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f",
+              "activityId": null
+            },
+            {
+              "measuredAt": "2026-09-10T12:00:00.000Z",
+              "score": 72,
+              "sourceKind": "lesson",
+              "lessonId": "7d8e9f0a-1b2c-4d3e-9f4a-5b6c7d8e9f0a",
+              "activityId": null
+            },
+            {
+              "measuredAt": "2026-09-24T12:00:00.000Z",
+              "score": 74,
+              "sourceKind": "lesson",
+              "lessonId": "9f1c4d7e-3b2a-4f51-9d0c-7a6b5e4c3d21",
+              "activityId": null
+            }
+          ]
+        },
+        {
+          "competency": "fluency",
+          "points": [
+            {
+              "measuredAt": "2026-07-14T12:00:00.000Z",
+              "score": 66,
+              "sourceKind": "lesson",
+              "lessonId": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+              "activityId": null
+            },
+            {
+              "measuredAt": "2026-08-20T12:00:00.000Z",
+              "score": 68,
+              "sourceKind": "lesson",
+              "lessonId": "5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f",
+              "activityId": null
+            },
+            {
+              "measuredAt": "2026-09-10T12:00:00.000Z",
+              "score": 70,
+              "sourceKind": "lesson",
+              "lessonId": "7d8e9f0a-1b2c-4d3e-9f4a-5b6c7d8e9f0a",
+              "activityId": null
+            },
+            {
+              "measuredAt": "2026-09-24T12:00:00.000Z",
+              "score": 71,
+              "sourceKind": "lesson",
+              "lessonId": "9f1c4d7e-3b2a-4f51-9d0c-7a6b5e4c3d21",
+              "activityId": null
+            }
+          ]
+        },
+        {
+          "competency": "interaction",
+          "points": [
+            {
+              "measuredAt": "2026-09-10T12:00:00.000Z",
+              "score": 75,
+              "sourceKind": "lesson",
+              "lessonId": "7d8e9f0a-1b2c-4d3e-9f4a-5b6c7d8e9f0a",
+              "activityId": null
+            },
+            {
+              "measuredAt": "2026-09-24T12:00:00.000Z",
+              "score": 77,
+              "sourceKind": "lesson",
+              "lessonId": "9f1c4d7e-3b2a-4f51-9d0c-7a6b5e4c3d21",
+              "activityId": null
+            }
+          ]
+        },
+        {
+          "competency": "comprehension",
+          "points": [
+            {
+              "measuredAt": "2026-07-14T12:00:00.000Z",
+              "score": 76,
+              "sourceKind": "lesson",
+              "lessonId": "1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d",
+              "activityId": null
+            },
+            {
+              "measuredAt": "2026-08-20T12:00:00.000Z",
+              "score": 78,
+              "sourceKind": "lesson",
+              "lessonId": "5c6d7e8f-9a0b-4c1d-8e2f-3a4b5c6d7e8f",
+              "activityId": null
+            },
+            {
+              "measuredAt": "2026-09-10T12:00:00.000Z",
+              "score": 79,
+              "sourceKind": "lesson",
+              "lessonId": "7d8e9f0a-1b2c-4d3e-9f4a-5b6c7d8e9f0a",
+              "activityId": null
+            },
+            {
+              "measuredAt": "2026-09-24T12:00:00.000Z",
+              "score": 80,
+              "sourceKind": "lesson",
+              "lessonId": "9f1c4d7e-3b2a-4f51-9d0c-7a6b5e4c3d21",
+              "activityId": null
+            }
+          ]
+        },
+        {
+          "competency": "pronunciation",
+          "points": [
+            {
+              "measuredAt": "2026-09-10T12:00:00.000Z",
+              "score": 69,
+              "sourceKind": "lesson",
+              "lessonId": "7d8e9f0a-1b2c-4d3e-9f4a-5b6c7d8e9f0a",
+              "activityId": null
+            },
+            {
+              "measuredAt": "2026-09-24T12:00:00.000Z",
+              "score": 71,
+              "sourceKind": "lesson",
+              "lessonId": "9f1c4d7e-3b2a-4f51-9d0c-7a6b5e4c3d21",
+              "activityId": null
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

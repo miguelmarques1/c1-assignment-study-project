@@ -33,6 +33,12 @@
   --color-badge-danger-fg: #93000a;
   --color-badge-neutral-bg: #e4e1e6;
   --color-badge-neutral-fg: #1b1b1e;
+  --color-chart-1: #0058be;
+  --color-chart-2: #ae3115;
+  --color-chart-3: #006c49;
+  --color-chart-4: #b27100;
+  --color-chart-5: #4a3aa7;
+  --color-chart-6: #c2407a;
 
   --text-display: 44px;
   --text-display--line-height: 52px;
@@ -133,6 +139,12 @@
   --color-badge-danger-fg: #ffdad6;
   --color-badge-neutral-bg: #2c2a2e;
   --color-badge-neutral-fg: #e5e1e6;
+  --color-chart-1: #3987e5;
+  --color-chart-2: #e0603a;
+  --color-chart-3: #199e70;
+  --color-chart-4: #c98500;
+  --color-chart-5: #9085e9;
+  --color-chart-6: #d55181;
 
   --shadow-card: none;
   --shadow-button: none;

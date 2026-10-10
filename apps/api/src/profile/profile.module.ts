@@ -20,6 +20,7 @@ const SHARED = [
   ProfileTagsPort,
   PronunciationFocusPort,
   ErrorLedgerPort,
+  ProfileService,
 ];
 
 /**
@@ -36,7 +37,7 @@ const SHARED = [
 @Module({
   imports: [TaxonomyModule],
   controllers: [ProfileController],
-  providers: [...SHARED, ProfileService],
+  providers: SHARED,
   exports: SHARED,
 })
 export class ProfileModule {}

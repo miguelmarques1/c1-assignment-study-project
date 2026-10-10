@@ -10,6 +10,7 @@ import { Dialog } from '@/components/ui/dialog';
 import { Field } from '@/components/ui/field';
 import { Grid } from '@/components/ui/grid';
 import { Meter } from '@/components/ui/meter';
+import { SegmentedControl } from '@/components/ui/segmented-control';
 import { Stack } from '@/components/ui/stack';
 import { TextArea } from '@/components/ui/text-area';
 
@@ -239,5 +240,51 @@ describe('Stack and Grid', () => {
       </Grid>,
     );
     expect(screen.getByText('one').parentElement?.className).toMatch(/grid/);
+  });
+});
+
+describe('SegmentedControl', () => {
+  const OPTIONS = [
+    { value: 'all', label: 'All time' },
+    { value: '90d', label: '90 days' },
+    { value: '30d', label: '30 days' },
+  ] as const;
+
+  function Fixture({ onChange }: { onChange?: (value: string) => void }) {
+    const [value, setValue] = useState<'all' | '90d' | '30d'>('all');
+    return (
+      <SegmentedControl
+        label="Time range"
+        options={OPTIONS}
+        value={value}
+        onChange={(next) => {
+          setValue(next);
+          onChange?.(next);
+        }}
+      />
+    );
+  }
+
+  it('segmented_control_is_a_radio_group_operable_by_arrow_keys', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<Fixture onChange={onChange} />);
+
+    expect(screen.getByRole('radiogroup', { name: 'Time range' })).toBeInTheDocument();
+    const all = screen.getByRole('radio', { name: 'All time' });
+    expect(all).toBeChecked();
+    // Roving tab index: only the selected option is a tab stop.
+    expect(screen.getByRole('radio', { name: '90 days' })).toHaveAttribute('tabindex', '-1');
+
+    all.focus();
+    await user.keyboard('{ArrowRight}');
+    expect(screen.getByRole('radio', { name: '90 days' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: '90 days' })).toHaveFocus();
+    await user.keyboard('{ArrowLeft}{ArrowLeft}');
+    expect(screen.getByRole('radio', { name: '30 days' })).toBeChecked();
+    expect(onChange).toHaveBeenLastCalledWith('30d');
+
+    await user.click(screen.getByRole('radio', { name: 'All time' }));
+    expect(screen.getByRole('radio', { name: 'All time' })).toBeChecked();
   });
 });

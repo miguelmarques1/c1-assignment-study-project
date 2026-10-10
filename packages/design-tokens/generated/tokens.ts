@@ -33,6 +33,12 @@ export const color = {
   'badge-danger-fg': '#93000a',
   'badge-neutral-bg': '#e4e1e6',
   'badge-neutral-fg': '#1b1b1e',
+  'chart-1': '#0058be',
+  'chart-2': '#ae3115',
+  'chart-3': '#006c49',
+  'chart-4': '#b27100',
+  'chart-5': '#4a3aa7',
+  'chart-6': '#c2407a',
 } as const;
 
 export const darkColor = {
@@ -64,6 +70,12 @@ export const darkColor = {
   'badge-danger-fg': '#ffdad6',
   'badge-neutral-bg': '#2c2a2e',
   'badge-neutral-fg': '#e5e1e6',
+  'chart-1': '#3987e5',
+  'chart-2': '#e0603a',
+  'chart-3': '#199e70',
+  'chart-4': '#c98500',
+  'chart-5': '#9085e9',
+  'chart-6': '#d55181',
 } as const;
 
 export const spacing = {

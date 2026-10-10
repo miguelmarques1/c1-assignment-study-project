@@ -33,6 +33,12 @@ class EqLightColors {
   static const Color badgeDangerFg = Color(0xFF93000A);
   static const Color badgeNeutralBg = Color(0xFFE4E1E6);
   static const Color badgeNeutralFg = Color(0xFF1B1B1E);
+  static const Color chart1 = Color(0xFF0058BE);
+  static const Color chart2 = Color(0xFFAE3115);
+  static const Color chart3 = Color(0xFF006C49);
+  static const Color chart4 = Color(0xFFB27100);
+  static const Color chart5 = Color(0xFF4A3AA7);
+  static const Color chart6 = Color(0xFFC2407A);
 }
 
 class EqDarkColors {
@@ -64,6 +70,12 @@ class EqDarkColors {
   static const Color badgeDangerFg = Color(0xFFFFDAD6);
   static const Color badgeNeutralBg = Color(0xFF2C2A2E);
   static const Color badgeNeutralFg = Color(0xFFE5E1E6);
+  static const Color chart1 = Color(0xFF3987E5);
+  static const Color chart2 = Color(0xFFE0603A);
+  static const Color chart3 = Color(0xFF199E70);
+  static const Color chart4 = Color(0xFFC98500);
+  static const Color chart5 = Color(0xFF9085E9);
+  static const Color chart6 = Color(0xFFD55181);
 }
 
 class EqSpacing {

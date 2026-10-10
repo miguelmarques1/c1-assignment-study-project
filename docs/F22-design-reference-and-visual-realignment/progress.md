@@ -139,3 +139,7 @@
 
 **Follow-up added by F19 (2026-09-26), appended — earlier notes above are unchanged:**
 - **The header pill now carries `Lessons`** (F19), between Dashboard and Settings and prefix-matched so a lesson's detail keeps it active; F12's `Profile` goes between Dashboard and Lessons. `NavPill` gained `label`, `alwaysVisible` and per-destination `matchPrefix`; `Meter` accepts `delta: null` (em dash, "no previous result") and prints negatives with U+2212. `design/README.md`'s dashboard table records the pill change and F19's `Recent lessons` block (not in the mockup; F05/F07 Experience clauses). The gallery's meter block gained a null-delta row, so its visual baselines change — see F19's progress log for their regeneration.
+
+**Follow-up added by F20 (2026-10-10), appended — earlier notes above are unchanged:**
+- **The two statistic cards F22 deferred to F20 are settled.** `Nível de Domínio` is dropped under Section 7, Pedagogy (the clause already used for the other level labels). `Tempo de Conversação` stays deferred, now to F20's Full Scope, with the reason in `design/README.md`: lesson minutes against a weekly goal is not a statistic F20 Core computes, and the weekly-goal sub-line is a cadence target. `design-reference.spec.ts` still has a deferred `Stat card` row.
+- The dashboard's pill row notes that `Profile` is prefix-matched so its Progress page keeps it active.

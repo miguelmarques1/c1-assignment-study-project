@@ -12,6 +12,7 @@ const BLOCKS = [
   'badge',
   'meter',
   'chip',
+  'segmented-control',
   'field',
   'icons',
   'stack',

@@ -4,7 +4,7 @@ import '../../core/session/session_controller.dart';
 import '../../core/session/session_state.dart';
 import '../lessons/lessons_module.dart';
 import '../plan/plan_module.dart';
-import '../profile/profile_page.dart';
+import '../profile/profile_module.dart';
 import '../settings/settings_module.dart';
 import '../speaking/speaking_module.dart';
 import '../today/today_page.dart';
@@ -25,7 +25,7 @@ final shellModule = createModule(
       children: (sub) {
         sub
           ..route('/today', child: (ctx, state) => const TodayPage())
-          ..route('/profile', child: (ctx, state) => const ProfilePage())
+          ..module(profileModule)
           ..module(lessonsModule)
           ..module(planModule)
           ..module(settingsModule)

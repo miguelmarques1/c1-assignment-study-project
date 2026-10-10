@@ -18,6 +18,7 @@ import { LessonsModule } from './lessons/lessons.module';
 import { PlanGenerationModule } from './plan-generation/plan-generation.module';
 import { PlansModule } from './plans/plans.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { ProgressModule } from './progress/progress.module';
 import { ProfileUpdateModule } from './profile-update/profile-update.module';
 import { PromptsModule } from './prompts/prompts.module';
 import { PronunciationModule } from './pronunciation/pronunciation.module';
@@ -59,6 +60,7 @@ import { WritingModule } from './writing/writing.module';
     PlanGenerationModule,
     WritingModule,
     SpeakingModule,
+    ProgressModule,
     ActivitiesModule,
   ],
   providers: [

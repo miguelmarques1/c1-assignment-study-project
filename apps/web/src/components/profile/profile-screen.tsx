@@ -1,9 +1,10 @@
 'use client';
 
 import type { LearningProfileView, LedgerEntryView } from '@english-quest/shared';
+import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { Card, EmptyState, ErrorState, Skeleton } from '@/components/ui';
+import { ArrowRightIcon, Card, ChartIcon, EmptyState, ErrorState, Skeleton } from '@/components/ui';
 import { fetchProfile, findLedgerEntryByTag } from '@/lib/profile';
 import { CompetencyMeters } from './competency-meters';
 import { LedgerEntrySheet } from './ledger-entry-sheet';
@@ -130,6 +131,24 @@ export function ProfileScreen({ initialView, initialTag }: ProfileScreenProps) {
   } else {
     body = (
       <>
+        <Card as="div">
+          <div className="flex items-start gap-md">
+            <ChartIcon size={32} />
+            <div className="flex flex-col gap-xs">
+              <h3 className="text-title-lg text-on-surface">Progress over time</h3>
+              <p className="text-body-md text-on-surface-variant">
+                See how each competency has moved across your lessons and activities.
+              </p>
+              <Link
+                href="/profile/progress"
+                className="inline-flex items-center gap-xs self-start text-label-lg text-primary underline outline-offset-2 outline-outline-strong focus-visible:outline-2"
+              >
+                See your progress
+                <ArrowRightIcon size={16} />
+              </Link>
+            </div>
+          </div>
+        </Card>
         {view.notes.length > 0 ? (
           <Card tone="info" as="div" role="note">
             <div className="flex flex-col gap-xs">
