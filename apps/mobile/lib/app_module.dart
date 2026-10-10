@@ -9,6 +9,7 @@ import 'core/network/api_client.dart';
 import 'core/network/auth_interceptor.dart';
 import 'core/session/session_controller.dart';
 import 'core/session/session_store.dart';
+import 'features/activity/activity_module.dart';
 import 'features/auth/auth_module.dart';
 import 'features/shell/shell_module.dart';
 
@@ -41,7 +42,8 @@ Future<Module> buildAppModule() async {
         ..addSingleton<AudioRecorderService>(AudioRecorderService.new)
         ..route('/', child: (ctx, state) => const BootGate())
         ..module(authModule)
-        ..module(shellModule);
+        ..module(shellModule)
+        ..module(activityModule);
     },
   );
 }

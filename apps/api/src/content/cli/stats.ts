@@ -4,8 +4,8 @@ import { loadEnv } from '../../config/env';
 import { ERROR_TAXONOMY_PATH } from '../../taxonomy/error-taxonomy.constants';
 import { loadErrorTaxonomyFile } from '../../taxonomy/error-taxonomy';
 import { assertContentSchemaExists } from '../content-schema-guard';
-import { collectContentStats, renderContentStats } from '../content-stats';
-import { collectGenerationStats, renderGenerationStats } from '../../generation/generation-stats';
+import { collectActivityStats, collectContentStats, renderActivityStats, renderContentStats } from '../content-stats';
+import { collectGenerationStats, GENERATION_STATS_WINDOW_DAYS, renderGenerationStats } from '../../generation/generation-stats';
 
 /**
  * `pnpm content:stats`: read-only inventory, the PRD's corpus target, usage
@@ -21,7 +21,15 @@ async function main(): Promise<void> {
     const stats = await collectContentStats(prisma, taxonomy);
     // F14's section: how generated items fare at the difficulty gate, per prompt version.
     const generation = await collectGenerationStats(prisma);
-    process.stdout.write(`${[...renderContentStats(stats), ...renderGenerationStats(generation)].join('\n')}\n`);
+    // F16's sections: difficulty ratings per prompt version, and questions the runner could not correct.
+    const since = new Date(Date.now() - GENERATION_STATS_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const activities = await collectActivityStats(prisma, since);
+    const sections = [
+      ...renderContentStats(stats),
+      ...renderGenerationStats(generation),
+      ...renderActivityStats(activities, GENERATION_STATS_WINDOW_DAYS),
+    ];
+    process.stdout.write(`${sections.join('\n')}\n`);
   } finally {
     await prisma.$disconnect();
   }

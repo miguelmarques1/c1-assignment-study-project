@@ -221,3 +221,131 @@ export function renderContentStats(stats: ContentStats, now: Date = new Date()):
 
   return lines;
 }
+
+// ---------------------------------------------------------------------------
+// F16's curator signals: what learners said about difficulty, and which
+// questions the runner could not correct. The curator has no admin UI, so
+// this report is where both are read (spec A28).
+// ---------------------------------------------------------------------------
+
+export interface RatingsByPromptVersion {
+  /** `promptId@promptVersion` for a generated item, `curated` for the rest. */
+  source: string;
+  rated: number;
+  tooEasy: number;
+  justRight: number;
+  tooHard: number;
+  notUseful: number;
+}
+
+export interface UncorrectableItem {
+  slug: string;
+  /** 1-based question numbers. */
+  questions: number[];
+  attempts: number;
+  lastSeen: Date;
+}
+
+export interface ActivityStats {
+  ratings: RatingsByPromptVersion[];
+  /** Questions whose answer key failed validation: a defect to fix with a re-import. */
+  uncorrectable: UncorrectableItem[];
+  /** Ordering and matching questions that F16 Core leaves unscored: not defects. */
+  waitingForFullScope: { items: number; questions: number };
+}
+
+export async function collectActivityStats(prisma: PrismaClient, since: Date): Promise<ActivityStats> {
+  const [ratingRows, unscoredRows] = await Promise.all([
+    prisma.$queryRaw<
+      Array<{ source: string; rated: number; too_easy: number; just_right: number; too_hard: number; not_useful: number }>
+    >`
+      SELECT COALESCE(prompt_id || '@' || prompt_version, 'curated') AS source,
+             COUNT(*)::int AS rated,
+             COUNT(*) FILTER (WHERE difficulty_rating = 'too_easy')::int AS too_easy,
+             COUNT(*) FILTER (WHERE difficulty_rating = 'just_right')::int AS just_right,
+             COUNT(*) FILTER (WHERE difficulty_rating = 'too_hard')::int AS too_hard,
+             COUNT(*) FILTER (WHERE not_useful)::int AS not_useful
+      FROM objective_attempts
+      WHERE rated_at IS NOT NULL AND rated_at >= ${since}
+      GROUP BY 1
+      ORDER BY 1
+    `,
+    prisma.$queryRaw<Array<{ slug: string; reason: string; questions: number[]; attempts: number; last: Date }>>`
+      SELECT c.slug,
+             r->>'unscoredReason' AS reason,
+             ARRAY_AGG(DISTINCT ((r->>'index')::int + 1) ORDER BY ((r->>'index')::int + 1)) AS questions,
+             COUNT(DISTINCT a.id)::int AS attempts,
+             MAX(a.submitted_at) AS last
+      FROM objective_attempts a
+      JOIN content_item c ON c.id = a.content_item_id
+      CROSS JOIN LATERAL jsonb_array_elements(a.results) AS r
+      WHERE a.status = 'submitted' AND a.submitted_at >= ${since} AND r->>'outcome' = 'unscored'
+      GROUP BY c.slug, r->>'unscoredReason'
+      ORDER BY c.slug
+    `,
+  ]);
+
+  const waiting = unscoredRows.filter((row) => row.reason === 'format_unavailable');
+  return {
+    ratings: ratingRows.map((row) => ({
+      source: row.source,
+      rated: row.rated,
+      tooEasy: row.too_easy,
+      justRight: row.just_right,
+      tooHard: row.too_hard,
+      notUseful: row.not_useful,
+    })),
+    uncorrectable: unscoredRows
+      .filter((row) => row.reason === 'answer_key_invalid')
+      .map((row) => ({ slug: row.slug, questions: row.questions, attempts: row.attempts, lastSeen: row.last })),
+    waitingForFullScope: {
+      items: new Set(waiting.map((row) => row.slug)).size,
+      questions: waiting.reduce((sum, row) => sum + row.questions.length, 0),
+    },
+  };
+}
+
+function share(count: number, of: number): string {
+  return of === 0 ? '—' : `${Math.round((100 * count) / of)}%`;
+}
+
+export function renderActivityStats(stats: ActivityStats, windowDays: number, now: Date = new Date()): string[] {
+  const lines: string[] = ['', `Difficulty ratings by prompt version (last ${windowDays} days)`];
+  if (stats.ratings.length === 0) {
+    lines.push('  No activity has been rated yet.');
+  } else {
+    const table = columns(
+      [
+        ['source', 'rated', 'too easy', 'just right', 'too hard', 'not useful'],
+        ...stats.ratings.map((row) => {
+          const judged = row.tooEasy + row.justRight + row.tooHard;
+          return [row.source, String(row.rated), share(row.tooEasy, judged), share(row.justRight, judged), share(row.tooHard, judged), String(row.notUseful)];
+        }),
+      ],
+      [1, 2, 3, 4, 5],
+    );
+    lines.push(...table.map((line) => `  ${line}`));
+  }
+
+  lines.push('', `Questions that could not be corrected (last ${windowDays} days)`);
+  if (stats.uncorrectable.length === 0) {
+    lines.push('  None. Every answer key was valid when it was used.');
+  } else {
+    const table = columns(
+      [
+        ['slug', 'questions', 'attempts', 'last seen'],
+        ...stats.uncorrectable.map((row) => [row.slug, row.questions.join(', '), String(row.attempts), relativeTime(row.lastSeen, now)]),
+      ],
+      [2],
+    );
+    lines.push(...table.map((line) => `  ${line}`));
+    lines.push('  Fix the key in meta.json and re-import. Attempts already started keep their snapshot.');
+  }
+  if (stats.waitingForFullScope.questions > 0) {
+    const { items, questions } = stats.waitingForFullScope;
+    lines.push(
+      `  ${questions} ordering or matching question${questions === 1 ? '' : 's'} in ${items} item${items === 1 ? '' : 's'} waiting for F16 Full (shown unscored, not defects).`,
+    );
+  }
+  return lines;
+}

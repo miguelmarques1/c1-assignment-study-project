@@ -214,4 +214,30 @@ export class AppError extends Error {
   static speakingActivitySkipped(): AppError {
     return new AppError(ERROR_CODES.SPEAKING_ACTIVITY_SKIPPED);
   }
+
+  /** A writing, speaking or pronunciation activity has no bank questions to answer. */
+  static activityNotObjective(): AppError {
+    return new AppError(ERROR_CODES.ACTIVITY_NOT_OBJECTIVE);
+  }
+
+  /** An unknown attempt id, another user's, and one outside the activity's lineage are the same answer. */
+  static activityAttemptNotFound(): AppError {
+    return new AppError(ERROR_CODES.ACTIVITY_ATTEMPT_NOT_FOUND);
+  }
+
+  static activitySkipped(): AppError {
+    return new AppError(ERROR_CODES.ACTIVITY_SKIPPED);
+  }
+
+  static activityAudioNotFound(): AppError {
+    return new AppError(ERROR_CODES.ACTIVITY_AUDIO_NOT_FOUND);
+  }
+
+  static activityAudioUnavailable(): AppError {
+    return new AppError(ERROR_CODES.ACTIVITY_AUDIO_UNAVAILABLE);
+  }
+
+  static activityNotRunnable(): AppError {
+    return new AppError(ERROR_CODES.ACTIVITY_NOT_RUNNABLE);
+  }
 }

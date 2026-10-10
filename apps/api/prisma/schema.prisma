@@ -54,6 +54,7 @@ model User {
   writingCorrections   WritingCorrection[]
   speakingTasks        SpeakingTask[]
   speakingAttempts     SpeakingAttempt[]
+  objectiveAttempts    ObjectiveAttempt[]
 
   @@map("users")
 }
@@ -978,6 +979,7 @@ model ContentItem {
   servings        ContentItemServing[]
   generationSlots ContentGenerationSlot[]
   planActivities  StudyPlanActivity[]
+  objectiveAttempts ObjectiveAttempt[]
 
   @@index([type, cefrLevel], map: "ix_content_item_type_level")
   @@index([targetTags], map: "ix_content_item_target_tags", type: Gin)
@@ -1207,6 +1209,7 @@ model StudyPlanActivity {
   writingTask WritingTask?
   speakingTask     SpeakingTask?    @relation("SpeakingTaskRoot")
   speakingAttempts SpeakingAttempt[] @relation("SpeakingAttemptActivity")
+  objectiveAttempts ObjectiveAttempt[]
 
   @@unique([planId, day, position], map: "ux_plan_activities_plan_slot")
   @@index([userId, completedAt(sort: Desc)], map: "ix_plan_activities_user_completed")
@@ -1294,6 +1297,49 @@ model SpeakingAttempt {
   @@unique([userId, clientAttemptId], map: "ux_speaking_attempts_client")
   @@index([taskId, createdAt], map: "ix_speaking_attempts_task_created")
   @@map("speaking_attempts")
+}
+
+/// F16: one row per attempt at a bank-backed activity. The questions are
+/// snapshotted when the attempt starts, so a re-import never changes what it
+/// is graded against. The id is F15's `completion_key` and F12's `source_key`.
+/// The partial indexes and CHECK constraints live only in the SQL.
+model ObjectiveAttempt {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId               String    @map("user_id") @db.Uuid
+  planActivityId       String    @map("plan_activity_id") @db.Uuid
+  contentItemId        String    @map("content_item_id") @db.Uuid
+  /// One of listening, reading, vocabulary, grammar, error_review.
+  kind                 String    @db.VarChar(16)
+  /// One of open, submitted, abandoned.
+  status               String    @default("open") @db.VarChar(16)
+  /// The item's curated or generated, snapshotted.
+  provenance           String    @db.VarChar(16)
+  promptId             String?   @map("prompt_id") @db.VarChar(64)
+  promptVersion        String?   @map("prompt_version") @db.VarChar(16)
+  /// The item's questions with keys and explanations at creation.
+  questions            Json
+  questionsFingerprint String    @map("questions_fingerprint") @db.Char(64)
+  startedAt            DateTime  @default(now()) @map("started_at") @db.Timestamptz(6)
+  submittedAt          DateTime? @map("submitted_at") @db.Timestamptz(6)
+  abandonedAt          DateTime? @map("abandoned_at") @db.Timestamptz(6)
+  answers              Json?
+  results              Json?
+  scoreCorrect         Int?      @map("score_correct") @db.SmallInt
+  scoreTotal           Int?      @map("score_total") @db.SmallInt
+  unscoredCount        Int       @default(0) @map("unscored_count") @db.SmallInt
+  timeSpentSeconds     Int?      @map("time_spent_seconds")
+  /// One of too_easy, just_right, too_hard.
+  difficultyRating     String?   @map("difficulty_rating") @db.VarChar(12)
+  notUseful            Boolean   @default(false) @map("not_useful")
+  ratedAt              DateTime? @map("rated_at") @db.Timestamptz(6)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planActivity StudyPlanActivity @relation(fields: [planActivityId], references: [id], onDelete: Cascade)
+  contentItem  ContentItem       @relation(fields: [contentItemId], references: [id], onDelete: NoAction)
+
+  @@map("objective_attempts")
 }
 
 /// The fallback (F07's `StudyPlanFallbackPort`) and interim-plan (analysis
